@@ -253,10 +253,10 @@ gauntlet-messageai-24hr-mvp/
 **Description**: Initialize the project repository on GitHub  
  **Your Actions**:
 
-* \[ \] Create new public repository: `gauntlet-messageai-24hr-mvp`  
-* \[ \] Initialize with README.md  
-* \[ \] Clone to local machine: `git clone https://github.com/joaocarlinho/gauntlet-messageai-24hr-mvp.git`  
-* \[ \] Set up main branch protection (optional but recommended)
+* \[x\] Create new public repository: `gauntlet-messageai-24hr-mvp`  
+* \[x\] Initialize with README.md  
+* \[x\] Clone to local machine: `git clone https://github.com/joaocarlinho/gauntlet-messageai-24hr-mvp.git`  
+* \[x\] Set up main branch protection (optional but recommended)
 
 **Files Created**:
 
@@ -270,16 +270,16 @@ gauntlet-messageai-24hr-mvp/
 **Description**: Set up Railway for backend hosting and PostgreSQL database  
  **Your Actions**:
 
-* \[ \] Sign up at https://railway.app (use GitHub OAuth)  
-* \[ \] Create new project: "MessageAI Backend"  
-* \[ \] Add PostgreSQL service to project  
-* \[ \] Note down database credentials:  
+* \[x\] Sign up at https://railway.app (use GitHub OAuth)  
+* \[x\] Create new project: "MessageAI Backend"  
+* \[x\] Add PostgreSQL service to project  
+* \[x\] Note down database credentials:  
   * `DATABASE_URL` (will be auto-generated)  
   * Railway project ID  
   * Railway service domain  
-* \[ \] Install Railway CLI: `npm i -g @railway/cli`  
-* \[ \] Login to Railway CLI: `railway login`  
-* \[ \] Link local project: `railway link` (do this after backend setup)
+* \[x\] Install Railway CLI: `npm i -g @railway/cli`  
+* \[x\] Login to Railway CLI: `railway login`  
+* \[x\] Link local project: `railway link` (do this after backend setup)
 
 **Environment Variables to Save**:
 
@@ -294,24 +294,24 @@ RAILWAY\_PROJECT\_ID=\<project-id\>
 **Description**: Configure AWS services (S3, Lambda, SQS, EventBridge)  
  **Your Actions**:
 
-* \[ \] Sign up/login to AWS Console  
-* \[ \] Create IAM user for programmatic access:  
+* \[x\] Sign up/login to AWS Console  
+* \[x\] Create IAM user for programmatic access:  
   * Username: `messageai-service`  
   * Permissions: `AmazonS3FullAccess`, `AWSLambdaFullAccess`, `AmazonSQSFullAccess`  
-* \[ \] Generate access keys:  
+* \[x\] Generate access keys:  
   * Note down `AWS_ACCESS_KEY_ID`  
   * Note down `AWS_SECRET_ACCESS_KEY`  
-* \[ \] Create S3 bucket:  
+* \[x\] Create S3 bucket:  
   * Name: `messageai-media-<random-suffix>`  
   * Region: `us-east-1` (or your preferred region)  
   * Enable CORS for file uploads  
   * Note down bucket name  
-* \[ \] Create SQS queue:  
+* \[x\] Create SQS queue:  
   * Name: `messageai-notification-queue`  
   * Type: Standard  
   * Note down queue URL
 
-\[ \] Set up AWS CLI (optional for deployment):  
+\[x\] Set up AWS CLI (optional for deployment):  
  aws configure\# Enter your access key, secret key, region
 
 * 
@@ -335,15 +335,15 @@ AWS\_SQS\_QUEUE\_URL=https://sqs.us-east-1.amazonaws.com/...
 **Description**: Set up Expo for React Native development and push notifications  
  **Your Actions**:
 
-* \[ \] Sign up at https://expo.dev  
-* \[ \] Create new project: "MessageAI"  
-* \[ \] Note down project slug: `messageai`  
-* \[ \] Generate Expo access token:  
+* \[x\] Sign up at https://expo.dev  
+* \[x\] Create new project: "MessageAI"  
+* \[x\] Note down project slug: `messageai`  
+* \[x\] Generate Expo access token:  
   * Go to Access Tokens in account settings  
   * Create token: "MessageAI Development"  
   * Note down `EXPO_ACCESS_TOKEN`  
-* \[ \] Install Expo CLI: `npm install -g expo-cli`  
-* \[ \] Login: `expo login`
+* \[x\] Install Expo CLI: `npm install -g expo-cli`  
+* \[x\] Login: `expo login`
 
 **Environment Variables to Save**:
 
@@ -358,17 +358,17 @@ EXPO\_ACCESS\_TOKEN=\<your-token\>
 **Description**: Configure Firebase Cloud Messaging for production builds  
  **Your Actions**:
 
-* \[ \] Go to https://console.firebase.google.com  
-* \[ \] Create new project: "MessageAI"  
-* \[ \] Add Android app:  
+* \[x\] Go to https://console.firebase.google.com  
+* \[x\] Create new project: "MessageAI"  
+* \[x\] Add Android app:  
   * Package name: `com.joaocarlinho.messageai`  
   * Download `google-services.json`  
-* \[ \] Add iOS app:  
+* \[x\] Add iOS app:  
   * Bundle ID: `com.joaocarlinho.messageai`  
   * Download `GoogleService-Info.plist`  
-* \[ \] Enable Cloud Messaging  
-* \[ \] Get server key from Project Settings \> Cloud Messaging  
-* \[ \] Note down `FCM_SERVER_KEY`
+* \[x\] Enable Cloud Messaging  
+* \[x\] Get server key from Project Settings \> Cloud Messaging  
+* \[x\] Note down `FCM_SERVER_KEY`
 
 **Environment Variables to Save**:
 
