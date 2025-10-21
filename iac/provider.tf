@@ -5,13 +5,13 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
-    railway = {
-      source  = "terraform-community-providers/railway"
-      version = "~> 0.4"
-    }
     random = {
       source  = "hashicorp/random"
       version = "~> 3.1"
+    }
+    railway = {
+      source  = "terraform-community-providers/railway"
+      version = "~> 0.2"
     }
   }
 }
@@ -22,5 +22,5 @@ provider "aws" {
 }
 
 provider "railway" {
-  token = var.railway_api_key
+  # Railway API key will be picked up from environment variable RAILWAY_API_KEY
 }

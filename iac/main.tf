@@ -143,7 +143,7 @@ resource "aws_iam_policy" "lambda_basic_policy" {
           "sqs:DeleteMessage",
           "sqs:GetQueueAttributes"
         ],
-        Effect = "Allow",
+        Effect   = "Allow",
         Resource = aws_sqs_queue.notifications.arn
       }
     ]
@@ -163,18 +163,17 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
 
 # --- Placeholder Lambda function (code must be uploaded separately) ---
 resource "aws_lambda_function" "placeholder" {
-  filename         = "placeholder.zip"
-  function_name    = "${var.project_name}-placeholder-${var.environment}"
-  role             = aws_iam_role.lambda_exec.arn
-  handler          = "index.handler"
-  runtime          = "nodejs18.x"
+  filename      = "placeholder.zip"
+  function_name = "${var.project_name}-placeholder-${var.environment}"
+  role          = aws_iam_role.lambda_exec.arn
+  handler       = "index.handler"
+  runtime       = "nodejs18.x"
   # source_code_hash = filebase64sha256("placeholder.zip")
 
   environment {
     variables = {
-      AWS_REGION = var.aws_region
-      S3_BUCKET  = aws_s3_bucket.media.bucket
-      SQS_URL    = aws_sqs_queue.notifications.id
+      S3_BUCKET = aws_s3_bucket.media.bucket
+      SQS_URL   = aws_sqs_queue.notifications.id
     }
   }
 
@@ -182,74 +181,7 @@ resource "aws_lambda_function" "placeholder" {
 }
 
 # --- Railway Resources ---
-
-# Railway Project
-resource "railway_project" "messageai" {
-  name = "${var.project_name}-${var.environment}"
-}
-
-# Railway PostgreSQL Database Service
-resource "railway_service" "postgres" {
-  project_id = railway_project.messageai.id
-  name       = "postgres"
-  source     = "postgresql:15"
-}
-
-# Railway Backend Service
-resource "railway_service" "backend" {
-  project_id = railway_project.messageai.id
-  name       = "backend"
-  source     = "."
-}
-
-# Railway Environment Variables for Backend Service
-resource "railway_variable" "backend_database_url" {
-  project_id = railway_project.messageai.id
-  service_id = railway_service.backend.id
-  name       = "DATABASE_URL"
-  value      = railway_service.postgres.database_url
-  sensitive  = true
-}
-
-resource "railway_variable" "backend_aws_region" {
-  project_id = railway_project.messageai.id
-  service_id = railway_service.backend.id
-  name       = "AWS_REGION"
-  value      = var.aws_region
-}
-
-resource "railway_variable" "backend_aws_s3_bucket" {
-  project_id = railway_project.messageai.id
-  service_id = railway_service.backend.id
-  name       = "AWS_S3_BUCKET"
-  value      = aws_s3_bucket.media.bucket
-}
-
-resource "railway_variable" "backend_aws_sqs_queue_url" {
-  project_id = railway_project.messageai.id
-  service_id = railway_service.backend.id
-  name       = "AWS_SQS_QUEUE_URL"
-  value      = aws_sqs_queue.notifications.url
-}
-
-resource "railway_variable" "backend_node_env" {
-  project_id = railway_project.messageai.id
-  service_id = railway_service.backend.id
-  name       = "NODE_ENV"
-  value      = var.environment
-}
-
-resource "railway_variable" "backend_port" {
-  project_id = railway_project.messageai.id
-  service_id = railway_service.backend.id
-  name       = "PORT"
-  value      = "3000"
-}
-
-# Railway Custom Domain (optional - can be configured later)
-# resource "railway_domain" "backend" {
-#   project_id = railway_project.messageai.id
-#   service_id = railway_service.backend.id
-#   domain     = "api.${var.project_name}.com"
-# }
+# Note: Railway resources will be configured manually after AWS infrastructure is provisioned
+# The Railway provider has limited resource support, so we'll use manual configuration
+# for the Railway PostgreSQL database and project setup
 
