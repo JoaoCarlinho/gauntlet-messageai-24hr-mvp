@@ -868,18 +868,18 @@ git checkout -b feature/authentication
 
 ---
 
-#### **Task 3.6: Create Main Server Entry Point**
+#### **✅ Task 3.6: Create Main Server Entry Point**
 
 **Description**: Set up Express server with basic configuration  
 **Files Created**:
 - `backend/src/index.ts`
 
 **Implementation Steps**:
-- [ ] Initialize Express app
-- [ ] Configure CORS, body-parser
-- [ ] Mount auth routes under `/api/v1`
-- [ ] Add error handling middleware
-- [ ] Start server on PORT from env
+- [x] Initialize Express app
+- [x] Configure CORS, body-parser
+- [x] Mount auth routes under `/api/v1`
+- [x] Add error handling middleware
+- [x] Start server on PORT from env
 
 ---
 
