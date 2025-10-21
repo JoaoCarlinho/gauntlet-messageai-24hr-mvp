@@ -1,0 +1,32 @@
+{
+  "aws_region": {
+    "sensitive": false,
+    "type": "string",
+    "value": "us-east-1"
+  },
+  "aws_s3_bucket": {
+    "sensitive": false,
+    "type": "string",
+    "value": "messageai-media-8949ab32"
+  },
+  "aws_sqs_queue_url": {
+    "sensitive": false,
+    "type": "string",
+    "value": "https://sqs.us-east-1.amazonaws.com/971422717446/messageai-notification-queue-production"
+  },
+  "lambda_function_arn": {
+    "sensitive": false,
+    "type": "string",
+    "value": "arn:aws:lambda:us-east-1:971422717446:function:messageai-placeholder-production"
+  },
+  "media_s3_bucket": {
+    "sensitive": false,
+    "type": "string",
+    "value": "messageai-media-8949ab32"
+  },
+  "s3_bucket_name": {
+    "sensitive": false,
+    "type": "string",
+    "value": "messageai-artifacts-dab87024"
+  }
+}

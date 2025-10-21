@@ -1,2 +1,6 @@
 .DS_Store
 git_init_script.sh
+tokens
+dev_history/
+.env
+.env.example

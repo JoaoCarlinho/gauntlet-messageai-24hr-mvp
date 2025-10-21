@@ -9,3 +9,16 @@ variable "project_name" {
   type        = string
   default     = "messageai"
 }
+
+variable "environment" {
+  description = "Deployment environment (development|staging|production)"
+  type        = string
+  default     = "production"
+}
+
+variable "railway_api_key" {
+  description = "Railway API key for provisioning Railway resources (sensitive)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
