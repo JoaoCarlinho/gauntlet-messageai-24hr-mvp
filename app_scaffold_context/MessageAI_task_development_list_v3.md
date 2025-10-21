@@ -1109,10 +1109,10 @@ git checkout \-b feature/user-management
 
 **Implementation Steps**:
 
-* \[ \] Get user profile by ID  
-* \[ \] Update user profile (displayName)  
-* \[ \] Update online status  
-* \[ \] Get user's conversations list
+* \[x\] Get user profile by ID  
+* \[x\] Update user profile (displayName)  
+* \[x\] Update online status  
+* \[x\] Get user's conversations list
 
 ---
 
