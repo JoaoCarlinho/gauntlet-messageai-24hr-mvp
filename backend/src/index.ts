@@ -1,12 +1,14 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { createServer } from 'http';
 import prisma from './config/database';
 import { configureAWS } from './config/aws';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/users.routes';
 import conversationRoutes from './routes/conversations.routes';
 import messageRoutes from './routes/messages.routes';
+import { initializeSocketServer } from './socket';
 
 // Load environment variables
 dotenv.config();
@@ -22,8 +24,21 @@ try {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Create HTTP server from Express app
+const httpServer = createServer(app);
+
+// CORS configuration for both Express and Socket.io
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? process.env.FRONTEND_URL || 'https://yourdomain.com'
+    : ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000', 'http://localhost:8081'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -54,6 +69,13 @@ app.get('/api/v1', (req, res) => {
   res.json({
     message: 'MessageAI API v1',
     version: '1.0.0',
+    features: {
+      rest: true,
+      websockets: true,
+      realTimeMessaging: true,
+      presence: true,
+      typingIndicators: true
+    },
     endpoints: {
       health: '/health',
       auth: '/api/v1/auth',
@@ -75,6 +97,20 @@ app.get('/api/v1', (req, res) => {
       getMessages: 'GET /api/v1/conversations/:id/messages',
       createMessage: 'POST /api/v1/conversations/:id/messages',
       uploadMessageMedia: 'POST /api/v1/conversations/:id/messages/upload'
+    },
+    websocket: {
+      url: `ws://localhost:${PORT}`,
+      events: {
+        connection: 'Socket connection established',
+        send_message: 'Send a message to conversation',
+        message_received: 'Receive new message',
+        typing_start: 'User started typing',
+        typing_stop: 'User stopped typing',
+        join_conversation: 'Join a conversation room',
+        leave_conversation: 'Leave a conversation room',
+        heartbeat: 'Keep connection alive',
+        presence_update: 'Update user presence status'
+      }
     }
   });
 });
@@ -97,23 +133,38 @@ app.use('*', (req, res) => {
 });
 
 // Graceful shutdown
-process.on('SIGTERM', async () => {
-  console.log('SIGTERM received, shutting down gracefully');
+const gracefulShutdown = async (signal: string) => {
+  console.log(`${signal} received, shutting down gracefully`);
+  
+  // Close HTTP server
+  httpServer.close(() => {
+    console.log('HTTP server closed');
+  });
+  
+  // Close Socket.io server
+  io.close(() => {
+    console.log('Socket.io server closed');
+  });
+  
+  // Disconnect from database
   await prisma.$disconnect();
+  console.log('Database disconnected');
+  
   process.exit(0);
-});
+};
 
-process.on('SIGINT', async () => {
-  console.log('SIGINT received, shutting down gracefully');
-  await prisma.$disconnect();
-  process.exit(0);
-});
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Initialize Socket.io server
+const io = initializeSocketServer(httpServer);
 
 // Start server
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`🔗 API base: http://localhost:${PORT}/api/v1`);
+  console.log(`🔌 Socket.io server initialized and ready for connections`);
 });
 
 export default app;
