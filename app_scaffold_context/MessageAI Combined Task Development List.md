@@ -183,6 +183,14 @@ gauntlet-messageai-24hr-mvp/
   - [ ] IAM roles and policies for Lambda functions
   - [ ] CloudWatch log groups for monitoring
 - [ ] Create Lambda function resources (will link to `/aws-lambdas` code later)
+**Progress update — Part B implemented (scaffolded)**
+- [x] Add AWS resources to `iac/main.tf`:
+  - [x] S3 bucket for media storage (`messageai-media-*`) (with CORS & lifecycle rule)
+  - [x] Configure S3 CORS policy for file uploads
+  - [x] SQS queue (`messageai-notification-queue`)
+  - [x] IAM roles and policies for Lambda functions
+  - [x] CloudWatch log groups for monitoring
+- [x] Create Lambda function resources (placeholder resource added; actual code/artifact upload required)
 
 **Part C: Define Railway Resources**
 - [ ] Add Railway PostgreSQL database resource
