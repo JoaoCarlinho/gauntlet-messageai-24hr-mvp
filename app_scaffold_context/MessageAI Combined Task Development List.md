@@ -277,33 +277,33 @@ EXPO_ACCESS_TOKEN=<your-token>
 
 ---
 
-### **Task 0.6: Firebase Setup (for Production Push Notifications)**
+### **✅ Task 0.6: Firebase Setup (for Production Push Notifications)**
 
 **Description**: Configure Firebase Cloud Messaging for production builds using HTTP v1 API  
 **Your Actions**:
 
-- [ ] Go to https://console.firebase.google.com
-- [ ] Create new project: "MessageAI"
-- [ ] Add Android app:
+- [x] Go to https://console.firebase.google.com
+- [x] Create new project: "MessageAI"
+- [x] Add Android app:
   - Package name: `com.joaocarlinho.messageai`
   - Download `google-services.json`
-- [ ] Add iOS app:
+- [x] Add iOS app:
   - Bundle ID: `com.joaocarlinho.messageai`
   - Download `GoogleService-Info.plist`
-- [ ] Enable Cloud Messaging
-- [ ] Generate Service Account Key (HTTP v1 API):
+- [x] Enable Cloud Messaging
+- [x] Generate Service Account Key (HTTP v1 API):
   - Go to Project Settings > Service Accounts
   - Click "Generate new private key"
   - Download the JSON file
   - Note down the `project_id` from the JSON
-- [ ] Set up HTTP v1 API credentials:
+- [x] Set up HTTP v1 API credentials:
   - Extract `client_email` and `private_key` from the service account JSON
   - Note down `FIREBASE_PROJECT_ID`
 
-**Environment Variables to Save**:
+**Environment Variables Saved**:
 ```
-FIREBASE_PROJECT_ID=<your-project-id>
-FIREBASE_CLIENT_EMAIL=<service-account-email>
+FIREBASE_PROJECT_ID=name_hash
+FIREBASE_CLIENT_EMAIL=name@web.com
 FIREBASE_PRIVATE_KEY=<private-key-from-json>
 ```
 
