@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "MessageAI",
+    "slug": "messageai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "messageai",
+    "userInterfaceStyle": "automatic",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-sqlite",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#ffffff"
+        }
+      ]
+    ],
+    "ios": {
+      "bundleIdentifier": "com.joaocarlinho.messageai",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.joaocarlinho.messageai",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

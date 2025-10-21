@@ -1,6 +1,58 @@
-.DS_Store
-git_init_script.sh
-tokens
-dev_history/
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Expo
+.expo/
+.expo-shared/
+dist/
+web-build/
+
+# Environment
 .env
 .env.example
+.env.local
+.env.*.local
+terraform-outputs.json
+
+# Terraform
+iac/.terraform/
+iac/.terraform.lock.hcl
+iac/terraform.tfstate
+iac/terraform.tfstate.backup
+iac/tfplan
+iac/terraform.tfvars
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backend
+backend/dist/
+backend/.env
+
+# Mobile
+mobile/.env
+
+# Build
+*.apk
+*.ipa
+*.aab
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sensitive files
+tokens
+android_firebase_setup.txt
+ios_firebase_setup.txt
+dev_history/
