@@ -827,17 +827,17 @@ git checkout -b feature/authentication
 
 ---
 
-#### **Task 3.3: Build Auth Service**
+#### **✅ Task 3.3: Build Auth Service**
 
 **Description**: Implement registration, login, and token refresh logic  
 **Files Created**:
 - `backend/src/services/auth.service.ts`
 
 **Implementation Steps**:
-- [ ] Create user registration with password hashing
-- [ ] Implement login with credential verification
-- [ ] Add refresh token functionality
-- [ ] Include password validation
+- [x] Create user registration with password hashing
+- [x] Implement login with credential verification
+- [x] Add refresh token functionality
+- [x] Include password validation
 
 ---
 
