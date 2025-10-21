@@ -841,17 +841,17 @@ git checkout -b feature/authentication
 
 ---
 
-#### **Task 3.4: Create Auth Controller**
+#### **✅ Task 3.4: Create Auth Controller**
 
 **Description**: Build REST endpoints for authentication  
 **Files Created**:
 - `backend/src/controllers/auth.controller.ts`
 
 **Implementation Steps**:
-- [ ] POST `/api/v1/auth/register` endpoint
-- [ ] POST `/api/v1/auth/login` endpoint
-- [ ] POST `/api/v1/auth/refresh` endpoint
-- [ ] Add request validation
+- [x] POST `/api/v1/auth/register` endpoint
+- [x] POST `/api/v1/auth/login` endpoint
+- [x] POST `/api/v1/auth/refresh` endpoint
+- [x] Add request validation
 
 ---
 
