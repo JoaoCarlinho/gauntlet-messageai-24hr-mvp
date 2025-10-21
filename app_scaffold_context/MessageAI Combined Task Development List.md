@@ -855,16 +855,16 @@ git checkout -b feature/authentication
 
 ---
 
-#### **Task 3.5: Create Auth Routes**
+#### **✅ Task 3.5: Create Auth Routes**
 
 **Description**: Set up authentication route handlers  
 **Files Created**:
 - `backend/src/routes/auth.routes.ts`
 
 **Implementation Steps**:
-- [ ] Define auth routes with controllers
-- [ ] Add input validation middleware
-- [ ] Connect to Express app
+- [x] Define auth routes with controllers
+- [x] Add input validation middleware
+- [x] Connect to Express app
 
 ---
 
