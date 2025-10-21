@@ -163,26 +163,26 @@ gauntlet-messageai-24hr-mvp/
 **Your Actions**:
 
 **Part A: Configure Terraform Variables**
-- [ ] Create `iac/terraform.tfvars` (git-ignored):
+- [x] Create `iac/terraform.tfvars` (git-ignored):
   ```hcl
   project_name     = "messageai"
   environment      = "production"
   aws_region       = "us-east-1"
   railway_api_key  = "<from-railway-account>"
   ```
-- [ ] Review and update `iac/variables.tf` with any additional variables needed
-- [ ] Configure Terraform backend for state management:
+- [x] Review and update `iac/variables.tf` with any additional variables needed
+- [x] Configure Terraform backend for state management:
   - Option 1: Terraform Cloud (recommended for collaboration)
   - Option 2: S3 + DynamoDB backend
 
 **Part B: Define AWS Resources**
-- [ ] Add AWS resources to `iac/main.tf`:
-  - [ ] S3 bucket for media storage (`messageai-media-*`)
-  - [ ] Configure S3 CORS policy for file uploads
-  - [ ] SQS queue (`messageai-notification-queue`)
-  - [ ] IAM roles and policies for Lambda functions
-  - [ ] CloudWatch log groups for monitoring
-- [ ] Create Lambda function resources (will link to `/aws-lambdas` code later)
+- [x] Add AWS resources to `iac/main.tf`:
+  - [x] S3 bucket for media storage (`messageai-media-*`)
+  - [x] Configure S3 CORS policy for file uploads
+  - [x] SQS queue (`messageai-notification-queue`)
+  - [x] IAM roles and policies for Lambda functions
+  - [x] CloudWatch log groups for monitoring
+- [x] Create Lambda function resources (will link to `/aws-lambdas` code later)
 **Progress update — Part B implemented (scaffolded)**
 - [x] Add AWS resources to `iac/main.tf`:
   - [x] S3 bucket for media storage (`messageai-media-*`) (with CORS & lifecycle rule)
@@ -193,18 +193,19 @@ gauntlet-messageai-24hr-mvp/
 - [x] Create Lambda function resources (placeholder resource added; actual code/artifact upload required)
 
 **Part C: Define Railway Resources**
-- [ ] Add Railway PostgreSQL database resource
-- [ ] Configure Railway project and service
-- [ ] Set up Railway environment variables via Terraform
+- [x] Add Railway PostgreSQL database resource
+- [x] Configure Railway project and service
+- [x] Set up Railway environment variables via Terraform
 
 **Part D: Configure Outputs**
-- [ ] Update `iac/outputs.tf` to export:
+- [x] Update `iac/outputs.tf` to export:
   ```hcl
-  output "database_url" { value = <railway_db_url> sensitive = true }
-  output "aws_s3_bucket" { value = aws_s3_bucket.media.id }
+  output "database_url" { value = railway_service.postgres.database_url sensitive = true }
+  output "aws_s3_bucket" { value = aws_s3_bucket.media.bucket }
   output "aws_sqs_queue_url" { value = aws_sqs_queue.notifications.url }
   output "aws_region" { value = var.aws_region }
-  output "railway_service_domain" { value = <railway_service_domain> }
+  output "railway_service_domain" { value = railway_service.backend.domain }
+  output "railway_project_id" { value = railway_project.messageai.id }
   ```
 
 **Files Modified**:

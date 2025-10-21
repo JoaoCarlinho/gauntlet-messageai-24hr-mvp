@@ -32,7 +32,17 @@ resource "random_id" "bucket_id" {
 # --- Media S3 bucket for user uploads ---
 resource "aws_s3_bucket" "media" {
   bucket = "${var.project_name}-media-${random_id.media_bucket_id.hex}"
-  acl    = "private"
+
+  tags = {
+    Name    = "${var.project_name}-media"
+    Project = var.project_name
+    Env     = var.environment
+  }
+}
+
+# --- S3 bucket CORS configuration ---
+resource "aws_s3_bucket_cors_configuration" "media" {
+  bucket = aws_s3_bucket.media.id
 
   cors_rule {
     allowed_headers = ["*"]
@@ -41,22 +51,27 @@ resource "aws_s3_bucket" "media" {
     expose_headers  = ["ETag"]
     max_age_seconds = 3000
   }
+}
 
-  lifecycle_rule {
-    id      = "expire-temp-uploads"
-    enabled = true
+# --- S3 bucket lifecycle configuration ---
+resource "aws_s3_bucket_lifecycle_configuration" "media" {
+  bucket = aws_s3_bucket.media.id
+
+  rule {
+    id     = "expire-temp-uploads"
+    status = "Enabled"
+
+    filter {
+      prefix = ""
+    }
+
     expiration {
       days = 30
     }
-    noncurrent_version_expiration {
-      days = 30
-    }
-  }
 
-  tags = {
-    Name    = "${var.project_name}-media"
-    Project = var.project_name
-    Env     = var.environment
+    noncurrent_version_expiration {
+      noncurrent_days = 30
+    }
   }
 }
 
@@ -142,7 +157,7 @@ resource "aws_iam_role_policy_attachment" "lambda_basic_attach" {
 
 # --- CloudWatch Log Group for Lambdas ---
 resource "aws_cloudwatch_log_group" "lambda_logs" {
-  name              = "/aws/lambda/${var.project_name}-*"
+  name              = "/aws/lambda/${var.project_name}-${var.environment}"
   retention_in_days = 14
 }
 
@@ -153,7 +168,7 @@ resource "aws_lambda_function" "placeholder" {
   role             = aws_iam_role.lambda_exec.arn
   handler          = "index.handler"
   runtime          = "nodejs18.x"
-  source_code_hash = filebase64sha256("placeholder.zip")
+  # source_code_hash = filebase64sha256("placeholder.zip")
 
   environment {
     variables = {
@@ -165,4 +180,76 @@ resource "aws_lambda_function" "placeholder" {
 
   depends_on = [aws_iam_role_policy_attachment.lambda_basic_attach]
 }
+
+# --- Railway Resources ---
+
+# Railway Project
+resource "railway_project" "messageai" {
+  name = "${var.project_name}-${var.environment}"
+}
+
+# Railway PostgreSQL Database Service
+resource "railway_service" "postgres" {
+  project_id = railway_project.messageai.id
+  name       = "postgres"
+  source     = "postgresql:15"
+}
+
+# Railway Backend Service
+resource "railway_service" "backend" {
+  project_id = railway_project.messageai.id
+  name       = "backend"
+  source     = "."
+}
+
+# Railway Environment Variables for Backend Service
+resource "railway_variable" "backend_database_url" {
+  project_id = railway_project.messageai.id
+  service_id = railway_service.backend.id
+  name       = "DATABASE_URL"
+  value      = railway_service.postgres.database_url
+  sensitive  = true
+}
+
+resource "railway_variable" "backend_aws_region" {
+  project_id = railway_project.messageai.id
+  service_id = railway_service.backend.id
+  name       = "AWS_REGION"
+  value      = var.aws_region
+}
+
+resource "railway_variable" "backend_aws_s3_bucket" {
+  project_id = railway_project.messageai.id
+  service_id = railway_service.backend.id
+  name       = "AWS_S3_BUCKET"
+  value      = aws_s3_bucket.media.bucket
+}
+
+resource "railway_variable" "backend_aws_sqs_queue_url" {
+  project_id = railway_project.messageai.id
+  service_id = railway_service.backend.id
+  name       = "AWS_SQS_QUEUE_URL"
+  value      = aws_sqs_queue.notifications.url
+}
+
+resource "railway_variable" "backend_node_env" {
+  project_id = railway_project.messageai.id
+  service_id = railway_service.backend.id
+  name       = "NODE_ENV"
+  value      = var.environment
+}
+
+resource "railway_variable" "backend_port" {
+  project_id = railway_project.messageai.id
+  service_id = railway_service.backend.id
+  name       = "PORT"
+  value      = "3000"
+}
+
+# Railway Custom Domain (optional - can be configured later)
+# resource "railway_domain" "backend" {
+#   project_id = railway_project.messageai.id
+#   service_id = railway_service.backend.id
+#   domain     = "api.${var.project_name}.com"
+# }
 
