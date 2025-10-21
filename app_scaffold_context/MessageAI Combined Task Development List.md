@@ -254,22 +254,22 @@ AWS_SQS_QUEUE_URL=<from-terraform-output>
 
 ---
 
-### **Task 0.5: Expo Account Setup**
+### **✅ Task 0.5: Expo Account Setup**
 
 **Description**: Set up Expo for React Native development and push notifications  
 **Your Actions**:
 
-- [ ] Sign up at https://expo.dev
-- [ ] Create new project: "MessageAI"
-- [ ] Note down project slug: `messageai`
-- [ ] Generate Expo access token:
+- [x] Sign up at https://expo.dev
+- [x] Create new project: "MessageAI"
+- [x] Note down project slug: `messageai`
+- [x] Generate Expo access token:
   - Go to Access Tokens in account settings
   - Create token: "MessageAI Development"
   - Note down `EXPO_ACCESS_TOKEN`
-- [ ] Install Expo CLI: `npm install -g expo-cli`
-- [ ] Login: `expo login`
+- [x] Install Expo CLI: `npm install -g expo-cli`
+- [x] Login: `expo login`
 
-**Environment Variables to Save**:
+**Environment Variables Saved**:
 ```
 EXPO_PROJECT_SLUG=messageai
 EXPO_ACCESS_TOKEN=<your-token>
