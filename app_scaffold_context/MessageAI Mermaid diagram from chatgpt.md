@@ -1,4 +1,4 @@
-flowchart TD  
+sflowchart TD  
   %% \========== CLIENT LAYER \==========  
   subgraph Client\["📱 Client (React Native \+ Expo)"\]  
     A1\[Login/Register Screen\\n(Auth via REST)\]  
