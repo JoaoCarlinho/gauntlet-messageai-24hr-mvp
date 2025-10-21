@@ -1,0 +1,19 @@
+{
+  "name": "messageai-monorepo",
+  "private": true,
+  "workspaces": [
+    "mobile",
+    "backend",
+    "aws-lambdas/*"
+  ],
+  "scripts": {
+    "mobile": "cd mobile && npm start",
+    "backend": "cd backend && npm run dev",
+    "install-all": "npm install && npm run install:mobile && npm run install:backend",
+    "install:mobile": "cd mobile && npm install",
+    "install:backend": "cd backend && npm install",
+    "terraform:init": "cd iac && terraform init",
+    "terraform:plan": "cd iac && terraform plan",
+    "terraform:apply": "cd iac && terraform apply"
+  }
+}
