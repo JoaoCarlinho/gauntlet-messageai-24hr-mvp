@@ -279,7 +279,7 @@ EXPO_ACCESS_TOKEN=<your-token>
 
 ### **Task 0.6: Firebase Setup (for Production Push Notifications)**
 
-**Description**: Configure Firebase Cloud Messaging for production builds  
+**Description**: Configure Firebase Cloud Messaging for production builds using HTTP v1 API  
 **Your Actions**:
 
 - [ ] Go to https://console.firebase.google.com
@@ -291,15 +291,27 @@ EXPO_ACCESS_TOKEN=<your-token>
   - Bundle ID: `com.joaocarlinho.messageai`
   - Download `GoogleService-Info.plist`
 - [ ] Enable Cloud Messaging
-- [ ] Get server key from Project Settings > Cloud Messaging
-- [ ] Note down `FCM_SERVER_KEY`
+- [ ] Generate Service Account Key (HTTP v1 API):
+  - Go to Project Settings > Service Accounts
+  - Click "Generate new private key"
+  - Download the JSON file
+  - Note down the `project_id` from the JSON
+- [ ] Set up HTTP v1 API credentials:
+  - Extract `client_email` and `private_key` from the service account JSON
+  - Note down `FIREBASE_PROJECT_ID`
 
 **Environment Variables to Save**:
 ```
-FCM_SERVER_KEY=<your-server-key>
+FIREBASE_PROJECT_ID=<your-project-id>
+FIREBASE_CLIENT_EMAIL=<service-account-email>
+FIREBASE_PRIVATE_KEY=<private-key-from-json>
 ```
 
-**Note**: These files will be needed later, save them securely
+**Note**: 
+- The legacy FCM server key is deprecated (disabled 6/20/2024)
+- Use HTTP v1 API with service account credentials instead
+- Save the service account JSON file securely
+- These files will be needed later for push notifications
 
 ---
 
@@ -331,8 +343,10 @@ FCM_SERVER_KEY=<your-server-key>
   RAILWAY_PROJECT_ID=xxx
   RAILWAY_SERVICE_DOMAIN=xxx.railway.app
   
-  # Firebase
-  FCM_SERVER_KEY=your-fcm-server-key
+  # Firebase (HTTP v1 API)
+  FIREBASE_PROJECT_ID=your-firebase-project-id
+  FIREBASE_CLIENT_EMAIL=your-service-account-email
+  FIREBASE_PRIVATE_KEY=your-private-key
   ```
 
 - [ ] Create `mobile/.env.example`:
