@@ -554,27 +554,29 @@ git checkout -b feature/project-init
 
 ---
 
-#### **Task 1.3: Initialize Node.js Backend**
+#### **✅ Task 1.3: Initialize Node.js Backend**
 
 **Description**: Set up Express.js backend with TypeScript and Prisma  
+**Status**: ✅ Completed
 **Files Created**:
 - `backend/` (entire directory structure)
 - `backend/package.json`
 - `backend/tsconfig.json`
 - `backend/prisma/schema.prisma`
 - `backend/.env.example`
+- `backend/.env`
 
 **Implementation Steps**:
 
-- [ ] Create backend directory: `mkdir backend && cd backend`
-- [ ] Initialize Node project: `npm init -y`
-- [ ] Install dependencies:
+- [x] Create backend directory: `mkdir backend && cd backend`
+- [x] Initialize Node project: `npm init -y`
+- [x] Install dependencies:
   ```bash
   npm install express socket.io prisma @prisma/client jsonwebtoken bcrypt cors dotenv express-validator aws-sdk
   npm install -D typescript ts-node nodemon @types/express @types/node @types/cors @types/jsonwebtoken @types/bcrypt
   ```
 
-- [ ] Create `tsconfig.json`:
+- [x] Create `tsconfig.json`:
   ```json
   {
     "compilerOptions": {
@@ -594,10 +596,10 @@ git checkout -b feature/project-init
   }
   ```
 
-- [ ] Initialize Prisma: `npx prisma init`
-- [ ] Copy `.env.example` created in Task 0.7 to `backend/.env.example`
-- [ ] Create `backend/.env` from Terraform outputs (DATABASE_URL automatically set)
-- [ ] Update `package.json` scripts:
+- [x] Initialize Prisma: `npx prisma init`
+- [x] Copy `.env.example` created in Task 0.7 to `backend/.env.example`
+- [x] Create `backend/.env` from Terraform outputs (DATABASE_URL points to Railway PostgreSQL)
+- [x] Update `package.json` scripts:
   ```json
   {
     "scripts": {
