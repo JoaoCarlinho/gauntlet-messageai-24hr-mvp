@@ -315,12 +315,12 @@ FIREBASE_PRIVATE_KEY=<private-key-from-json>
 
 ---
 
-### **Task 0.7: Create Environment Variable Templates**
+### **✅ Task 0.7: Create Environment Variable Templates**
 
 **Description**: Generate `.env.example` files from Terraform outputs  
 **Your Actions**:
 
-- [ ] Create `backend/.env.example`:
+- [x] Create `backend/.env.example`:
   ```
   PORT=3000
   NODE_ENV=development
@@ -349,7 +349,7 @@ FIREBASE_PRIVATE_KEY=<private-key-from-json>
   FIREBASE_PRIVATE_KEY=your-private-key
   ```
 
-- [ ] Create `mobile/.env.example`:
+- [x] Create `mobile/.env.example`:
   ```
   # API Configuration
   API_URL=http://localhost:3000
@@ -360,8 +360,8 @@ FIREBASE_PRIVATE_KEY=<private-key-from-json>
   EXPO_PROJECT_SLUG=messageai
   ```
 
-- [ ] Create actual `.env` files from templates with real values
-- [ ] Ensure `.env` is in `.gitignore`
+- [x] Create actual `.env` files from templates with real values
+- [x] Ensure `.env` is in `.gitignore`
 
 ---
 
