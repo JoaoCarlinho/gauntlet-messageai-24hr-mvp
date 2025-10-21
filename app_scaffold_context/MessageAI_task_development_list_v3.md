@@ -728,7 +728,7 @@ git push origin feature/project-init
 * \[x\] Create Pull Request on GitHub: "PR \#1: Project Initialization & Scaffolding"  
 * \[x\] Review changes in GitHub UI  
 * \[x\] Merge PR to main  
-* \[x\] Pull latest changes: `git checkout main && git pull`
+* \[x\] Pull latest changes: `git checkout master && git pull`
 
 ---
 
@@ -966,7 +966,7 @@ git push origin feature/database-schema
 **Description**: Implement JWT token generation and verification  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/authentication
 
@@ -1099,7 +1099,7 @@ git push origin feature/authentication
 **Description**: Implement user-related business logic  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/user-management
 
@@ -1186,7 +1186,7 @@ git push origin feature/user-management
 **Description**: Implement conversation management logic  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/conversations-api
 
@@ -1289,7 +1289,7 @@ git push origin feature/conversations-api
 **Description**: Set up Socket.io with authentication  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/socket-io
 
@@ -1427,7 +1427,7 @@ git push origin feature/socket-io
 **Description**: Create file-based routing with Expo Router  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/mobile-navigation
 
@@ -1543,7 +1543,7 @@ git push origin feature/mobile-navigation
 **Description**: Set up Kea store for authentication state  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/mobile-auth
 
@@ -1666,7 +1666,7 @@ git push origin feature/mobile-auth
 **Description**: Set up state management for conversations  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/chat-list
 
@@ -1742,7 +1742,7 @@ git push origin feature/chat-list
 **Description**: Build message bubble with sender styling  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/chat-room-ui
 
@@ -1818,7 +1818,7 @@ git push origin feature/chat-room-ui
 **Description**: Define local database schema for offline storage  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/sqlite-storage
 
@@ -1892,7 +1892,7 @@ git push origin feature/sqlite-storage
 **Description**: Set up Socket.io client with authentication  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/socket-client
 
@@ -1985,7 +1985,7 @@ git push origin feature/socket-client
 **Description**: Complete chat room with real-time messaging  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/chat-room-complete
 
@@ -2103,7 +2103,7 @@ git push origin feature/chat-room-complete
 **Description**: UI to create group with multiple participants  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/group-chat
 
@@ -2207,7 +2207,7 @@ git push origin feature/group-chat
 **Description**: Allow users to select and send images  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/image-upload
 
@@ -2336,7 +2336,7 @@ git push origin feature/image-upload
 **Description**: Track user online status and last seen  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/presence-system
 
@@ -2424,7 +2424,7 @@ git push origin feature/presence-system
 **Description**: Configure Expo Notifications in mobile app  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/push-notifications
 
@@ -2528,7 +2528,7 @@ git push origin feature/push-notifications
 **Description**: Queue messages when offline and sync on reconnect  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/offline-support
 
@@ -2621,7 +2621,7 @@ git push origin feature/offline-support
 **Description**: Improve performance for large message lists  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/performance-optimizations
 
@@ -2708,7 +2708,7 @@ git push origin feature/performance-optimizations
 **Description**: Catch and handle errors gracefully  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/error-handling
 
@@ -2837,7 +2837,7 @@ git push origin feature/error-handling
 **Description**: Set up environment variables in Railway dashboard  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b deployment/backend-railway
 
@@ -2982,7 +2982,7 @@ git push origin deployment/backend-railway
 **Description**: Point mobile app to deployed Railway backend  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b config/production-backend
 
@@ -3043,7 +3043,7 @@ git push origin config/production-backend
 **Description**: Lambda function to process notification queue  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/aws-lambdas
 
@@ -3130,7 +3130,7 @@ git push origin feature/aws-lambdas
 **Description**: Test all MVP features systematically  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b testing/e2e-manual
 
@@ -3244,7 +3244,7 @@ git push origin testing/e2e-manual
 **Description**: Document setup, features, and deployment  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b docs/comprehensive-readme
 
@@ -3593,7 +3593,7 @@ git push origin docs/comprehensive-readme
 
 \# Start new feature
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/feature-name
 
@@ -3611,7 +3611,7 @@ git push origin feature/feature-name
 
 \# Return to main
 
-git checkout main && git pull
+git checkout master && git pull
 
 ### **Development Commands**
 
