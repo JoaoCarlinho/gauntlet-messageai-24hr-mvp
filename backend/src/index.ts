@@ -2,10 +2,20 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import prisma from './config/database';
+import { configureAWS } from './config/aws';
 import authRoutes from './routes/auth.routes';
+import userRoutes from './routes/users.routes';
 
 // Load environment variables
 dotenv.config();
+
+// Configure AWS services
+try {
+  configureAWS();
+} catch (error) {
+  console.warn('⚠️ AWS configuration failed:', error);
+  console.warn('File upload features will not be available');
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -33,6 +43,7 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/users', userRoutes);
 
 // API info endpoint
 app.get('/api/v1', (req, res) => {
@@ -42,11 +53,16 @@ app.get('/api/v1', (req, res) => {
     endpoints: {
       health: '/health',
       auth: '/api/v1/auth',
+      users: '/api/v1/users',
       register: 'POST /api/v1/auth/register',
       login: 'POST /api/v1/auth/login',
       refresh: 'POST /api/v1/auth/refresh',
       logout: 'POST /api/v1/auth/logout',
-      profile: 'GET /api/v1/auth/profile'
+      profile: 'GET /api/v1/auth/profile',
+      getCurrentUser: 'GET /api/v1/users/me',
+      updateProfile: 'PUT /api/v1/users/me',
+      uploadAvatar: 'POST /api/v1/users/avatar',
+      searchUsers: 'GET /api/v1/users/search'
     }
   });
 });
