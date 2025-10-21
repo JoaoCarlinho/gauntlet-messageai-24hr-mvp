@@ -15,5 +15,10 @@
     "terraform:init": "cd iac && terraform init",
     "terraform:plan": "cd iac && terraform plan",
     "terraform:apply": "cd iac && terraform apply"
+  },
+  "dependencies": {
+    "axios": "^1.12.2",
+    "jsonwebtoken": "^9.0.2",
+    "socket.io-client": "^4.8.1"
   }
 }
