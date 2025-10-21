@@ -489,28 +489,30 @@ git checkout -b feature/project-init
 
 ---
 
-#### **Task 1.2: Initialize React Native Frontend with Expo**
+#### **✅ Task 1.2: Initialize React Native Frontend with Expo**
 
 **Description**: Create Expo project with TypeScript and required dependencies  
+**Status**: ✅ Completed
 **Files Created**:
 - `mobile/` (entire directory structure)
 - `mobile/package.json`
 - `mobile/app.json`
 - `mobile/tsconfig.json`
 - `mobile/.env.example`
+- `mobile/.env`
 
 **Implementation Steps**:
 
-- [ ] Run: `npx create-expo-app mobile --template expo-template-blank-typescript`
-- [ ] Install dependencies:
+- [x] Run: `npx create-expo-app mobile --template expo-template-blank-typescript`
+- [x] Install dependencies:
   ```bash
   cd mobile
   npx expo install expo-router expo-sqlite expo-secure-store expo-image-picker expo-image expo-notifications @react-native-async-storage/async-storage
-  npm install socket.io-client kea react-query axios react-native-paper
+  npm install socket.io-client kea @tanstack/react-query axios react-native-paper
   npm install -D @types/react @types/react-native
   ```
 
-- [ ] Configure `app.json`:
+- [x] Configure `app.json`:
   ```json
   {
     "expo": {
@@ -547,8 +549,8 @@ git checkout -b feature/project-init
   }
   ```
 
-- [ ] Copy `.env.example` created in Task 0.7 to `mobile/.env.example`
-- [ ] Create `mobile/.env` from Terraform outputs
+- [x] Copy `.env.example` created in Task 0.7 to `mobile/.env.example`
+- [x] Create `mobile/.env` from Terraform outputs
 
 ---
 
