@@ -11,6 +11,7 @@ web-build/
 
 # Environment
 .env
+.env.example
 .env.local
 .env.*.local
 terraform-outputs.json
