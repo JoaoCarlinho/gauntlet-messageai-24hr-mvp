@@ -1,15 +1,85 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  phoneNumber   String?  @unique
+  password      String
+  displayName   String
+  avatarUrl     String?
+  lastSeen      DateTime @default(now())
+  isOnline      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sentMessages     Message[]
+  conversations    ConversationMember[]
+  readReceipts     ReadReceipt[]
+}
+
+model Conversation {
+  id            String   @id @default(uuid())
+  type          String   // "direct" or "group"
+  name          String?  // for group chats
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  members       ConversationMember[]
+  messages      Message[]
+}
+
+model ConversationMember {
+  id              String   @id @default(uuid())
+  conversationId  String
+  userId          String
+  joinedAt        DateTime @default(now())
+  lastReadAt      DateTime?
+
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user            User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@index([conversationId])
+}
+
+model Message {
+  id              String   @id @default(uuid())
+  conversationId  String
+  senderId        String
+  content         String
+  type            String   @default("text") // "text", "image", "system"
+  mediaUrl        String?
+  status          String   @default("sent") // "sending", "sent", "delivered", "read"
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender          User @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  readReceipts    ReadReceipt[]
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+}
+
+model ReadReceipt {
+  id          String   @id @default(uuid())
+  messageId   String
+  userId      String
+  readAt      DateTime @default(now())
+
+  message     Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@index([userId])
 }
