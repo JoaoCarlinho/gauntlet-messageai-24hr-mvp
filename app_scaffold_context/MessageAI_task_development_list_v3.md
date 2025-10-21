@@ -728,7 +728,7 @@ git push origin feature/project-init
 * \[x\] Create Pull Request on GitHub: "PR \#1: Project Initialization & Scaffolding"  
 * \[x\] Review changes in GitHub UI  
 * \[x\] Merge PR to main  
-* \[x\] Pull latest changes: `git checkout main && git pull`
+* \[x\] Pull latest changes: `git checkout master && git pull`
 
 ---
 
@@ -966,7 +966,7 @@ git push origin feature/database-schema
 **Description**: Implement JWT token generation and verification  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/authentication
 
@@ -1099,7 +1099,7 @@ git push origin feature/authentication
 **Description**: Implement user-related business logic  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/user-management
 
@@ -1116,7 +1116,7 @@ git checkout \-b feature/user-management
 
 ---
 
-#### **Task 4.2: Create Users Controller**
+#### **Task 4.2: Create Users Controller** ✅ **COMPLETED**
 
 **Description**: Build REST endpoints for user operations  
  **Files Created**:
@@ -1125,13 +1125,13 @@ git checkout \-b feature/user-management
 
 **Implementation Steps**:
 
-* \[ \] GET `/api/v1/users/me` \- get current user  
-* \[ \] PUT `/api/v1/users/me` \- update profile  
-* \[ \] POST `/api/v1/users/avatar` \- upload avatar (S3)
+* \[x\] GET `/api/v1/users/me` \- get current user  
+* \[x\] PUT `/api/v1/users/me` \- update profile  
+* \[x\] POST `/api/v1/users/avatar` \- upload avatar (S3)
 
 ---
 
-#### **Task 4.3: Create S3 Service**
+#### **Task 4.3: Create S3 Service** ✅ **COMPLETED**
 
 **Description**: Handle file uploads to AWS S3  
  **Files Created**:
@@ -1141,14 +1141,14 @@ git checkout \-b feature/user-management
 
 **Implementation Steps**:
 
-* \[ \] Configure AWS S3 client  
-* \[ \] Create upload function with pre-signed URLs  
-* \[ \] Add file type validation  
-* \[ \] Generate public URLs for avatars
+* \[x\] Configure AWS S3 client  
+* \[x\] Create upload function with pre-signed URLs  
+* \[x\] Add file type validation  
+* \[x\] Generate public URLs for avatars
 
 ---
 
-#### **Task 4.4: Create User Routes**
+#### **Task 4.4: Create User Routes** ✅ **COMPLETED**
 
 **Description**: Mount user endpoints  
  **Files Created**:
@@ -1157,12 +1157,12 @@ git checkout \-b feature/user-management
 
 **Implementation Steps**:
 
-* \[ \] Define user routes with auth middleware  
-* \[ \] Connect to Express app in `index.ts`
+* \[x\] Define user routes with auth middleware  
+* \[x\] Connect to Express app in `index.ts`
 
 ---
 
-#### **Task 4.5: Commit and Create PR \#4**
+#### **Task 4.5: Commit and Create PR \#4** ✅ **COMPLETED**
 
 **Git Actions**:
 
@@ -1174,19 +1174,19 @@ git push origin feature/user-management
 
 **Your Actions**:
 
-* \[ \] Create PR \#4: "User & Profile Management"  
+* \[x\] Create PR \#4: "User & Profile Management"  
 * \[ \] Merge to main
 
 ---
 
 ### **PR \#5: Conversations & Messages (REST API)**
 
-#### **Task 5.1: Create Conversation Service**
+#### **Task 5.1: Create Conversation Service** ✅ **COMPLETED**
 
 **Description**: Implement conversation management logic  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/conversations-api
 
@@ -1196,15 +1196,15 @@ git checkout \-b feature/conversations-api
 
 **Implementation Steps**:
 
-* \[ \] Create direct conversation (1-on-1)  
-* \[ \] Create group conversation  
-* \[ \] Get user's conversation list with last message  
-* \[ \] Get conversation by ID with members  
-* \[ \] Add/remove members (for future)
+* \[x\] Create direct conversation (1-on-1)  
+* \[x\] Create group conversation  
+* \[x\] Get user's conversation list with last message  
+* \[x\] Get conversation by ID with members  
+* \[x\] Add/remove members (for future)
 
 ---
 
-#### **Task 5.2: Create Message Service**
+#### **Task 5.2: Create Message Service** ✅ **COMPLETED**
 
 **Description**: Implement message handling logic  
  **Files Created**:
@@ -1213,15 +1213,15 @@ git checkout \-b feature/conversations-api
 
 **Implementation Steps**:
 
-* \[ \] Create message in database  
-* \[ \] Get messages for conversation (with pagination)  
-* \[ \] Update message status (sent/delivered/read)  
-* \[ \] Create read receipts  
-* \[ \] Get unread message count
+* \[x\] Create message in database  
+* \[x\] Get messages for conversation (with pagination)  
+* \[x\] Update message status (sent/delivered/read)  
+* \[x\] Create read receipts  
+* \[x\] Get unread message count
 
 ---
 
-#### **Task 5.3: Create Conversations Controller**
+#### **Task 5.3: Create Conversations Controller** ✅ **COMPLETED**
 
 **Description**: Build REST endpoints for conversations  
  **Files Created**:
@@ -1230,13 +1230,13 @@ git checkout \-b feature/conversations-api
 
 **Implementation Steps**:
 
-* \[ \] GET `/api/v1/conversations` \- list user's conversations  
-* \[ \] POST `/api/v1/conversations` \- create new conversation  
-* \[ \] GET `/api/v1/conversations/:id` \- get conversation details
+* \[x\] GET `/api/v1/conversations` \- list user's conversations  
+* \[x\] POST `/api/v1/conversations` \- create new conversation  
+* \[x\] GET `/api/v1/conversations/:id` \- get conversation details
 
 ---
 
-#### **Task 5.4: Create Messages Controller**
+#### **Task 5.4: Create Messages Controller** ✅ **COMPLETED**
 
 **Description**: Build REST endpoints for messages  
  **Files Created**:
@@ -1245,12 +1245,12 @@ git checkout \-b feature/conversations-api
 
 **Implementation Steps**:
 
-* \[ \] GET `/api/v1/conversations/:id/messages` \- get messages (paginated)  
-* \[ \] POST `/api/v1/conversations/:id/messages` \- create message (REST fallback)
+* \[x\] GET `/api/v1/conversations/:id/messages` \- get messages (paginated)  
+* \[x\] POST `/api/v1/conversations/:id/messages` \- create message (REST fallback)
 
 ---
 
-#### **Task 5.5: Create Routes**
+#### **Task 5.5: Create Routes** ✅ **COMPLETED**
 
 **Description**: Mount conversation and message routes  
  **Files Created**:
@@ -1260,8 +1260,8 @@ git checkout \-b feature/conversations-api
 
 **Implementation Steps**:
 
-* \[ \] Define routes with auth middleware  
-* \[ \] Connect to Express app in `index.ts`
+* \[x\] Define routes with auth middleware  
+* \[x\] Connect to Express app in `index.ts`
 
 ---
 
@@ -1289,7 +1289,7 @@ git push origin feature/conversations-api
 **Description**: Set up Socket.io with authentication  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/socket-io
 
@@ -1427,7 +1427,7 @@ git push origin feature/socket-io
 **Description**: Create file-based routing with Expo Router  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/mobile-navigation
 
@@ -1543,7 +1543,7 @@ git push origin feature/mobile-navigation
 **Description**: Set up Kea store for authentication state  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/mobile-auth
 
@@ -1666,7 +1666,7 @@ git push origin feature/mobile-auth
 **Description**: Set up state management for conversations  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/chat-list
 
@@ -1742,7 +1742,7 @@ git push origin feature/chat-list
 **Description**: Build message bubble with sender styling  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/chat-room-ui
 
@@ -1818,7 +1818,7 @@ git push origin feature/chat-room-ui
 **Description**: Define local database schema for offline storage  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/sqlite-storage
 
@@ -1892,7 +1892,7 @@ git push origin feature/sqlite-storage
 **Description**: Set up Socket.io client with authentication  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/socket-client
 
@@ -1985,7 +1985,7 @@ git push origin feature/socket-client
 **Description**: Complete chat room with real-time messaging  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/chat-room-complete
 
@@ -2103,7 +2103,7 @@ git push origin feature/chat-room-complete
 **Description**: UI to create group with multiple participants  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/group-chat
 
@@ -2207,7 +2207,7 @@ git push origin feature/group-chat
 **Description**: Allow users to select and send images  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/image-upload
 
@@ -2336,7 +2336,7 @@ git push origin feature/image-upload
 **Description**: Track user online status and last seen  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/presence-system
 
@@ -2424,7 +2424,7 @@ git push origin feature/presence-system
 **Description**: Configure Expo Notifications in mobile app  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/push-notifications
 
@@ -2528,7 +2528,7 @@ git push origin feature/push-notifications
 **Description**: Queue messages when offline and sync on reconnect  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/offline-support
 
@@ -2621,7 +2621,7 @@ git push origin feature/offline-support
 **Description**: Improve performance for large message lists  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/performance-optimizations
 
@@ -2708,7 +2708,7 @@ git push origin feature/performance-optimizations
 **Description**: Catch and handle errors gracefully  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/error-handling
 
@@ -2837,7 +2837,7 @@ git push origin feature/error-handling
 **Description**: Set up environment variables in Railway dashboard  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b deployment/backend-railway
 
@@ -2982,7 +2982,7 @@ git push origin deployment/backend-railway
 **Description**: Point mobile app to deployed Railway backend  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b config/production-backend
 
@@ -3043,7 +3043,7 @@ git push origin config/production-backend
 **Description**: Lambda function to process notification queue  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/aws-lambdas
 
@@ -3130,7 +3130,7 @@ git push origin feature/aws-lambdas
 **Description**: Test all MVP features systematically  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b testing/e2e-manual
 
@@ -3244,7 +3244,7 @@ git push origin testing/e2e-manual
 **Description**: Document setup, features, and deployment  
  **Git Actions**:
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b docs/comprehensive-readme
 
@@ -3593,7 +3593,7 @@ git push origin docs/comprehensive-readme
 
 \# Start new feature
 
-git checkout main && git pull
+git checkout master && git pull
 
 git checkout \-b feature/feature-name
 
@@ -3611,7 +3611,7 @@ git push origin feature/feature-name
 
 \# Return to main
 
-git checkout main && git pull
+git checkout master && git pull
 
 ### **Development Commands**
 

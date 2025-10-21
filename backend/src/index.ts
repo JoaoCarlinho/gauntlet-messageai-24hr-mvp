@@ -5,6 +5,8 @@ import prisma from './config/database';
 import { configureAWS } from './config/aws';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/users.routes';
+import conversationRoutes from './routes/conversations.routes';
+import messageRoutes from './routes/messages.routes';
 
 // Load environment variables
 dotenv.config();
@@ -44,6 +46,8 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/conversations', conversationRoutes);
+app.use('/api/v1/conversations', messageRoutes);
 
 // API info endpoint
 app.get('/api/v1', (req, res) => {
@@ -54,6 +58,8 @@ app.get('/api/v1', (req, res) => {
       health: '/health',
       auth: '/api/v1/auth',
       users: '/api/v1/users',
+      conversations: '/api/v1/conversations',
+      messages: '/api/v1/conversations/:id/messages',
       register: 'POST /api/v1/auth/register',
       login: 'POST /api/v1/auth/login',
       refresh: 'POST /api/v1/auth/refresh',
@@ -62,7 +68,13 @@ app.get('/api/v1', (req, res) => {
       getCurrentUser: 'GET /api/v1/users/me',
       updateProfile: 'PUT /api/v1/users/me',
       uploadAvatar: 'POST /api/v1/users/avatar',
-      searchUsers: 'GET /api/v1/users/search'
+      searchUsers: 'GET /api/v1/users/search',
+      getConversations: 'GET /api/v1/conversations',
+      createConversation: 'POST /api/v1/conversations',
+      getConversation: 'GET /api/v1/conversations/:id',
+      getMessages: 'GET /api/v1/conversations/:id/messages',
+      createMessage: 'POST /api/v1/conversations/:id/messages',
+      uploadMessageMedia: 'POST /api/v1/conversations/:id/messages/upload'
     }
   });
 });
