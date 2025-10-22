@@ -45,7 +45,7 @@ class NotificationManager {
       // Request permissions
       await this.requestPermissions();
       
-      // Get push token
+      // Get push token (will handle auth gracefully)
       await this.getPushToken();
       
       // Set up listeners
@@ -56,6 +56,17 @@ class NotificationManager {
     } catch (error) {
       console.error('Failed to initialize notification system:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Register push token with backend after authentication
+   * This should be called after user logs in
+   */
+  async registerPushTokenAfterAuth(): Promise<void> {
+    if (this.pushToken) {
+      console.log('Registering push token with backend after authentication...');
+      await this.sendTokenToBackend(this.pushToken);
     }
   }
 
@@ -156,6 +167,11 @@ class NotificationManager {
     } catch (error) {
       // If axios error with response, surface status for debugging
       if (error?.response) {
+        // Handle authentication errors gracefully
+        if (error.response.status === 401) {
+          console.log('Push token not sent - user not authenticated yet. Will retry after login.');
+          return false;
+        }
         console.warn('Error sending push token to backend:', error.response.status, error.response.data);
         return false;
       }

@@ -132,7 +132,19 @@ export const conversationsLogic = kea({
     // Load conversations listener
     loadConversations: async () => {
       try {
+        actions.setLoading(true);
+        actions.setError(null);
+        
         const conversations = await conversationsAPI.getConversations();
+        
+        // Handle empty conversations list gracefully
+        if (!conversations || conversations.length === 0) {
+          console.log('No conversations found - user has no conversations yet');
+          actions.setConversations([]);
+          actions.setLoading(false);
+          actions.setError(null);
+          return;
+        }
         
         // Sort conversations by last message timestamp (most recent first)
         const sortedConversations = conversations.sort((a, b) => {

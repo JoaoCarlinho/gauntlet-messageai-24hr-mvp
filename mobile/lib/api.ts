@@ -138,7 +138,14 @@ apiClient.interceptors.response.use(
       try {
         const refreshToken = await tokenManager.getRefreshToken();
         if (!refreshToken) {
-          // No refresh token, redirect to login
+          // No refresh token - handle gracefully for push token registration
+          // Don't throw error for push token endpoints as they're not critical
+          if (originalRequest.url?.includes('/push-token')) {
+            console.warn('Push token registration failed - no authentication tokens available');
+            return Promise.reject(error);
+          }
+          
+          // For other endpoints, clear tokens and redirect to login
           await tokenManager.clearTokens();
           await tokenManager.clearUserData();
           throw new Error('No refresh token available');
@@ -172,25 +179,81 @@ apiClient.interceptors.response.use(
 // Authentication API
 export const authAPI = {
   async login(credentials: LoginRequest): Promise<AuthResponse> {
-    const response = await apiClient.post<ApiResponse<AuthResponse>>('/auth/login', credentials);
-    if (response.data.success && response.data.data) {
-      const authData = response.data.data;
-      await tokenManager.setTokens(authData.accessToken, authData.refreshToken);
-      await tokenManager.setUserData(authData.user);
-      return authData;
+    try {
+      const response = await apiClient.post('/auth/login', credentials);
+      
+      // Handle backend response structure: { message, user, tokens }
+      if (response.data.user && response.data.tokens) {
+        const authData = {
+          user: response.data.user,
+          accessToken: response.data.tokens.accessToken,
+          refreshToken: response.data.tokens.refreshToken
+        };
+        await tokenManager.setTokens(authData.accessToken, authData.refreshToken);
+        await tokenManager.setUserData(authData.user);
+        return authData;
+      }
+      
+      // Handle error response structure: { error, message }
+      throw new Error(response.data.error || response.data.message || 'Login failed');
+    } catch (error: any) {
+      // Handle specific HTTP status codes
+      if (error.response?.status === 401) {
+        throw new Error('Invalid email or password. Please check your credentials and try again.');
+      } else if (error.response?.status === 400) {
+        const message = error.response.data?.message || error.response.data?.error;
+        if (message?.includes('validation') || message?.includes('required')) {
+          throw new Error('Please check your email and password format.');
+        }
+        throw new Error(message || 'Invalid login information.');
+      } else if (error.response?.status === 429) {
+        throw new Error('Too many login attempts. Please wait a moment and try again.');
+      } else if (error.response?.status >= 500) {
+        throw new Error('Server error. Please try again later.');
+      }
+      
+      // Re-throw the original error if it's not an HTTP error
+      throw error;
     }
-    throw new Error(response.data.error || 'Login failed');
   },
 
   async register(userData: RegisterRequest): Promise<AuthResponse> {
-    const response = await apiClient.post<ApiResponse<AuthResponse>>('/auth/register', userData);
-    if (response.data.success && response.data.data) {
-      const authData = response.data.data;
-      await tokenManager.setTokens(authData.accessToken, authData.refreshToken);
-      await tokenManager.setUserData(authData.user);
-      return authData;
+    try {
+      const response = await apiClient.post('/auth/register', userData);
+      
+      // Handle backend response structure: { message, user, tokens }
+      if (response.data.user && response.data.tokens) {
+        const authData = {
+          user: response.data.user,
+          accessToken: response.data.tokens.accessToken,
+          refreshToken: response.data.tokens.refreshToken
+        };
+        await tokenManager.setTokens(authData.accessToken, authData.refreshToken);
+        await tokenManager.setUserData(authData.user);
+        return authData;
+      }
+      
+      // Handle error response structure: { error, message }
+      throw new Error(response.data.error || response.data.message || 'Registration failed');
+    } catch (error: any) {
+      // Handle specific HTTP status codes
+      if (error.response?.status === 409) {
+        throw new Error('An account with this email already exists. Please try logging in instead.');
+      } else if (error.response?.status === 400) {
+        const message = error.response.data?.message || error.response.data?.error;
+        if (message?.includes('validation') || message?.includes('required')) {
+          throw new Error('Please check your information and try again.');
+        }
+        throw new Error(message || 'Invalid registration information.');
+      } else if (error.response?.status === 429) {
+        throw new Error('Too many registration attempts. Please wait a moment and try again.');
+      } else if (error.response?.status >= 500) {
+        throw new Error('Server error. Please try again later.');
+      }
+      
+      // Re-throw the original error if it's not an HTTP error
+      throw error;
     }
-    throw new Error(response.data.error || 'Registration failed');
   },
 
   async refreshToken(): Promise<{ accessToken: string; refreshToken: string }> {
@@ -199,16 +262,22 @@ export const authAPI = {
       throw new Error('No refresh token available');
     }
 
-    const response = await apiClient.post<ApiResponse<{ accessToken: string; refreshToken: string }>>('/auth/refresh', {
+    const response = await apiClient.post('/auth/refresh', {
       refreshToken,
     });
 
-    if (response.data.success && response.data.data) {
-      const tokens = response.data.data;
+    // Handle backend response structure: { message, accessToken, expiresIn }
+    if (response.data.accessToken) {
+      const tokens = {
+        accessToken: response.data.accessToken,
+        refreshToken: refreshToken // Keep the existing refresh token
+      };
       await tokenManager.setTokens(tokens.accessToken, tokens.refreshToken);
       return tokens;
     }
-    throw new Error(response.data.error || 'Token refresh failed');
+    
+    // Handle error response structure: { error, message }
+    throw new Error(response.data.error || response.data.message || 'Token refresh failed');
   },
 
   async logout(): Promise<void> {
@@ -273,11 +342,35 @@ export const usersAPI = {
 // Conversations API
 export const conversationsAPI = {
   async getConversations(): Promise<ConversationWithLastMessage[]> {
-    const response = await apiClient.get<ApiResponse<ConversationWithLastMessage[]>>('/conversations');
-    if (response.data.success && response.data.data) {
-      return response.data.data;
+    try {
+      const response = await apiClient.get('/conversations');
+      
+      // Handle different response formats from backend
+      if (response.data && response.data.conversations !== undefined) {
+        // Backend returns: { message: string, conversations: [], count: number }
+        return response.data.conversations || [];
+      } else if (response.data && response.data.success && response.data.data) {
+        // Legacy format: { success: true, data: [] }
+        return response.data.data;
+      } else if (response.data && Array.isArray(response.data)) {
+        // Direct array response
+        return response.data;
+      } else {
+        // No conversations found - return empty array instead of throwing error
+        console.log('No conversations found - returning empty array');
+        return [];
+      }
+    } catch (error: any) {
+      // If it's a 404 or empty response, return empty array instead of throwing
+      if (error?.response?.status === 404 || error?.response?.status === 200) {
+        console.log('No conversations endpoint or empty response - returning empty array');
+        return [];
+      }
+      
+      // For other errors, still throw to maintain error handling
+      console.error('Error fetching conversations:', error);
+      throw new Error(error?.response?.data?.error || error?.message || 'Failed to get conversations');
     }
-    throw new Error(response.data.error || 'Failed to get conversations');
   },
 
   async getConversation(conversationId: string): Promise<Conversation> {
