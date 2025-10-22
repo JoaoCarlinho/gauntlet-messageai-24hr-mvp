@@ -1759,12 +1759,12 @@ git checkout \-b feature/chat-room-ui
 
 **Implementation Steps**:
 
-* \[ \] Create bubble with different styles for sent/received  
-* \[ \] Display message content  
-* \[ \] Show timestamp below bubble  
-* \[ \] Add read receipts (checkmarks)  
-* \[ \] Display message status (sending, sent, delivered, read)  
-* \[ \] Support text and image types
+* \[x\] Create bubble with different styles for sent/received  
+* \[x\] Display message content  
+* \[x\] Show timestamp below bubble  
+* \[x\] Add read receipts (checkmarks)  
+* \[x\] Display message status (sending, sent, delivered, read)  
+* \[x\] Support text and image types
 
 ---
 
@@ -1777,11 +1777,11 @@ git checkout \-b feature/chat-room-ui
 
 **Implementation Steps**:
 
-* \[ \] Create TextInput with auto-growing height  
-* \[ \] Add send button (disabled when empty)  
-* \[ \] Add image picker button  
-* \[ \] Handle input focus/blur  
-* \[ \] Trigger typing indicators
+* \[x\] Create TextInput with auto-growing height  
+* \[x\] Add send button (disabled when empty)  
+* \[x\] Add image picker button  
+* \[x\] Handle input focus/blur  
+* \[x\] Trigger typing indicators
 
 ---
 
@@ -1794,10 +1794,10 @@ git checkout \-b feature/chat-room-ui
 
 **Implementation Steps**:
 
-* \[ \] Display animated dots  
-* \[ \] Show typing user's name  
-* \[ \] Auto-hide after timeout  
-* \[ \] Support multiple users typing
+* \[x\] Display animated dots  
+* \[x\] Show typing user's name  
+* \[x\] Auto-hide after timeout  
+* \[x\] Support multiple users typing
 
 ---
 
@@ -1813,8 +1813,8 @@ git push origin feature/chat-room-ui
 
 **Your Actions**:
 
-* \[ \] Create PR \#10: "Chat Room UI Components"  
-* \[ \] Merge to main
+* \[x\] Create PR \#10: "Chat Room UI Components"  
+* \[x\] Merge to main
 
 ---
 
@@ -1835,11 +1835,11 @@ git checkout \-b feature/sqlite-storage
 
 **Implementation Steps**:
 
-* \[ \] Create Users table  
-* \[ \] Create Conversations table  
-* \[ \] Create Messages table  
-* \[ \] Create ReadReceipts table  
-* \[ \] Add indexes for performance
+* \[x\] Create Users table  
+* \[x\] Create Conversations table  
+* \[x\] Create Messages table  
+* \[x\] Create ReadReceipts table  
+* \[x\] Add indexes for performance
 
 ---
 
@@ -1852,11 +1852,11 @@ git checkout \-b feature/sqlite-storage
 
 **Implementation Steps**:
 
-* \[ \] Create functions to insert/update/delete messages  
-* \[ \] Add queries to fetch conversation messages  
-* \[ \] Create functions to update message status  
-* \[ \] Add conversation CRUD operations  
-* \[ \] Include read receipt management
+* \[x\] Create functions to insert/update/delete messages  
+* \[x\] Add queries to fetch conversation messages  
+* \[x\] Create functions to update message status  
+* \[x\] Add conversation CRUD operations  
+* \[x\] Include read receipt management
 
 ---
 
