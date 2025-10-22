@@ -578,9 +578,9 @@ export const getUsersWithPushTokens = async (userIds?: string[]): Promise<Array<
   try {
     const whereClause = userIds ? {
       id: { in: userIds },
-      pushTokens: { not: { equals: [] } }
+      pushTokens: { isEmpty: false }
     } : {
-      pushTokens: { not: { equals: [] } }
+      pushTokens: { isEmpty: false }
     };
 
     const users = await prisma.user.findMany({
