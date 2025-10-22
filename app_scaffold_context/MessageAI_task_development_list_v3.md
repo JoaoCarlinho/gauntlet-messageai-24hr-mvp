@@ -1759,12 +1759,12 @@ git checkout \-b feature/chat-room-ui
 
 **Implementation Steps**:
 
-* \[ \] Create bubble with different styles for sent/received  
-* \[ \] Display message content  
-* \[ \] Show timestamp below bubble  
-* \[ \] Add read receipts (checkmarks)  
-* \[ \] Display message status (sending, sent, delivered, read)  
-* \[ \] Support text and image types
+* \[x\] Create bubble with different styles for sent/received  
+* \[x\] Display message content  
+* \[x\] Show timestamp below bubble  
+* \[x\] Add read receipts (checkmarks)  
+* \[x\] Display message status (sending, sent, delivered, read)  
+* \[x\] Support text and image types
 
 ---
 
@@ -1777,11 +1777,11 @@ git checkout \-b feature/chat-room-ui
 
 **Implementation Steps**:
 
-* \[ \] Create TextInput with auto-growing height  
-* \[ \] Add send button (disabled when empty)  
-* \[ \] Add image picker button  
-* \[ \] Handle input focus/blur  
-* \[ \] Trigger typing indicators
+* \[x\] Create TextInput with auto-growing height  
+* \[x\] Add send button (disabled when empty)  
+* \[x\] Add image picker button  
+* \[x\] Handle input focus/blur  
+* \[x\] Trigger typing indicators
 
 ---
 
@@ -1794,10 +1794,10 @@ git checkout \-b feature/chat-room-ui
 
 **Implementation Steps**:
 
-* \[ \] Display animated dots  
-* \[ \] Show typing user's name  
-* \[ \] Auto-hide after timeout  
-* \[ \] Support multiple users typing
+* \[x\] Display animated dots  
+* \[x\] Show typing user's name  
+* \[x\] Auto-hide after timeout  
+* \[x\] Support multiple users typing
 
 ---
 
