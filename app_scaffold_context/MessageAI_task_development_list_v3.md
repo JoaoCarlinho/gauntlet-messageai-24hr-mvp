@@ -1869,9 +1869,9 @@ git checkout \-b feature/sqlite-storage
 
 **Implementation Steps**:
 
-* \[ \] Open/create SQLite database on mount  
-* \[ \] Run migrations if needed  
-* \[ \] Handle database errors gracefully
+* \[x\] Open/create SQLite database on mount  
+* \[x\] Run migrations if needed  
+* \[x\] Handle database errors gracefully
 
 ---
 
@@ -1887,8 +1887,8 @@ git push origin feature/sqlite-storage
 
 **Your Actions**:
 
-* \[ \] Create PR \#11: "Local SQLite Database"  
-* \[ \] Merge to main
+* \[x\] Create PR \#11: "Local SQLite Database"  
+* \[x\] Merge to main
 
 ---
 
@@ -1909,11 +1909,11 @@ git checkout \-b feature/socket-client
 
 **Implementation Steps**:
 
-* \[ \] Initialize Socket.io client with auth token  
-* \[ \] Configure transports: `['polling', 'websocket']`  
-* \[ \] Add connection/disconnection handlers  
-* \[ \] Add reconnection logic with exponential backoff  
-* \[ \] Show connection status in UI
+* \[x\] Initialize Socket.io client with auth token  
+* \[x\] Configure transports: `['polling', 'websocket']`  
+* \[x\] Add connection/disconnection handlers  
+* \[x\] Add reconnection logic with exponential backoff  
+* \[x\] Show connection status in UI
 
 ---
 
@@ -1926,11 +1926,11 @@ git checkout \-b feature/socket-client
 
 **Implementation Steps**:
 
-* \[ \] Create hook that manages socket connection  
-* \[ \] Add functions to emit events (send\_message, typing\_start, etc.)  
-* \[ \] Add listeners for incoming events  
-* \[ \] Return socket state (connected, connecting, disconnected)  
-* \[ \] Clean up listeners on unmount
+* \[x\] Create hook that manages socket connection  
+* \[x\] Add functions to emit events (send\_message, typing\_start, etc.)  
+* \[x\] Add listeners for incoming events  
+* \[x\] Return socket state (connected, connecting, disconnected)  
+* \[x\] Clean up listeners on unmount
 
 ---
 
@@ -1943,11 +1943,11 @@ git checkout \-b feature/socket-client
 
 **Implementation Steps**:
 
-* \[ \] Create Kea logic for messages by conversation  
-* \[ \] Add action: sendMessage (optimistic)  
-* \[ \] Add listener: handle message\_received from socket  
-* \[ \] Update message status on delivery/read events  
-* \[ \] Sync with local SQLite database
+* \[x\] Create Kea logic for messages by conversation  
+* \[x\] Add action: sendMessage (optimistic)  
+* \[x\] Add listener: handle message\_received from socket  
+* \[x\] Update message status on delivery/read events  
+* \[x\] Sync with local SQLite database
 
 ---
 
@@ -1960,11 +1960,11 @@ git checkout \-b feature/socket-client
 
 **Implementation Steps**:
 
-* \[ \] Load messages from local DB on mount  
-* \[ \] Subscribe to socket events for new messages  
-* \[ \] Provide sendMessage function  
-* \[ \] Handle optimistic updates  
-* \[ \] Sync read receipts
+* \[x\] Load messages from local DB on mount  
+* \[x\] Subscribe to socket events for new messages  
+* \[x\] Provide sendMessage function  
+* \[x\] Handle optimistic updates  
+* \[x\] Sync read receipts
 
 ---
 
