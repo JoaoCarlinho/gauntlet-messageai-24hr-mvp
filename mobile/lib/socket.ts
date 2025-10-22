@@ -33,7 +33,7 @@ class SocketManager {
 
   constructor(config: Partial<SocketConfig> = {}) {
     this.config = {
-      url: process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001',
+      url: process.env.EXPO_PUBLIC_API_URL || 'https://gauntlet-messageai-24hr-mvp-production.up.railway.app',
       transports: ['polling', 'websocket'],
       timeout: 20000,
       reconnection: true,

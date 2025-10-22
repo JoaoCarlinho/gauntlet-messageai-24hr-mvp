@@ -21,7 +21,7 @@ import {
 } from '../types';
 
 // Environment configuration
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://gauntlet-messageai-24hr-mvp-production.up.railway.app';
 
 // Storage keys
 const STORAGE_KEYS = {

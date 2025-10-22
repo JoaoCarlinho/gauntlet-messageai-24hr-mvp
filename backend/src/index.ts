@@ -22,9 +22,33 @@ async function initializeDatabase() {
     // Use enhanced connection with retry logic
     await connectWithRetry();
     
-    // Check if User table exists
-    const userCount = await prisma.user.count();
-    logger.info(`Found ${userCount} users in database`);
+    // Check if User table exists and fix schema issues
+    try {
+      const userCount = await prisma.user.count();
+      logger.info(`Found ${userCount} users in database`);
+    } catch (schemaError) {
+      logger.info('Database schema issue detected, attempting to fix...');
+      
+      // Check if pushTokens column is missing
+      if (schemaError instanceof Error && schemaError.message.includes('pushTokens')) {
+        logger.info('Adding missing pushTokens column to User table...');
+        try {
+          await prisma.$executeRaw`
+            ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "pushTokens" TEXT[] DEFAULT ARRAY[]::TEXT[]
+          `;
+          logger.info('✅ pushTokens column added successfully');
+          
+          // Retry user count
+          const userCount = await prisma.user.count();
+          logger.info(`Found ${userCount} users in database after schema fix`);
+        } catch (fixError) {
+          logger.logError(fixError as Error, { operation: 'schema_fix' });
+          throw fixError;
+        }
+      } else {
+        throw schemaError;
+      }
+    }
     
   } catch (error) {
     logger.logError(error as Error, { operation: 'database_initialization' });
