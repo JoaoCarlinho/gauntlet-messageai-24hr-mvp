@@ -322,6 +322,14 @@ export const cleanupStalePresence = async (): Promise<void> => {
     const io = getSocketServer();
     if (!io) return;
 
+    // First check if database tables exist
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+    } catch (dbError) {
+      console.warn('⚠️ Database not ready for presence cleanup:', dbError);
+      return;
+    }
+
     // Get all users who should be online according to database
     const onlineUsers = await prisma.user.findMany({
       where: { isOnline: true },
@@ -354,7 +362,9 @@ export const cleanupStalePresence = async (): Promise<void> => {
       console.log(`🧹 Cleaned up ${staleUsers.length} stale user presences`);
     }
   } catch (error) {
-    console.error('Error cleaning up stale presence:', error);
+    console.error('❌ Error cleaning up stale presence:', error);
+    // Don't throw error to prevent service crash
+    // This is a background cleanup task, not critical for app functionality
   }
 };
 

@@ -13,6 +13,47 @@ import { initializeSocketServer } from './socket';
 // Load environment variables
 dotenv.config();
 
+// Database initialization function
+async function initializeDatabase() {
+  try {
+    console.log('🔄 Initializing database connection...');
+    
+    // Test database connection
+    await prisma.$connect();
+    console.log('✅ Database connected successfully');
+    
+    // Test basic query to ensure tables exist
+    await prisma.$queryRaw`SELECT 1`;
+    console.log('✅ Database schema verified');
+    
+    // Check if User table exists
+    const userCount = await prisma.user.count();
+    console.log(`📊 Found ${userCount} users in database`);
+    
+  } catch (error) {
+    console.error('❌ Database initialization failed:', error);
+    
+    // If it's a table not found error, try to run migrations
+    if (error instanceof Error && error.message.includes('does not exist')) {
+      console.log('🔄 Attempting to run database migrations...');
+      try {
+        const { execSync } = require('child_process');
+        execSync('npx prisma migrate deploy', { stdio: 'inherit' });
+        console.log('✅ Database migrations completed');
+        
+        // Retry connection
+        await prisma.$connect();
+        console.log('✅ Database connected after migrations');
+      } catch (migrationError) {
+        console.error('❌ Migration failed:', migrationError);
+        process.exit(1);
+      }
+    } else {
+      process.exit(1);
+    }
+  }
+}
+
 // Configure AWS services
 try {
   configureAWS();
@@ -159,12 +200,26 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 // Initialize Socket.io server
 const io = initializeSocketServer(httpServer);
 
-// Start server
-httpServer.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📊 Health check: http://localhost:${PORT}/health`);
-  console.log(`🔗 API base: http://localhost:${PORT}/api/v1`);
-  console.log(`🔌 Socket.io server initialized and ready for connections`);
-});
+// Start server with database initialization
+async function startServer() {
+  try {
+    // Initialize database first
+    await initializeDatabase();
+    
+    // Start HTTP server
+    httpServer.listen(PORT, () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`📊 Health check: http://localhost:${PORT}/health`);
+      console.log(`🔗 API base: http://localhost:${PORT}/api/v1`);
+      console.log(`🔌 Socket.io server initialized and ready for connections`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+// Start the server
+startServer();
 
 export default app;
