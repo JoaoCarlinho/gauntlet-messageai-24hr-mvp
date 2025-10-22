@@ -21,22 +21,117 @@ async function fixDatabase() {
     await prisma.$connect();
     console.log('✅ Database connected successfully');
     
-    // Check if pushTokens column exists
-    console.log('🔍 Checking for pushTokens column...');
-    const result = await prisma.$queryRaw`
-      SELECT column_name 
-      FROM information_schema.columns 
-      WHERE table_name = 'User' AND column_name = 'pushTokens'
+    // Check if User table exists
+    console.log('🔍 Checking if User table exists...');
+    const tableExists = await prisma.$queryRaw`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'User'
+      );
     `;
     
-    if (result.length === 0) {
-      console.log('⚠️  pushTokens column missing, adding it...');
+    if (!tableExists[0].exists) {
+      console.log('⚠️  User table does not exist, creating it...');
+      // Create the User table with all required columns
       await prisma.$executeRaw`
-        ALTER TABLE "User" ADD COLUMN "pushTokens" TEXT[] DEFAULT ARRAY[]::TEXT[]
+        CREATE TABLE "User" (
+          "id" TEXT NOT NULL,
+          "email" TEXT NOT NULL,
+          "phoneNumber" TEXT,
+          "password" TEXT NOT NULL,
+          "displayName" TEXT NOT NULL,
+          "avatarUrl" TEXT,
+          "lastSeen" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "isOnline" BOOLEAN NOT NULL DEFAULT false,
+          "pushTokens" TEXT[] DEFAULT ARRAY[]::TEXT[],
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL,
+          CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+        );
       `;
-      console.log('✅ pushTokens column added successfully');
+      
+      // Create unique indexes
+      await prisma.$executeRaw`CREATE UNIQUE INDEX "User_email_key" ON "User"("email");`;
+      await prisma.$executeRaw`CREATE UNIQUE INDEX "User_phoneNumber_key" ON "User"("phoneNumber");`;
+      
+      console.log('✅ User table created successfully');
     } else {
-      console.log('✅ pushTokens column already exists');
+      console.log('✅ User table exists');
+      
+      // Check if pushTokens column exists
+      console.log('🔍 Checking for pushTokens column...');
+      const columnExists = await prisma.$queryRaw`
+        SELECT EXISTS (
+          SELECT FROM information_schema.columns 
+          WHERE table_name = 'User' AND column_name = 'pushTokens'
+        );
+      `;
+      
+      if (!columnExists[0].exists) {
+        console.log('⚠️  pushTokens column missing, adding it...');
+        await prisma.$executeRaw`
+          ALTER TABLE "User" ADD COLUMN "pushTokens" TEXT[] DEFAULT ARRAY[]::TEXT[]
+        `;
+        console.log('✅ pushTokens column added successfully');
+      } else {
+        console.log('✅ pushTokens column already exists');
+      }
+    }
+    
+    // Check and create other tables if needed
+    console.log('🔍 Checking other tables...');
+    
+    // Conversation table
+    const conversationExists = await prisma.$queryRaw`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'Conversation'
+      );
+    `;
+    
+    if (!conversationExists[0].exists) {
+      console.log('⚠️  Conversation table missing, creating it...');
+      await prisma.$executeRaw`
+        CREATE TABLE "Conversation" (
+          "id" TEXT NOT NULL,
+          "type" TEXT NOT NULL,
+          "name" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL,
+          CONSTRAINT "Conversation_pkey" PRIMARY KEY ("id")
+        );
+      `;
+      console.log('✅ Conversation table created');
+    }
+    
+    // Message table
+    const messageExists = await prisma.$queryRaw`
+      SELECT EXISTS (
+        SELECT FROM information_schema.tables 
+        WHERE table_schema = 'public' 
+        AND table_name = 'Message'
+      );
+    `;
+    
+    if (!messageExists[0].exists) {
+      console.log('⚠️  Message table missing, creating it...');
+      await prisma.$executeRaw`
+        CREATE TABLE "Message" (
+          "id" TEXT NOT NULL,
+          "conversationId" TEXT NOT NULL,
+          "senderId" TEXT NOT NULL,
+          "content" TEXT NOT NULL,
+          "type" TEXT NOT NULL DEFAULT 'text',
+          "mediaUrl" TEXT,
+          "status" TEXT NOT NULL DEFAULT 'sent',
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL,
+          CONSTRAINT "Message_pkey" PRIMARY KEY ("id")
+        );
+      `;
+      console.log('✅ Message table created');
     }
     
     // Run Prisma migrations
@@ -62,6 +157,7 @@ async function fixDatabase() {
     
   } catch (error) {
     console.error('❌ Database fix failed:', error);
+    console.error('Error details:', error.message);
     process.exit(1);
   } finally {
     await prisma.$disconnect();

@@ -13,9 +13,9 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useConversations } from '../hooks/useConversations';
-import { usersAPI } from '../lib/api';
-import { User, CreateGroupConversationData } from '../types';
+import { useConversations } from '../../hooks/useConversations';
+import { usersAPI } from '../../lib/api';
+import { User, CreateGroupConversationData } from '../../types';
 
 export default function NewGroupScreen() {
   const [groupName, setGroupName] = useState('');
