@@ -9,3 +9,5 @@ export { useMessages } from './useMessages';
 export { default as useMessagesHook } from './useMessages';
 export { usePresence } from './usePresence';
 export { default as usePresenceHook } from './usePresence';
+export { useNotifications } from './useNotifications';
+export { default as useNotificationsHook } from './useNotifications';

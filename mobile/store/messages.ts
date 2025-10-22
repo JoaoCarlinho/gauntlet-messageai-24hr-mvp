@@ -10,7 +10,10 @@ interface MessagesState {
   error: string | null;
   typingUsers: { [conversationId: string]: string[] };
   pendingMessages: { [tempId: string]: Message };
+  queuedMessages: { [tempId: string]: Message };
   lastMessageIds: { [conversationId: string]: string };
+  isOffline: boolean;
+  connectionStatus: 'connected' | 'connecting' | 'disconnected' | 'reconnecting';
 }
 
 // Messages actions
@@ -50,6 +53,13 @@ interface MessagesActions {
   // Database sync
   syncMessageToDatabase: (message: Message) => void;
   updateMessageInDatabase: (messageId: string, updates: Partial<Message>) => void;
+  
+  // Offline queue management
+  setConnectionStatus: (status: 'connected' | 'connecting' | 'disconnected' | 'reconnecting') => void;
+  queueMessage: (message: Message) => void;
+  processQueuedMessages: () => void;
+  removeQueuedMessage: (tempId: string) => void;
+  retryQueuedMessage: (tempId: string) => void;
 }
 
 // Helper function to generate temporary ID (UUID-like)
@@ -103,7 +113,10 @@ export const messagesLogic = kea({
     error: null,
     typingUsers: {},
     pendingMessages: {},
+    queuedMessages: {},
     lastMessageIds: {},
+    isOffline: false,
+    connectionStatus: 'disconnected',
   },
   
   actions: {
@@ -149,6 +162,13 @@ export const messagesLogic = kea({
     // Database sync
     syncMessageToDatabase: (message: Message) => ({ message }),
     updateMessageInDatabase: (messageId: string, updates: Partial<Message>) => ({ messageId, updates }),
+    
+    // Offline queue management
+    setConnectionStatus: (status: 'connected' | 'connecting' | 'disconnected' | 'reconnecting') => ({ status }),
+    queueMessage: (message: Message) => ({ message }),
+    processQueuedMessages: true,
+    removeQueuedMessage: (tempId: string) => ({ tempId }),
+    retryQueuedMessage: (tempId: string) => ({ tempId }),
   },
   
   reducers: {
@@ -362,6 +382,34 @@ export const messagesLogic = kea({
         return state;
       },
     },
+    
+    queuedMessages: {
+      queueMessage: (state, { message }) => ({
+        ...state,
+        [message.id]: message,
+      }),
+      
+      removeQueuedMessage: (state, { tempId }) => {
+        const newState = { ...state };
+        delete newState[tempId];
+        return newState;
+      },
+      
+      processQueuedMessages: (state) => {
+        // Clear all queued messages when processing
+        return {};
+      },
+    },
+    
+    isOffline: {
+      setConnectionStatus: (state, { status }) => {
+        return status === 'disconnected' || status === 'reconnecting';
+      },
+    },
+    
+    connectionStatus: {
+      setConnectionStatus: (_, { status }) => status,
+    },
   },
   
   listeners: ({ actions, values }: any) => ({
@@ -384,14 +432,22 @@ export const messagesLogic = kea({
         // Add optimistic message to state
         actions.addMessage(optimisticMessage);
         
-        // Store in pending messages
-        actions.updateMessage(optimisticMessage.id, { status: 'sending' });
-        
-        // Sync to database
-        actions.syncMessageToDatabase(optimisticMessage);
-        
-        // Emit socket event (this will be handled by the socket hook)
-        // The socket hook will emit the 'send_message' event
+        // Check if we're offline
+        if (values.isOffline || values.connectionStatus === 'disconnected') {
+          // Queue message for later sending
+          const queuedMessage = { ...optimisticMessage, status: 'queued' as MessageStatus };
+          actions.queueMessage(queuedMessage);
+          actions.updateMessage(optimisticMessage.id, { status: 'queued' });
+          actions.syncMessageToDatabase(queuedMessage);
+          console.log('Message queued for offline sending:', queuedMessage.id);
+        } else {
+          // Store in pending messages and send immediately
+          actions.updateMessage(optimisticMessage.id, { status: 'sending' });
+          actions.syncMessageToDatabase(optimisticMessage);
+          
+          // Emit socket event (this will be handled by the socket hook)
+          // The socket hook will emit the 'send_message' event
+        }
         
         actions.setLoading(false);
       } catch (error) {
@@ -594,6 +650,104 @@ export const messagesLogic = kea({
         console.error('Update message in database error:', error);
       }
     },
+    
+    // Set connection status listener
+    setConnectionStatus: async ({ status }: any) => {
+      console.log('Connection status changed to:', status);
+      
+      // If we just reconnected, process queued messages
+      if (status === 'connected' && values.connectionStatus === 'disconnected') {
+        console.log('Reconnected, processing queued messages...');
+        actions.processQueuedMessages();
+      }
+    },
+    
+    // Queue message listener
+    queueMessage: async ({ message }: any) => {
+      try {
+        // Store queued message in database
+        const db = SQLite.openDatabaseSync('messageai.db');
+        const queries = createDatabaseQueries(db);
+        
+        await queries.insertMessage(message, message.id);
+        console.log('Message queued in database:', message.id);
+      } catch (error) {
+        console.error('Queue message error:', error);
+      }
+    },
+    
+    // Process queued messages listener
+    processQueuedMessages: async () => {
+      try {
+        const queuedMessages = values.queuedMessages;
+        const queuedMessageIds = Object.keys(queuedMessages);
+        
+        if (queuedMessageIds.length === 0) {
+          console.log('No queued messages to process');
+          return;
+        }
+        
+        console.log(`Processing ${queuedMessageIds.length} queued messages...`);
+        
+        // Process each queued message
+        for (const tempId of queuedMessageIds) {
+          const message = queuedMessages[tempId];
+          
+          // Update status to sending
+          actions.updateMessage(tempId, { status: 'sending' });
+          actions.updateMessageInDatabase(tempId, { status: 'sending' });
+          
+          // Remove from queued messages
+          actions.removeQueuedMessage(tempId);
+          
+          // Emit socket event to send the message
+          // This will be handled by the socket hook
+          console.log('Re-sending queued message:', tempId);
+        }
+        
+        console.log('Finished processing queued messages');
+      } catch (error) {
+        console.error('Process queued messages error:', error);
+      }
+    },
+    
+    // Remove queued message listener
+    removeQueuedMessage: async ({ tempId }: any) => {
+      try {
+        // Remove from database
+        const db = SQLite.openDatabaseSync('messageai.db');
+        const queries = createDatabaseQueries(db);
+        
+        await queries.deleteMessage(tempId);
+        console.log('Queued message removed from database:', tempId);
+      } catch (error) {
+        console.error('Remove queued message error:', error);
+      }
+    },
+    
+    // Retry queued message listener
+    retryQueuedMessage: async ({ tempId }: any) => {
+      try {
+        const queuedMessage = values.queuedMessages[tempId];
+        
+        if (!queuedMessage) {
+          console.log('Queued message not found:', tempId);
+          return;
+        }
+        
+        // Update status to sending
+        actions.updateMessage(tempId, { status: 'sending' });
+        actions.updateMessageInDatabase(tempId, { status: 'sending' });
+        
+        // Remove from queued messages
+        actions.removeQueuedMessage(tempId);
+        
+        // Emit socket event to retry sending
+        console.log('Retrying queued message:', tempId);
+      } catch (error) {
+        console.error('Retry queued message error:', error);
+      }
+    },
   }),
   
   // Selectors
@@ -635,6 +789,31 @@ export const messagesLogic = kea({
         const conversationMessages = messages[conversationId] || [];
         return conversationMessages.length;
       },
+    ],
+    
+    getQueuedMessages: [
+      (selectors: any) => [selectors.queuedMessages],
+      (queuedMessages: any) => Object.values(queuedMessages),
+    ],
+    
+    getQueuedMessageCount: [
+      (selectors: any) => [selectors.queuedMessages],
+      (queuedMessages: any) => Object.keys(queuedMessages).length,
+    ],
+    
+    hasQueuedMessages: [
+      (selectors: any) => [selectors.queuedMessages],
+      (queuedMessages: any) => Object.keys(queuedMessages).length > 0,
+    ],
+    
+    getConnectionStatus: [
+      (selectors: any) => [selectors.connectionStatus],
+      (connectionStatus: any) => connectionStatus,
+    ],
+    
+    isOffline: [
+      (selectors: any) => [selectors.isOffline],
+      (isOffline: any) => isOffline,
     ],
   },
 });

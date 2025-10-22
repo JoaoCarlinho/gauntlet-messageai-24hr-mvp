@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { socketManager, ConnectionStatus } from '../lib/socket';
+import { useValues, useActions } from 'kea';
+import messagesLogic from '../store/messages';
 
 export interface SocketState {
   connected: boolean;
@@ -95,6 +97,10 @@ export const useSocket = (handlers: SocketEventHandlers = {}): UseSocketReturn =
 
   const handlersRef = useRef<SocketEventHandlers>(handlers);
   const isInitialized = useRef(false);
+  
+  // Get message store values and actions
+  const { connectionStatus, queuedMessages } = useValues(messagesLogic);
+  const { setConnectionStatus, processQueuedMessages } = useActions(messagesLogic);
 
   // Update handlers ref when handlers change
   useEffect(() => {
@@ -118,6 +124,20 @@ export const useSocket = (handlers: SocketEventHandlers = {}): UseSocketReturn =
           };
           
           setSocketState(newState);
+          
+          // Update message store connection status
+          let messageStoreStatus: 'connected' | 'connecting' | 'disconnected' | 'reconnecting';
+          if (status.connected) {
+            messageStoreStatus = 'connected';
+          } else if (status.connecting) {
+            messageStoreStatus = 'connecting';
+          } else if (status.reconnectAttempts > 0) {
+            messageStoreStatus = 'reconnecting';
+          } else {
+            messageStoreStatus = 'disconnected';
+          }
+          
+          setConnectionStatus(messageStoreStatus);
           
           // Call handler if provided
           if (handlersRef.current.onConnectionStatusChange) {
@@ -246,8 +266,15 @@ export const useSocket = (handlers: SocketEventHandlers = {}): UseSocketReturn =
     };
 
     console.log('Sending message:', messageData);
-    socketManager.emit('send_message', messageData);
-  }, []);
+    
+    // Check if we're connected before sending
+    if (socketState.connected) {
+      socketManager.emit('send_message', messageData);
+    } else {
+      console.log('Socket not connected, message will be queued');
+      // The message store will handle queuing when offline
+    }
+  }, [socketState.connected]);
 
   const markMessageAsRead = useCallback((messageId: string): void => {
     console.log('Marking message as read:', messageId);
@@ -275,6 +302,19 @@ export const useSocket = (handlers: SocketEventHandlers = {}): UseSocketReturn =
   const emit = useCallback((event: string, data?: any): void => {
     socketManager.emit(event, data);
   }, []);
+  
+  // Process queued messages when reconnected
+  const processQueuedMessagesOnReconnect = useCallback(() => {
+    if (socketState.connected && Object.keys(queuedMessages).length > 0) {
+      console.log('Processing queued messages on reconnect...');
+      processQueuedMessages();
+    }
+  }, [socketState.connected, queuedMessages, processQueuedMessages]);
+  
+  // Effect to process queued messages when reconnected
+  useEffect(() => {
+    processQueuedMessagesOnReconnect();
+  }, [processQueuedMessagesOnReconnect]);
 
   return {
     // Connection state
