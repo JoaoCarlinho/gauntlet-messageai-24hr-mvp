@@ -8,6 +8,7 @@ CREATE TABLE "User" (
     "avatarUrl" TEXT,
     "lastSeen" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "isOnline" BOOLEAN NOT NULL DEFAULT false,
+    "pushTokens" TEXT[] DEFAULT ARRAY[]::TEXT[],
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
