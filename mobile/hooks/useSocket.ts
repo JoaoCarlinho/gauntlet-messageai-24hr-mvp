@@ -164,8 +164,10 @@ export const useSocket = (handlers: SocketEventHandlers = {}): UseSocketReturn =
           }
         });
 
-        // Try registering in case already connected
-        registerSocketListeners();
+        // Only register listeners if socket is already connected
+        if (socketManager.isConnected()) {
+          registerSocketListeners();
+        }
 
         return () => {
           unsubscribeStatus();

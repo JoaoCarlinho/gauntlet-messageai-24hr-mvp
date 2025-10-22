@@ -35,7 +35,33 @@ export default function RegisterScreen() {
   // Show error alert when auth error occurs
   useEffect(() => {
     if (error) {
-      Alert.alert('Registration Failed', error);
+      // Check if it's a 409 error (user already exists)
+      if (error.includes('already exists') || error.includes('try logging in')) {
+        Alert.alert(
+          'Account Already Exists',
+          error,
+          [
+            {
+              text: 'Try Different Email',
+              style: 'cancel',
+              onPress: () => {
+                setEmail('');
+                setEmailError('');
+              }
+            },
+            {
+              text: 'Go to Login',
+              style: 'default',
+              onPress: () => {
+                clearError();
+                router.push('/(auth)/login');
+              }
+            }
+          ]
+        );
+      } else {
+        Alert.alert('Registration Failed', error);
+      }
       clearError();
     }
   }, [error, clearError]);

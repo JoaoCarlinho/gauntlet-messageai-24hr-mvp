@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState, useRef } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, AppState, AppStateStatus } from 'react-native';
 import * as SQLite from 'expo-sqlite';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuth } from '../hooks/useAuth';
 import { migrateDatabase } from '../db/schema';
 import { createDatabaseQueries } from '../db/queries';
@@ -13,6 +14,18 @@ import { messagesAPI } from '../lib/api';
 import { useValues, useActions } from 'kea';
 import { conversationsLogic } from '../store/conversations';
 import { messagesLogic } from '../store/messages';
+
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+      retry: 2,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 export default function RootLayout() {
   const { isAuthenticated, isLoading, initializeAuth } = useAuth();
@@ -76,7 +89,7 @@ export default function RootLayout() {
     return () => {
       subscription?.remove();
     };
-  }, [isAuthenticated, isConnected, conversations, connectSocket, syncMessageToDatabase]);
+  }, [isAuthenticated, isConnected, connectSocket, syncMessageToDatabase]);
 
   const initializeDatabase = async (): Promise<void> => {
     try {
@@ -111,7 +124,7 @@ export default function RootLayout() {
 
   // Background sync functions
   const syncMissedMessages = async (): Promise<void> => {
-    if (!isAuthenticated || conversations.length === 0) {
+    if (!isAuthenticated) {
       return;
     }
 
@@ -209,7 +222,7 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <QueryClientProvider client={queryClient}>
       <Stack screenOptions={{ headerShown: false }}>
         {isAuthenticated ? (
           // Authenticated user - show main app
@@ -228,7 +241,7 @@ export default function RootLayout() {
       {isAuthenticated && <ConnectionStatus />}
       
       <StatusBar style="auto" />
-    </>
+    </QueryClientProvider>
   );
 }
 
