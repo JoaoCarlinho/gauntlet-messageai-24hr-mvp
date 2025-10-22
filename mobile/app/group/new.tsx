@@ -14,10 +14,12 @@ import {
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useConversations } from '../../hooks/useConversations';
+import { useAuth } from '../../hooks/useAuth';
 import { usersAPI } from '../../lib/api';
 import { User, CreateGroupConversationData } from '../../types';
 
 export default function NewGroupScreen() {
+  const { isAuthenticated } = useAuth();
   const [groupName, setGroupName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [users, setUsers] = useState<User[]>([]);
@@ -29,9 +31,25 @@ export default function NewGroupScreen() {
   // Get conversations hook for creating groups
   const { createGroupConversation, isLoading: isCreatingGroup, error: createError } = useConversations();
 
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      console.log('User not authenticated, redirecting to login');
+      router.replace('/(auth)/login');
+    }
+  }, [isAuthenticated]);
+
   // Search users function
   const searchUsers = useCallback(async (query: string) => {
     if (!query.trim()) {
+      setUsers([]);
+      return;
+    }
+
+    // Check authentication before making API calls
+    if (!isAuthenticated) {
+      console.log('User not authenticated, skipping user search');
+      setSearchError('Please log in to search for users');
       setUsers([]);
       return;
     }
@@ -49,7 +67,7 @@ export default function NewGroupScreen() {
     } finally {
       setIsSearching(false);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   // Debounced search effect
   useEffect(() => {
