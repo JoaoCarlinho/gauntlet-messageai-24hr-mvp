@@ -29,6 +29,11 @@ jobs:
           cd backend
           npm install
       
+      - name: Generate Prisma client
+        run: |
+          cd backend
+          npx prisma generate
+      
       - name: Run TypeScript check
         run: |
           cd backend
