@@ -117,6 +117,15 @@ export const authLogic = kea({
         actions.setUser(authResponse.user);
         actions.setTokens(authResponse.accessToken, authResponse.refreshToken);
         
+        // Register push token after successful login
+        try {
+          const { notificationManager } = await import('../lib/notifications');
+          await notificationManager.registerPushTokenAfterAuth();
+        } catch (pushTokenError) {
+          console.warn('Failed to register push token after login:', pushTokenError);
+          // Don't fail login if push token registration fails
+        }
+        
         actions.setLoading(false);
         actions.setError(null);
       } catch (error) {
@@ -177,8 +186,17 @@ export const authLogic = kea({
         
         const tokens = await authAPI.refreshToken();
         
-        // Update state - keep existing user, just update tokens (this will also persist to SecureStore via tokenManager)
+        // Update state - keep existing user and refresh token, just update access token
         actions.setTokens(tokens.accessToken, tokens.refreshToken);
+        
+        // Reconnect socket with fresh token
+        try {
+          const { socketManager } = await import('../lib/socket');
+          await socketManager.reconnectWithFreshToken();
+        } catch (socketError) {
+          console.warn('Failed to reconnect socket after token refresh:', socketError);
+          // Don't fail the token refresh if socket reconnection fails
+        }
         
         actions.setLoading(false);
         actions.setError(null);
@@ -228,6 +246,14 @@ export const authLogic = kea({
           }
         } else {
           console.log('No stored auth data found');
+        }
+        
+        // Set up global error handler for authentication failures
+        if (typeof window !== 'undefined') {
+          window.addEventListener('auth:logout', (event: any) => {
+            console.log('Global auth logout triggered:', event.detail?.reason);
+            actions.logout();
+          });
         }
         
         actions.setLoading(false);

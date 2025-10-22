@@ -63,11 +63,56 @@ class NotificationManager {
    * Register push token with backend after authentication
    * This should be called after user logs in
    */
-  async registerPushTokenAfterAuth(): Promise<void> {
-    if (this.pushToken) {
-      console.log('Registering push token with backend after authentication...');
-      await this.sendTokenToBackend(this.pushToken);
+  async registerPushTokenAfterAuth(): Promise<boolean> {
+    if (!this.pushToken) {
+      console.log('No push token available to register');
+      return false;
     }
+
+    console.log('Registering push token after authentication...');
+    return await this.sendTokenToBackend(this.pushToken);
+  }
+
+  /**
+   * Retry push token registration with exponential backoff
+   */
+  async retryPushTokenRegistration(maxRetries: number = 3): Promise<boolean> {
+    if (!this.pushToken) {
+      console.log('No push token available to retry registration');
+      return false;
+    }
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`Push token registration attempt ${attempt}/${maxRetries}`);
+        
+        const success = await this.sendTokenToBackend(this.pushToken);
+        if (success) {
+          console.log('Push token registration successful on attempt', attempt);
+          return true;
+        }
+        
+        // Wait before retrying (exponential backoff)
+        if (attempt < maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+          console.log(`Push token registration failed, retrying in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      } catch (error) {
+        console.error(`Push token registration attempt ${attempt} failed:`, error);
+        
+        if (attempt === maxRetries) {
+          console.error('All push token registration attempts failed');
+          return false;
+        }
+        
+        // Wait before retrying
+        const delay = Math.pow(2, attempt) * 1000;
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    return false;
   }
 
   /**
@@ -146,11 +191,21 @@ class NotificationManager {
    */
   async sendTokenToBackend(token: string): Promise<boolean> {
     try {
+      // Check if user is authenticated before attempting to send token
+      const { tokenManager } = await import('./api');
+      const accessToken = await tokenManager.getAccessToken();
+      
+      if (!accessToken) {
+        console.log('Push token not sent - user not authenticated yet. Will retry after login.');
+        return false;
+      }
+
       const response = await api.client.post('/users/push-token', {
         pushToken: token,
         platform: Platform.OS,
         deviceId: Device.osInternalBuildId || 'unknown',
       });
+      
       if (response.status === 200 && response.data && response.data.success) {
         console.log('Push token sent to backend successfully');
         return true;

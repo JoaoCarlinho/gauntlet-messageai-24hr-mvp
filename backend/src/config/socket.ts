@@ -3,6 +3,7 @@ import { Server as HTTPServer } from 'http';
 import jwt from 'jsonwebtoken';
 import { Request } from 'express';
 import * as presenceService from '../services/presence.service';
+import prisma from './database';
 
 // Extend Socket interface to include user property
 declare module 'socket.io' {
@@ -43,7 +44,6 @@ export const socketConfig: SocketConfig = {
 export interface SocketJWTPayload {
   userId: string;
   email: string;
-  displayName: string;
   iat?: number;
   exp?: number;
 }
@@ -68,14 +68,35 @@ export const authenticateSocket = async (socket: Socket, next: (err?: Error) => 
       return next(new Error('Authentication token required'));
     }
 
-    // Verify JWT token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as SocketJWTPayload;
+    // Use the same JWT secret and verification options as HTTP authentication
+    const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
+    
+    // Verify JWT token with same options as HTTP auth
+    const decoded = jwt.verify(token, JWT_SECRET, {
+      issuer: 'messageai-api',
+      audience: 'messageai-client'
+    }) as SocketJWTPayload;
+    
+    // Fetch user details from database to get displayName
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        isOnline: true
+      }
+    });
+
+    if (!user) {
+      return next(new Error('User not found'));
+    }
     
     // Attach user information to socket
     socket.user = {
-      id: decoded.userId,
-      email: decoded.email,
-      displayName: decoded.displayName,
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
       socketId: socket.id,
       isOnline: true,
       lastSeen: new Date(),

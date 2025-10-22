@@ -223,29 +223,34 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Stack screenOptions={{ headerShown: false }}>
-        {isAuthenticated ? (
-          // Authenticated user - show main app
-          <>
-            <Stack.Screen name="(tabs)" />
-            <Stack.Screen name="chat/[id]" />
-            <Stack.Screen name="group/new" />
-          </>
-        ) : (
-          // Unauthenticated user - show auth screens
-          <Stack.Screen name="(auth)" />
-        )}
-      </Stack>
-      
-      {/* Connection Status Banner - only show for authenticated users */}
-      {isAuthenticated && <ConnectionStatus />}
-      
-      <StatusBar style="auto" />
+      <View style={styles.container}>
+        <Stack screenOptions={{ headerShown: false }}>
+          {isAuthenticated ? (
+            // Authenticated user - show main app
+            <>
+              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="chat/[id]" />
+              <Stack.Screen name="group/new" />
+            </>
+          ) : (
+            // Unauthenticated user - show auth screens
+            <Stack.Screen name="(auth)" />
+          )}
+        </Stack>
+        
+        {/* Connection Status Banner - only show for authenticated users */}
+        {isAuthenticated && <ConnectionStatus />}
+        
+        <StatusBar style="auto" />
+      </View>
     </QueryClientProvider>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',

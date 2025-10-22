@@ -98,6 +98,25 @@ class SocketManager {
   }
 
   /**
+   * Reconnect with fresh token
+   */
+  async reconnectWithFreshToken(): Promise<void> {
+    console.log('Reconnecting socket with fresh token...');
+    
+    // Disconnect current socket
+    if (this.socket) {
+      this.socket.disconnect();
+      this.socket = null;
+    }
+    
+    // Wait a moment before reconnecting
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Reconnect with fresh token
+    await this.connect();
+  }
+
+  /**
    * Disconnect from the socket server
    */
   disconnect(): void {
@@ -143,6 +162,20 @@ class SocketManager {
 
     this.socket.on('connect_error', (error) => {
       console.error('Socket connection error:', error);
+      
+      // Handle authentication errors specifically
+      if (error.message?.includes('Authentication token required') || 
+          error.message?.includes('Invalid authentication token')) {
+        console.log('Socket authentication failed, triggering logout');
+        
+        // Trigger global logout event
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('auth:logout', { 
+            detail: { reason: 'Socket authentication failed' } 
+          }));
+        }
+      }
+      
       this.updateConnectionStatus({
         connected: false,
         connecting: false,

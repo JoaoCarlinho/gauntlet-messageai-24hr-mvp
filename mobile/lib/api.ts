@@ -61,23 +61,22 @@ export const tokenManager = {
 
   async setTokens(accessToken: string | null, refreshToken: string | null): Promise<void> {
     try {
-      // Validate tokens before storing
+      // Validate access token
       if (!accessToken || typeof accessToken !== 'string') {
         console.warn('Invalid access token provided to setTokens:', accessToken);
         return;
       }
       
-      if (!refreshToken || typeof refreshToken !== 'string') {
-        console.warn('Invalid refresh token provided to setTokens:', refreshToken);
-        return;
-      }
-
-      await Promise.all([
-        SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, accessToken),
-        SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, refreshToken),
-      ]);
+      // Store access token
+      await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
       
-      console.log('Tokens stored successfully');
+      // Only store refresh token if provided and valid
+      if (refreshToken && typeof refreshToken === 'string') {
+        await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+        console.log('Both tokens stored successfully');
+      } else {
+        console.log('Access token stored, refresh token not provided or invalid');
+      }
     } catch (error) {
       console.error('Error setting tokens:', error);
       throw error;
@@ -164,29 +163,70 @@ apiClient.interceptors.response.use(
             return Promise.reject(error);
           }
           
-          // For other endpoints, clear tokens and redirect to login
+          // For other endpoints, clear tokens and trigger logout
           await tokenManager.clearTokens();
           await tokenManager.clearUserData();
+          
+          // Trigger global logout event
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('auth:logout', { 
+              detail: { reason: 'No refresh token available' } 
+            }));
+          }
+          
           throw new Error('No refresh token available');
         }
 
+        console.log('Attempting to refresh access token...');
+        
         // Attempt to refresh the token
         const response = await axios.post(`${API_BASE_URL}/api/v1/auth/refresh`, {
           refreshToken,
         });
 
-        const { accessToken, refreshToken: newRefreshToken } = response.data;
-        await tokenManager.setTokens(accessToken, newRefreshToken);
+        if (response.data.accessToken) {
+          const { accessToken } = response.data;
+          
+          // Update only the access token, keep existing refresh token
+          await tokenManager.setTokens(accessToken, null);
+          
+          console.log('Access token refreshed successfully');
 
-        // Retry the original request with new token
-        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-        return apiClient(originalRequest);
+          // Retry the original request with new token
+          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          return apiClient(originalRequest);
+        } else {
+          throw new Error('Invalid refresh response: missing access token');
+        }
       } catch (refreshError) {
-        // Refresh failed, clear tokens and redirect to login
+        console.error('Token refresh failed:', refreshError);
+        
+        // Refresh failed, clear tokens and trigger logout
         await tokenManager.clearTokens();
         await tokenManager.clearUserData();
+        
+        // Trigger global logout event
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('auth:logout', { 
+            detail: { reason: 'Token refresh failed' } 
+          }));
+        }
+        
+        // For push token endpoints, don't throw error as they're not critical
+        if (originalRequest.url?.includes('/push-token')) {
+          console.warn('Push token registration failed - token refresh failed');
+          return Promise.reject(error);
+        }
+        
         return Promise.reject(refreshError);
       }
+    }
+
+    // Handle other HTTP errors
+    if (error.response?.status >= 500) {
+      console.error('Server error:', error.response.status, error.response.data);
+    } else if (error.response?.status >= 400) {
+      console.warn('Client error:', error.response.status, error.response.data);
     }
 
     return Promise.reject(error);
@@ -319,11 +359,14 @@ export const authAPI = {
         throw new Error('Invalid refresh response: missing access token');
       }
       
+      // Backend only returns new access token, keep existing refresh token
       const tokens = {
         accessToken: newAccessToken,
         refreshToken: refreshToken // Keep the existing refresh token
       };
-      await tokenManager.setTokens(tokens.accessToken, tokens.refreshToken);
+      
+      // Only update access token, keep existing refresh token
+      await tokenManager.setTokens(tokens.accessToken, null);
       return tokens;
     }
     
