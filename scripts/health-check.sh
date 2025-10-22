@@ -11,7 +11,7 @@ RETRY_DELAY=${3:-30}
 
 if [ -z "$API_URL" ]; then
     echo "Usage: $0 <API_URL> [MAX_RETRIES] [RETRY_DELAY]"
-    echo "Example: $0 https://messageai-production.up.railway.app 10 30"
+    echo "Example: $0 https://gauntlet-messageai-24hr-mvp-production.up.railway.app 10 30"
     exit 1
 fi
 

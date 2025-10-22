@@ -12,16 +12,21 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useValues, useActions } from 'kea';
 import { conversationsLogic } from '../../store/conversations';
+import { useAuth } from '../../hooks/useAuth';
 import ChatItem from '../../components/chat/ChatItem';
 import { ConversationWithLastMessage } from '../../types';
 
 export default function ChatListScreen() {
   const { conversations, isLoading, error } = useValues(conversationsLogic);
   const { loadConversations, refreshConversations } = useActions(conversationsLogic);
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
-    loadConversations();
-  }, [loadConversations]);
+    // Only load conversations if user is authenticated
+    if (isAuthenticated) {
+      loadConversations();
+    }
+  }, [loadConversations, isAuthenticated]);
 
   const handleRefresh = async () => {
     refreshConversations();
@@ -44,11 +49,30 @@ export default function ChatListScreen() {
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Ionicons name="chatbubbles-outline" size={64} color="#ccc" />
-      <Text style={styles.emptyTitle}>No conversations yet</Text>
+      <Ionicons name="chatbubbles-outline" size={64} color="#007AFF" />
+      <Text style={styles.emptyTitle}>Welcome to MessageAI!</Text>
       <Text style={styles.emptySubtitle}>
-        Start a new chat to begin messaging
+        You don't have any conversations yet.{'\n'}
+        Tap the + button to start your first chat.
       </Text>
+      <TouchableOpacity style={styles.startChatButton} onPress={handleNewChat}>
+        <Ionicons name="add" size={20} color="white" />
+        <Text style={styles.startChatText}>Start New Chat</Text>
+      </TouchableOpacity>
+    </View>
+  );
+
+  const renderErrorState = () => (
+    <View style={styles.errorState}>
+      <Ionicons name="alert-circle-outline" size={64} color="#FF6B6B" />
+      <Text style={styles.errorTitle}>Unable to load conversations</Text>
+      <Text style={styles.errorSubtitle}>
+        {error || 'Something went wrong. Please try again.'}
+      </Text>
+      <TouchableOpacity style={styles.retryButton} onPress={handleRefresh}>
+        <Ionicons name="refresh" size={20} color="white" />
+        <Text style={styles.retryText}>Try Again</Text>
+      </TouchableOpacity>
     </View>
   );
 
@@ -61,15 +85,10 @@ export default function ChatListScreen() {
     );
   }
 
-  if (error) {
+  if (error && conversations.length === 0) {
     return (
-      <View style={styles.errorContainer}>
-        <Ionicons name="alert-circle-outline" size={64} color="#FF3B30" />
-        <Text style={styles.errorTitle}>Error loading conversations</Text>
-        <Text style={styles.errorMessage}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadConversations}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
+      <View style={styles.container}>
+        {renderErrorState()}
       </View>
     );
   }
@@ -138,6 +157,78 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    paddingVertical: 60,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#1C1C1E',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    color: '#8E8E93',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 32,
+  },
+  startChatButton: {
+    backgroundColor: '#007AFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  startChatText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  errorState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+    paddingVertical: 60,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#FF6B6B',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  errorSubtitle: {
+    fontSize: 16,
+    color: '#8E8E93',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  retryButton: {
+    backgroundColor: '#007AFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  retryText: {
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',

@@ -31,7 +31,29 @@ export default function LoginScreen() {
   // Show error alert when auth error occurs
   useEffect(() => {
     if (error) {
-      Alert.alert('Login Failed', error);
+      // Check if it's an invalid credentials error
+      if (error.includes('Invalid email or password') || error.includes('Authentication failed')) {
+        Alert.alert(
+          'Login Failed',
+          'Invalid email or password. Please check your credentials and try again.',
+          [
+            {
+              text: 'Try Again',
+              style: 'cancel'
+            },
+            {
+              text: 'Forgot Password?',
+              style: 'default',
+              onPress: () => {
+                // TODO: Implement forgot password functionality
+                Alert.alert('Forgot Password', 'Password reset functionality will be available soon.');
+              }
+            }
+          ]
+        );
+      } else {
+        Alert.alert('Login Failed', error);
+      }
       clearError();
     }
   }, [error, clearError]);
