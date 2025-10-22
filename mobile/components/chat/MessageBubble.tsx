@@ -17,6 +17,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   isOwn,
   showAvatar = false,
   showTimestamp = true,
+  conversationType = 'direct',
   onPress,
   onLongPress,
 }) => {
@@ -106,7 +107,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   };
 
   const renderSenderInfo = () => {
-    if (isOwn || !showAvatar || !message.sender) return null;
+    // Only show sender info for group conversations and received messages
+    if (isOwn || conversationType !== 'group' || !message.sender) return null;
 
     return (
       <View style={styles.senderInfo}>
@@ -146,6 +148,9 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
     );
   };
 
+  // Determine if we should show avatar for this message
+  const shouldShowAvatar = !isOwn && conversationType === 'group' && message.sender;
+
   return (
     <View style={[styles.container, isOwn ? styles.ownContainer : styles.otherContainer]}>
       {renderSenderInfo()}
@@ -164,6 +169,17 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
           {renderStatusIndicator()}
         </View>
       </View>
+      
+      {/* Avatar for group conversations */}
+      {shouldShowAvatar && (
+        <View style={styles.avatarContainer}>
+          <Avatar
+            user={message.sender}
+            size={32}
+            showStatus={false}
+          />
+        </View>
+      )}
     </View>
   );
 };
@@ -178,6 +194,14 @@ const styles = StyleSheet.create({
   },
   otherContainer: {
     alignItems: 'flex-start',
+  },
+  
+  avatarContainer: {
+    position: 'absolute',
+    left: -40,
+    top: 0,
+    width: 32,
+    height: 32,
   },
   
   senderInfo: {

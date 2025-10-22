@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useValues } from 'kea';
 import { authLogic } from '../../store/auth';
 import { useMessages } from '../../hooks/useMessages';
+import { useConversations } from '../../hooks/useConversations';
 import { useSocket } from '../../hooks/useSocket';
 import { MessageBubble, InputToolbar, TypingIndicator } from '../../components/chat';
 import { Message } from '../../types';
@@ -25,6 +26,9 @@ export default function ChatScreen() {
   
   // Get current user from auth store
   const { currentUser } = useValues(authLogic);
+  
+  // Use conversations hook to get conversation details
+  const { loadConversation, selectedConversation } = useConversations();
   
   // Use messages hook for message operations
   const {
@@ -67,6 +71,7 @@ export default function ChatScreen() {
   // State
   const [isTyping, setIsTyping] = useState(false);
   const [conversationName, setConversationName] = useState('Chat');
+  const [conversationType, setConversationType] = useState<'direct' | 'group'>('direct');
   
   // Handle new message from socket
   function handleNewMessage(message: Message) {
@@ -155,13 +160,14 @@ export default function ChatScreen() {
         isOwn={isOwn}
         showAvatar={!isOwn}
         showTimestamp={true}
+        conversationType={conversationType}
         onPress={() => handleMessagePress(item)}
         onLongPress={() => {
           // TODO: Show message options (copy, delete, etc.)
         }}
       />
     );
-  }, [currentUser, handleMessagePress]);
+  }, [currentUser, handleMessagePress, conversationType]);
   
   // Render typing indicator
   const renderTypingIndicator = useCallback(() => {
@@ -184,7 +190,8 @@ export default function ChatScreen() {
       // Load messages
       loadMessages();
       
-      // TODO: Load conversation details (name, participants, etc.)
+      // Load conversation details (name, participants, etc.)
+      loadConversation(conversationId);
       setConversationName(`Chat ${conversationId.slice(-4)}`);
     }
     
@@ -196,6 +203,24 @@ export default function ChatScreen() {
       }
     };
   }, [conversationId, joinConversation, leaveConversation, loadMessages]);
+
+  // Update conversation type and name when selected conversation changes
+  useEffect(() => {
+    if (selectedConversation && selectedConversation.id === conversationId) {
+      setConversationType(selectedConversation.type as 'direct' | 'group');
+      if (selectedConversation.name) {
+        setConversationName(selectedConversation.name);
+      } else if (selectedConversation.type === 'direct') {
+        // For direct conversations, show the other participant's name
+        const otherMember = selectedConversation.members?.find(
+          member => member.userId !== currentUser?.id
+        );
+        if (otherMember?.user?.displayName) {
+          setConversationName(otherMember.user.displayName);
+        }
+      }
+    }
+  }, [selectedConversation, conversationId, currentUser]);
   
   // Auto-scroll to bottom when messages change
   useEffect(() => {

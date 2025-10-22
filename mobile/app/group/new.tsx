@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,34 +9,72 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-
-// Mock data for contacts
-const mockContacts = [
-  { id: '1', name: 'John Doe', email: 'john@example.com', isSelected: false },
-  { id: '2', name: 'Sarah Wilson', email: 'sarah@example.com', isSelected: false },
-  { id: '3', name: 'Mike Johnson', email: 'mike@example.com', isSelected: false },
-  { id: '4', name: 'Emily Davis', email: 'emily@example.com', isSelected: false },
-  { id: '5', name: 'Alex Brown', email: 'alex@example.com', isSelected: false },
-];
+import { useConversations } from '../hooks/useConversations';
+import { usersAPI } from '../lib/api';
+import { User, CreateGroupConversationData } from '../types';
 
 export default function NewGroupScreen() {
   const [groupName, setGroupName] = useState('');
-  const [contacts, setContacts] = useState(mockContacts);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
   const [isCreating, setIsCreating] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
-  const selectedContacts = contacts.filter(contact => contact.isSelected);
+  // Get conversations hook for creating groups
+  const { createGroupConversation, isLoading: isCreatingGroup, error: createError } = useConversations();
 
-  const handleContactToggle = (contactId: string) => {
-    setContacts(prev =>
-      prev.map(contact =>
-        contact.id === contactId
-          ? { ...contact, isSelected: !contact.isSelected }
-          : contact
-      )
-    );
+  // Search users function
+  const searchUsers = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      setUsers([]);
+      return;
+    }
+
+    setIsSearching(true);
+    setSearchError(null);
+
+    try {
+      const searchResults = await usersAPI.searchUsers(query);
+      setUsers(searchResults);
+    } catch (error) {
+      console.error('Search users error:', error);
+      setSearchError(error instanceof Error ? error.message : 'Failed to search users');
+      setUsers([]);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      searchUsers(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, searchUsers]);
+
+  // Handle user selection
+  const handleUserToggle = (user: User) => {
+    setSelectedUsers(prev => {
+      const isSelected = prev.some(selectedUser => selectedUser.id === user.id);
+      if (isSelected) {
+        return prev.filter(selectedUser => selectedUser.id !== user.id);
+      } else {
+        return [...prev, user];
+      }
+    });
+  };
+
+  // Check if user is selected
+  const isUserSelected = (user: User) => {
+    return selectedUsers.some(selectedUser => selectedUser.id === user.id);
   };
 
   const handleCreateGroup = async () => {
@@ -45,22 +83,22 @@ export default function NewGroupScreen() {
       return;
     }
 
-    if (selectedContacts.length < 2) {
-      Alert.alert('Error', 'Please select at least 2 contacts');
+    if (selectedUsers.length < 2) {
+      Alert.alert('Error', 'Please select at least 2 members');
       return;
     }
 
     setIsCreating(true);
     try {
-      // TODO: Create group via API
-      console.log('Creating group:', {
-        name: groupName,
-        members: selectedContacts.map(c => c.id),
-      });
+      const groupData: CreateGroupConversationData = {
+        name: groupName.trim(),
+        participantIds: selectedUsers.map(user => user.id),
+      };
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Create group conversation
+      createGroupConversation(groupData);
 
+      // Show success message
       Alert.alert(
         'Success',
         'Group created successfully!',
@@ -68,44 +106,61 @@ export default function NewGroupScreen() {
           {
             text: 'OK',
             onPress: () => {
-              // TODO: Navigate to the new group chat
+              // Navigate back to conversations list
               router.back();
             },
           },
         ]
       );
     } catch (error) {
+      console.error('Create group error:', error);
       Alert.alert('Error', 'Failed to create group. Please try again.');
     } finally {
       setIsCreating(false);
     }
   };
 
-  const renderContact = ({ item }: { item: typeof mockContacts[0] }) => (
-    <TouchableOpacity
-      style={styles.contactItem}
-      onPress={() => handleContactToggle(item.id)}
-    >
-      <View style={styles.contactInfo}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>
-            {item.name.charAt(0).toUpperCase()}
-          </Text>
+  const renderUser = ({ item }: { item: User }) => {
+    const selected = isUserSelected(item);
+    
+    return (
+      <TouchableOpacity
+        style={styles.contactItem}
+        onPress={() => handleUserToggle(item)}
+      >
+        <View style={styles.contactInfo}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>
+              {item.displayName.charAt(0).toUpperCase()}
+            </Text>
+          </View>
+          <View style={styles.contactDetails}>
+            <Text style={styles.contactName}>{item.displayName}</Text>
+            <Text style={styles.contactEmail}>{item.email}</Text>
+          </View>
         </View>
-        <View style={styles.contactDetails}>
-          <Text style={styles.contactName}>{item.name}</Text>
-          <Text style={styles.contactEmail}>{item.email}</Text>
+        <View style={[
+          styles.checkbox,
+          selected && styles.checkboxSelected
+        ]}>
+          {selected && (
+            <Ionicons name="checkmark" size={16} color="#fff" />
+          )}
         </View>
-      </View>
-      <View style={[
-        styles.checkbox,
-        item.isSelected && styles.checkboxSelected
-      ]}>
-        {item.isSelected && (
-          <Ionicons name="checkmark" size={16} color="#fff" />
-        )}
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderSelectedUser = ({ item }: { item: User }) => (
+    <View style={styles.selectedUserChip}>
+      <Text style={styles.selectedUserText}>{item.displayName}</Text>
+      <TouchableOpacity
+        onPress={() => handleUserToggle(item)}
+        style={styles.removeUserButton}
+      >
+        <Ionicons name="close" size={16} color="#007AFF" />
+      </TouchableOpacity>
+    </View>
   );
 
   return (
@@ -120,17 +175,17 @@ export default function NewGroupScreen() {
         <Text style={styles.headerTitle}>New Group</Text>
         <TouchableOpacity
           onPress={handleCreateGroup}
-          disabled={!groupName.trim() || selectedContacts.length < 2 || isCreating}
+          disabled={!groupName.trim() || selectedUsers.length < 2 || isCreating || isCreatingGroup}
           style={[
             styles.createButton,
-            (!groupName.trim() || selectedContacts.length < 2 || isCreating) && styles.createButtonDisabled
+            (!groupName.trim() || selectedUsers.length < 2 || isCreating || isCreatingGroup) && styles.createButtonDisabled
           ]}
         >
           <Text style={[
             styles.createButtonText,
-            (!groupName.trim() || selectedContacts.length < 2 || isCreating) && styles.createButtonTextDisabled
+            (!groupName.trim() || selectedUsers.length < 2 || isCreating || isCreatingGroup) && styles.createButtonTextDisabled
           ]}>
-            {isCreating ? 'Creating...' : 'Create'}
+            {(isCreating || isCreatingGroup) ? 'Creating...' : 'Create'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -150,17 +205,76 @@ export default function NewGroupScreen() {
         <View style={styles.contactsSection}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>
-              Add Members ({selectedContacts.length})
+              Add Members ({selectedUsers.length})
             </Text>
           </View>
 
-          <FlatList
-            data={contacts}
-            renderItem={renderContact}
-            keyExtractor={(item) => item.id}
-            style={styles.contactsList}
-            showsVerticalScrollIndicator={false}
-          />
+          {/* Selected Users */}
+          {selectedUsers.length > 0 && (
+            <View style={styles.selectedUsersSection}>
+              <FlatList
+                data={selectedUsers}
+                renderItem={renderSelectedUser}
+                keyExtractor={(item) => item.id}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.selectedUsersList}
+              />
+            </View>
+          )}
+
+          {/* Search Input */}
+          <View style={styles.searchSection}>
+            <View style={styles.searchInputContainer}>
+              <Ionicons name="search" size={20} color="#8E8E93" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Search users by name or email"
+                placeholderTextColor="#8E8E93"
+              />
+              {isSearching && (
+                <ActivityIndicator size="small" color="#007AFF" style={styles.searchLoader} />
+              )}
+            </View>
+          </View>
+
+          {/* Search Results */}
+          {searchQuery.trim() && (
+            <View style={styles.searchResultsSection}>
+              {searchError ? (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorText}>{searchError}</Text>
+                </View>
+              ) : users.length > 0 ? (
+                <FlatList
+                  data={users}
+                  renderItem={renderUser}
+                  keyExtractor={(item) => item.id}
+                  style={styles.searchResultsList}
+                  showsVerticalScrollIndicator={false}
+                />
+              ) : !isSearching ? (
+                <View style={styles.noResultsContainer}>
+                  <Text style={styles.noResultsText}>No users found</Text>
+                </View>
+              ) : null}
+            </View>
+          )}
+
+          {/* Instructions */}
+          {!searchQuery.trim() && (
+            <View style={styles.instructionsContainer}>
+              <Ionicons name="search" size={48} color="#C7C7CC" />
+              <Text style={styles.instructionsText}>
+                Search for users to add to your group
+              </Text>
+              <Text style={styles.instructionsSubtext}>
+                Type a name or email address to find users
+              </Text>
+            </View>
+          )}
         </View>
       </View>
     </KeyboardAvoidingView>
@@ -286,5 +400,113 @@ const styles = StyleSheet.create({
   checkboxSelected: {
     backgroundColor: '#007AFF',
     borderColor: '#007AFF',
+  },
+  
+  // Selected users styles
+  selectedUsersSection: {
+    marginBottom: 16,
+  },
+  selectedUsersList: {
+    maxHeight: 50,
+  },
+  selectedUserChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E3F2FD',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
+  },
+  selectedUserText: {
+    fontSize: 14,
+    color: '#007AFF',
+    marginRight: 6,
+  },
+  removeUserButton: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  // Search styles
+  searchSection: {
+    marginBottom: 16,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F2F2F7',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: '#000',
+  },
+  searchLoader: {
+    marginLeft: 8,
+  },
+  
+  // Search results styles
+  searchResultsSection: {
+    flex: 1,
+    minHeight: 200,
+  },
+  searchResultsList: {
+    flex: 1,
+  },
+  
+  // Error and no results styles
+  errorContainer: {
+    padding: 16,
+    backgroundColor: '#FFE5E5',
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  errorText: {
+    color: '#FF3B30',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  noResultsContainer: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  noResultsText: {
+    color: '#8E8E93',
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  
+  // Instructions styles
+  instructionsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+  },
+  instructionsText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#8E8E93',
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  instructionsSubtext: {
+    fontSize: 14,
+    color: '#C7C7CC',
+    textAlign: 'center',
   },
 });

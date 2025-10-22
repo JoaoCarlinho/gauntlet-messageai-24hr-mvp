@@ -33,6 +33,12 @@ export interface MessageDeliveryData {
   conversationId: string;
 }
 
+export interface GroupMemberEventData {
+  conversationId: string;
+  userId: string;
+  action: 'joined' | 'left' | 'added' | 'removed';
+}
+
 // Extend Socket interface to include user property
 declare module 'socket.io' {
   interface Socket {
@@ -81,6 +87,7 @@ export const handleSendMessage = async (socket: Socket, data: SendMessageData): 
     // Get conversation members for delivery tracking
     const conversationMembers = await getConversationMembers(conversationId);
     const onlineMembers = await getOnlineMembersInConversation(conversationId);
+    const conversationDetails = await getConversationDetails(conversationId);
 
     // Broadcast message to all conversation participants
     roomManager.broadcastToRoom(conversationId, 'message_received', {
@@ -97,10 +104,15 @@ export const handleSendMessage = async (socket: Socket, data: SendMessageData): 
         sender: message.sender
       },
       conversationId: conversationId,
+      conversationType: conversationDetails?.type || 'direct',
+      conversationName: conversationDetails?.name,
       sentBy: socket.user.id,
+      sentByDisplayName: socket.user.displayName,
       sentAt: new Date(),
       onlineMembers: onlineMembers,
-      totalMembers: conversationMembers.length
+      totalMembers: conversationMembers.length,
+      memberCount: conversationMembers.length,
+      isGroupChat: conversationDetails?.type === 'group'
     }, ROOM_TYPES.CONVERSATION);
 
     // Send confirmation back to sender with optimistic update support
@@ -157,14 +169,24 @@ export const handleMarkRead = async (socket: Socket, data: MarkReadData): Promis
       return;
     }
 
+    // Get conversation details for enhanced read receipt
+    const conversationDetails = await getConversationDetails(conversationId);
+    const conversationMembers = await getConversationMembers(conversationId);
+    const onlineMembers = await getOnlineMembersInConversation(conversationId);
+
     // Broadcast read receipt to conversation
     roomManager.broadcastToRoom(conversationId, 'message_read', {
       messageId: messageId,
       conversationId: conversationId,
+      conversationType: conversationDetails?.type || 'direct',
+      conversationName: conversationDetails?.name,
       readBy: socket.user.id,
       readByDisplayName: socket.user.displayName,
       readAt: readReceipt.readAt,
-      messageStatus: message.status
+      messageStatus: message.status,
+      isGroupChat: conversationDetails?.type === 'group',
+      totalMembers: conversationMembers.length,
+      onlineMembers: onlineMembers
     }, ROOM_TYPES.CONVERSATION);
 
     // Update user's last seen timestamp
@@ -402,6 +424,58 @@ export const handleDeleteMessage = async (socket: Socket, data: { messageId: str
 };
 
 /**
+ * Handle group_member_event - Handle group member join/leave events
+ */
+export const handleGroupMemberEvent = async (socket: Socket, data: GroupMemberEventData): Promise<void> => {
+  if (!socket.user) {
+    socket.emit('error', { message: 'User not authenticated' });
+    return;
+  }
+
+  try {
+    const { conversationId, userId, action } = data;
+
+    // Validate input
+    if (!conversationId || !userId || !action) {
+      socket.emit('error', { message: 'Conversation ID, user ID, and action are required' });
+      return;
+    }
+
+    // Get conversation details
+    const conversationDetails = await getConversationDetails(conversationId);
+    const conversationMembers = await getConversationMembers(conversationId);
+    const onlineMembers = await getOnlineMembersInConversation(conversationId);
+
+    // Get user details for the event
+    const userDetails = await getUserDetails(userId);
+
+    // Broadcast group member event to conversation
+    roomManager.broadcastToRoom(conversationId, 'group_member_event', {
+      conversationId: conversationId,
+      conversationType: conversationDetails?.type || 'direct',
+      conversationName: conversationDetails?.name,
+      userId: userId,
+      userDisplayName: userDetails?.displayName || 'Unknown User',
+      action: action,
+      triggeredBy: socket.user.id,
+      triggeredByDisplayName: socket.user.displayName,
+      timestamp: new Date(),
+      isGroupChat: conversationDetails?.type === 'group',
+      totalMembers: conversationMembers.length,
+      onlineMembers: onlineMembers
+    }, ROOM_TYPES.CONVERSATION);
+
+    console.log(`👥 Group member event: ${action} by ${socket.user.displayName} for user ${userId} in conversation ${conversationId}`);
+  } catch (error) {
+    console.error('Error handling group member event:', error);
+    socket.emit('error', { 
+      message: 'Failed to handle group member event',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+};
+
+/**
  * Helper function to get conversation members
  */
 const getConversationMembers = async (conversationId: string): Promise<string[]> => {
@@ -431,6 +505,56 @@ const getOnlineMembersInConversation = async (conversationId: string): Promise<s
   } catch (error) {
     console.error('Error getting online members in conversation:', error);
     return [];
+  }
+};
+
+/**
+ * Helper function to get conversation details
+ */
+const getConversationDetails = async (conversationId: string): Promise<{ id: string; type: string; name?: string } | null> => {
+  try {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: { 
+        id: true, 
+        type: true, 
+        name: true 
+      }
+    });
+
+    await prisma.$disconnect();
+    return conversation;
+  } catch (error) {
+    console.error('Error getting conversation details:', error);
+    return null;
+  }
+};
+
+/**
+ * Helper function to get user details
+ */
+const getUserDetails = async (userId: string): Promise<{ id: string; displayName: string; email: string } | null> => {
+  try {
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { 
+        id: true, 
+        displayName: true, 
+        email: true 
+      }
+    });
+
+    await prisma.$disconnect();
+    return user;
+  } catch (error) {
+    console.error('Error getting user details:', error);
+    return null;
   }
 };
 
@@ -471,6 +595,11 @@ export const setupMessageHandlers = (socket: Socket): void => {
   // Handle delete_message event
   socket.on('delete_message', (data: { messageId: string, conversationId: string }) => {
     handleDeleteMessage(socket, data);
+  });
+
+  // Handle group_member_event
+  socket.on('group_member_event', (data: GroupMemberEventData) => {
+    handleGroupMemberEvent(socket, data);
   });
 
   console.log(`📨 Message handlers set up for socket: ${socket.id}`);

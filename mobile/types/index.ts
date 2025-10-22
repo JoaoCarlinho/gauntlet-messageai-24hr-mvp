@@ -351,6 +351,7 @@ export interface MessageBubbleProps {
   isOwn: boolean;
   showAvatar?: boolean;
   showTimestamp?: boolean;
+  conversationType?: 'direct' | 'group';
   onPress?: () => void;
   onLongPress?: () => void;
 }
