@@ -16,6 +16,7 @@ model User {
   avatarUrl     String?
   lastSeen      DateTime @default(now())
   isOnline      Boolean  @default(false)
+  pushTokens    String[] @default([])
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
