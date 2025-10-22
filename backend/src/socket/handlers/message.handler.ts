@@ -526,7 +526,17 @@ const getConversationDetails = async (conversationId: string): Promise<{ id: str
     });
 
     await prisma.$disconnect();
-    return conversation;
+    
+    if (!conversation) {
+      return null;
+    }
+    
+    // Convert null to undefined for the name field
+    return {
+      id: conversation.id,
+      type: conversation.type,
+      name: conversation.name || undefined
+    };
   } catch (error) {
     console.error('Error getting conversation details:', error);
     return null;
