@@ -52,7 +52,7 @@ jobs:
           chmod +x scripts/health-check.sh
           # Wait for deployment to be ready
           sleep 60
-          ./scripts/health-check.sh "https://messageai-production.up.railway.app" 5 30
+          ./scripts/health-check.sh "https://gauntlet-messageai-24hr-mvp-production.up.railway.app" 5 30
         continue-on-error: true
       
       - name: Notify on Build Failure
