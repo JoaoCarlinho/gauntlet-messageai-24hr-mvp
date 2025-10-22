@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   TextInput,
-  TouchableOpacity,
   StyleSheet,
   Alert,
   KeyboardAvoidingView,
@@ -11,46 +10,129 @@ import {
   ScrollView,
 } from 'react-native';
 import { Link, router } from 'expo-router';
+import { useAuth } from '../../hooks/useAuth';
+import { Button } from '../../components/ui/Button';
 
 export default function RegisterScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [confirmPasswordError, setConfirmPasswordError] = useState('');
+  const [displayNameError, setDisplayNameError] = useState('');
+  
+  const { register, isLoading, error, isAuthenticated, clearError } = useAuth();
 
-  const handleRegister = async () => {
-    if (!email || !password || !confirmPassword || !displayName) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
-      return;
-    }
-
-    if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      // TODO: Implement actual registration logic
-      console.log('Registration attempt:', { email, password, displayName });
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // TODO: Replace with actual authentication
-      // For now, just navigate to main app
+  // Navigate to main app when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
       router.replace('/(tabs)');
-    } catch (error) {
-      Alert.alert('Registration Failed', 'An error occurred during registration');
-    } finally {
-      setIsLoading(false);
     }
+  }, [isAuthenticated]);
+
+  // Show error alert when auth error occurs
+  useEffect(() => {
+    if (error) {
+      Alert.alert('Registration Failed', error);
+      clearError();
+    }
+  }, [error, clearError]);
+
+  // Form validation functions
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email.trim()) {
+      setEmailError('Email is required');
+      return false;
+    }
+    if (!emailRegex.test(email)) {
+      setEmailError('Please enter a valid email address');
+      return false;
+    }
+    setEmailError('');
+    return true;
+  };
+
+  const validateDisplayName = (name: string): boolean => {
+    if (!name.trim()) {
+      setDisplayNameError('Display name is required');
+      return false;
+    }
+    if (name.trim().length < 2) {
+      setDisplayNameError('Display name must be at least 2 characters');
+      return false;
+    }
+    if (name.trim().length > 50) {
+      setDisplayNameError('Display name must be less than 50 characters');
+      return false;
+    }
+    setDisplayNameError('');
+    return true;
+  };
+
+  const validatePassword = (password: string): boolean => {
+    if (!password.trim()) {
+      setPasswordError('Password is required');
+      return false;
+    }
+    if (password.length < 8) {
+      setPasswordError('Password must be at least 8 characters');
+      return false;
+    }
+    if (!/(?=.*[a-z])/.test(password)) {
+      setPasswordError('Password must contain at least one lowercase letter');
+      return false;
+    }
+    if (!/(?=.*[A-Z])/.test(password)) {
+      setPasswordError('Password must contain at least one uppercase letter');
+      return false;
+    }
+    if (!/(?=.*\d)/.test(password)) {
+      setPasswordError('Password must contain at least one number');
+      return false;
+    }
+    setPasswordError('');
+    return true;
+  };
+
+  const validateConfirmPassword = (confirmPassword: string, password: string): boolean => {
+    if (!confirmPassword.trim()) {
+      setConfirmPasswordError('Please confirm your password');
+      return false;
+    }
+    if (confirmPassword !== password) {
+      setConfirmPasswordError('Passwords do not match');
+      return false;
+    }
+    setConfirmPasswordError('');
+    return true;
+  };
+
+  const handleRegister = () => {
+    // Clear previous errors
+    setEmailError('');
+    setPasswordError('');
+    setConfirmPasswordError('');
+    setDisplayNameError('');
+    
+    // Validate all fields
+    const isEmailValid = validateEmail(email);
+    const isDisplayNameValid = validateDisplayName(displayName);
+    const isPasswordValid = validatePassword(password);
+    const isConfirmPasswordValid = validateConfirmPassword(confirmPassword, password);
+    
+    if (!isEmailValid || !isDisplayNameValid || !isPasswordValid || !isConfirmPasswordValid) {
+      return;
+    }
+
+    // Attempt registration
+    register({ 
+      email: email.trim(), 
+      password, 
+      displayName: displayName.trim() 
+    });
   };
 
   return (
@@ -64,62 +146,95 @@ export default function RegisterScreen() {
           <Text style={styles.subtitle}>Join MessageAI today</Text>
 
           <View style={styles.form}>
-            <TextInput
-              style={styles.input}
-              placeholder="Display Name"
-              value={displayName}
-              onChangeText={setDisplayName}
-              autoCapitalize="words"
-              autoCorrect={false}
-            />
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={[styles.input, displayNameError && styles.inputError]}
+                placeholder="Display Name"
+                value={displayName}
+                onChangeText={(text) => {
+                  setDisplayName(text);
+                  if (displayNameError) setDisplayNameError('');
+                }}
+                onBlur={() => validateDisplayName(displayName)}
+                autoCapitalize="words"
+                autoCorrect={false}
+                autoComplete="name"
+              />
+              {displayNameError ? <Text style={styles.errorText}>{displayNameError}</Text> : null}
+            </View>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={[styles.input, emailError && styles.inputError]}
+                placeholder="Email"
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  if (emailError) setEmailError('');
+                }}
+                onBlur={() => validateEmail(email)}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="email"
+              />
+              {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+            </View>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Password"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={[styles.input, passwordError && styles.inputError]}
+                placeholder="Password"
+                value={password}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  if (passwordError) setPasswordError('');
+                }}
+                onBlur={() => validatePassword(password)}
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="new-password"
+              />
+              {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
+            </View>
 
-            <TextInput
-              style={styles.input}
-              placeholder="Confirm Password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={[styles.input, confirmPasswordError && styles.inputError]}
+                placeholder="Confirm Password"
+                value={confirmPassword}
+                onChangeText={(text) => {
+                  setConfirmPassword(text);
+                  if (confirmPasswordError) setConfirmPasswordError('');
+                }}
+                onBlur={() => validateConfirmPassword(confirmPassword, password)}
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete="new-password"
+              />
+              {confirmPasswordError ? <Text style={styles.errorText}>{confirmPasswordError}</Text> : null}
+            </View>
 
-            <TouchableOpacity
-              style={[styles.button, isLoading && styles.buttonDisabled]}
+            <Button
+              title="Create Account"
               onPress={handleRegister}
+              loading={isLoading}
               disabled={isLoading}
-            >
-              <Text style={styles.buttonText}>
-                {isLoading ? 'Creating Account...' : 'Create Account'}
-              </Text>
-            </TouchableOpacity>
+              fullWidth
+              style={styles.button}
+            />
           </View>
 
           <View style={styles.footer}>
             <Text style={styles.footerText}>Already have an account? </Text>
             <Link href="/(auth)/login" asChild>
-              <TouchableOpacity>
-                <Text style={styles.linkText}>Sign In</Text>
-              </TouchableOpacity>
+              <Button
+                title="Sign In"
+                variant="ghost"
+                textStyle={styles.linkText}
+              />
             </Link>
           </View>
         </View>
@@ -157,33 +272,35 @@ const styles = StyleSheet.create({
   form: {
     marginBottom: 30,
   },
+  inputContainer: {
+    marginBottom: 16,
+  },
   input: {
     borderWidth: 1,
     borderColor: '#ddd',
     borderRadius: 8,
     padding: 16,
     fontSize: 16,
-    marginBottom: 16,
     backgroundColor: '#f9f9f9',
   },
+  inputError: {
+    borderColor: '#ff4444',
+    backgroundColor: '#fff5f5',
+  },
+  errorText: {
+    color: '#ff4444',
+    fontSize: 14,
+    marginTop: 4,
+    marginLeft: 4,
+  },
   button: {
-    backgroundColor: '#007AFF',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-  },
-  buttonDisabled: {
-    backgroundColor: '#ccc',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    marginTop: 8,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    flexWrap: 'wrap',
   },
   footerText: {
     fontSize: 16,

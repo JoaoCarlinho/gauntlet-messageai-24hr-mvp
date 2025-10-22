@@ -1,37 +1,22 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator } from 'react-native';
+import { useEffect } from 'react';
+import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { useAuth } from '../hooks/useAuth';
 
 export default function RootLayout() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { isAuthenticated, isLoading, initializeAuth } = useAuth();
 
   useEffect(() => {
-    // TODO: Check authentication status from storage
-    // For now, we'll simulate a loading state
-    const checkAuth = async () => {
-      try {
-        // Simulate checking auth status
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        // TODO: Replace with actual auth check
-        setIsAuthenticated(false);
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        setIsAuthenticated(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, []);
+    // Initialize authentication state on app load
+    initializeAuth();
+  }, [initializeAuth]);
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" />
-        <Text style={{ marginTop: 16 }}>Loading...</Text>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Loading MessageAI...</Text>
         <StatusBar style="auto" />
       </View>
     );
@@ -56,3 +41,18 @@ export default function RootLayout() {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '500',
+  },
+});
