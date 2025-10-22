@@ -14,6 +14,8 @@ import { InputToolbarProps } from '../../types';
 const InputToolbar: React.FC<InputToolbarProps> = ({
   onSendMessage,
   onSendImage,
+  onTypingStart,
+  onTypingStop,
   placeholder = 'Type a message...',
   disabled = false,
 }) => {
@@ -29,6 +31,15 @@ const InputToolbar: React.FC<InputToolbarProps> = ({
   const handleSendMessage = () => {
     const trimmedMessage = message.trim();
     if (trimmedMessage && !disabled) {
+      // Clear typing timeout and emit typing_stop
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+      if (onTypingStop) {
+        onTypingStop();
+      }
+      
       onSendMessage(trimmedMessage);
       setMessage('');
       setInputHeight(minInputHeight);
@@ -44,14 +55,24 @@ const InputToolbar: React.FC<InputToolbarProps> = ({
       clearTimeout(typingTimeoutRef.current);
     }
     
-    // Set new timeout for typing indicator
+    // Handle typing indicators
     if (text.trim()) {
-      // Here you would typically emit typing_start event
-      // For now, we'll just handle the timeout
+      // Emit typing_start event
+      if (onTypingStart) {
+        onTypingStart();
+      }
+      
+      // Set timeout to stop typing after 3 seconds of inactivity
       typingTimeoutRef.current = setTimeout(() => {
-        // Emit typing_stop event
-        // This would be handled by the parent component
+        if (onTypingStop) {
+          onTypingStop();
+        }
       }, 3000);
+    } else {
+      // Emit typing_stop event when text is empty
+      if (onTypingStop) {
+        onTypingStop();
+      }
     }
   };
 
@@ -65,6 +86,10 @@ const InputToolbar: React.FC<InputToolbarProps> = ({
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
       typingTimeoutRef.current = null;
+    }
+    // Emit typing_stop event when input loses focus
+    if (onTypingStop) {
+      onTypingStop();
     }
   };
 

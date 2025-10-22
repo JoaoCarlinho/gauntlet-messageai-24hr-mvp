@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { useValues, useActions } from 'kea';
 import { messagesLogic } from '../store/messages';
+import { authLogic } from '../store/auth';
 import { useSocket } from './useSocket';
 import { Message, SendMessageData, MessageStatusUpdateData, ReadReceiptData } from '../types';
 import { createDatabaseQueries } from '../db/queries';
@@ -30,6 +31,7 @@ export interface UseMessagesReturn {
   loadMoreMessages: (beforeMessageId: string) => void;
   markMessageAsRead: (messageId: string) => void;
   markAllMessagesAsRead: () => void;
+  retryMessage: (messageId: string) => void;
   
   // Socket operations
   joinConversation: () => void;
@@ -42,6 +44,9 @@ export interface UseMessagesReturn {
 
 export const useMessages = (options: UseMessagesOptions): UseMessagesReturn => {
   const { conversationId, autoLoad = true, loadLimit = 50 } = options;
+  
+  // Get current user from auth store
+  const { user: currentUser } = useValues(authLogic);
   
   // Get values and actions from messages store
   const {
@@ -64,6 +69,11 @@ export const useMessages = (options: UseMessagesOptions): UseMessagesReturn => {
     setError,
     syncMessageToDatabase,
     updateMessageInDatabase,
+    confirmMessageSent,
+    markMessageFailed,
+    retryMessage,
+    addTypingUser,
+    removeTypingUser,
   } = useActions(messagesLogic);
   
   // Get socket hook
@@ -98,8 +108,21 @@ export const useMessages = (options: UseMessagesOptions): UseMessagesReturn => {
   // Socket event handlers
   function handleMessageReceived(message: Message) {
     if (message.conversationId === conversationId) {
-      addMessage(message);
-      syncMessageToDatabase(message);
+      // Check if this is a confirmation of a message we sent optimistically
+      const existingMessage = messages.find(m => 
+        m.content === message.content && 
+        m.senderId === message.senderId &&
+        m.status === 'sending'
+      );
+      
+      if (existingMessage) {
+        // This is a confirmation of our optimistic message
+        confirmMessageSent(existingMessage.id, message.id);
+      } else {
+        // This is a new message from another user
+        addMessage(message);
+        syncMessageToDatabase(message);
+      }
     }
   }
   
@@ -117,8 +140,14 @@ export const useMessages = (options: UseMessagesOptions): UseMessagesReturn => {
   
   function handleTypingUpdate(event: any) {
     if (event.conversationId === conversationId) {
-      // Handle typing indicators - this would be managed by the messages store
-      // The typing logic is already handled in the messages store
+      // Handle typing indicators
+      if (event.isTyping) {
+        // User started typing
+        addTypingUser(conversationId, event.userId);
+      } else {
+        // User stopped typing
+        removeTypingUser(conversationId, event.userId);
+      }
     }
   }
   
@@ -150,21 +179,25 @@ export const useMessages = (options: UseMessagesOptions): UseMessagesReturn => {
   
   // Send message function
   const sendMessage = useCallback((content: string, type: 'text' | 'image' = 'text', mediaUrl?: string) => {
-    if (!content.trim()) return;
+    if (!content.trim() || !currentUser) return;
+    
+    // Generate temporary ID for optimistic update
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     const messageData: SendMessageData = {
       conversationId,
       content: content.trim(),
       type,
       mediaUrl,
+      tempId,
     };
     
-    // Send via socket
-    socketSendMessage(conversationId, content.trim(), type, mediaUrl);
-    
-    // Send via store (optimistic update)
+    // Send via store first (optimistic update)
     sendMessageAction(messageData);
-  }, [conversationId, socketSendMessage, sendMessageAction]);
+    
+    // Then send via socket
+    socketSendMessage(conversationId, content.trim(), type, mediaUrl);
+  }, [conversationId, currentUser, socketSendMessage, sendMessageAction]);
   
   // Load more messages
   const loadMoreMessages = useCallback((beforeMessageId: string) => {
@@ -173,12 +206,14 @@ export const useMessages = (options: UseMessagesOptions): UseMessagesReturn => {
   
   // Mark message as read
   const markMessageAsRead = useCallback((messageId: string) => {
+    if (!currentUser) return;
+    
     // Update locally
-    markMessageAsReadAction({ messageId, userId: 'current_user_id' }); // TODO: Get from auth store
+    markMessageAsReadAction({ messageId, userId: currentUser.id });
     
     // Send via socket
     socketMarkMessageAsRead(messageId);
-  }, [markMessageAsReadAction, socketMarkMessageAsRead]);
+  }, [currentUser, markMessageAsReadAction, socketMarkMessageAsRead]);
   
   // Mark all messages as read
   const markAllMessagesAsRead = useCallback(() => {
@@ -187,6 +222,18 @@ export const useMessages = (options: UseMessagesOptions): UseMessagesReturn => {
       markMessageAsRead(lastMessage.id);
     }
   }, [lastMessage, markMessageAsRead]);
+  
+  // Retry failed message
+  const retryMessage = useCallback((messageId: string) => {
+    // Retry the message in store
+    retryMessage(messageId);
+    
+    // Re-send via socket
+    const message = messages.find(m => m.id === messageId);
+    if (message) {
+      socketSendMessage(conversationId, message.content, message.type, message.mediaUrl);
+    }
+  }, [messages, socketSendMessage, conversationId]);
   
   // Join conversation
   const joinConversation = useCallback(() => {
