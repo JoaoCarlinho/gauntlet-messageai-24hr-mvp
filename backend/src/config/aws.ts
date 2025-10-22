@@ -1,4 +1,5 @@
-import AWS from 'aws-sdk';
+import { S3Client } from '@aws-sdk/client-s3';
+import { SQSClient } from '@aws-sdk/client-sqs';
 
 // AWS Configuration
 export const awsConfig = {
@@ -24,19 +25,12 @@ export const validateAWSConfig = (): void => {
   }
 };
 
-// Configure AWS SDK
+// Configure AWS SDK v3
 export const configureAWS = (): void => {
   try {
     validateAWSConfig();
-    
-    // Configure AWS SDK
-    AWS.config.update({
-      accessKeyId: awsConfig.accessKeyId,
-      secretAccessKey: awsConfig.secretAccessKey,
-      region: awsConfig.region
-    });
 
-    console.log('✅ AWS SDK configured successfully');
+    console.log('✅ AWS SDK v3 configured successfully');
     console.log(`📍 Region: ${awsConfig.region}`);
     console.log(`🪣 S3 Bucket: ${awsConfig.s3Bucket}`);
     
@@ -102,22 +96,26 @@ export const generateUniqueFilename = (originalName: string, prefix?: string): s
   return prefix ? `${prefix}/${filename}` : filename;
 };
 
-// AWS Service instances
-export const createS3Instance = (): AWS.S3 => {
+// AWS Service instances (SDK v3)
+export const createS3Instance = (): S3Client => {
   validateAWSConfig();
-  return new AWS.S3({
-    accessKeyId: awsConfig.accessKeyId,
-    secretAccessKey: awsConfig.secretAccessKey,
-    region: awsConfig.region
+  return new S3Client({
+    region: awsConfig.region,
+    credentials: {
+      accessKeyId: awsConfig.accessKeyId!,
+      secretAccessKey: awsConfig.secretAccessKey!,
+    },
   });
 };
 
-export const createSQSInstance = (): AWS.SQS => {
+export const createSQSInstance = (): SQSClient => {
   validateAWSConfig();
-  return new AWS.SQS({
-    accessKeyId: awsConfig.accessKeyId,
-    secretAccessKey: awsConfig.secretAccessKey,
-    region: awsConfig.region
+  return new SQSClient({
+    region: awsConfig.region,
+    credentials: {
+      accessKeyId: awsConfig.accessKeyId!,
+      secretAccessKey: awsConfig.secretAccessKey!,
+    },
   });
 };
 

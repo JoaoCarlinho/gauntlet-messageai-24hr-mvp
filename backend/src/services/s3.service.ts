@@ -1,5 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
+import { PutObjectCommand, DeleteObjectCommand, GetObjectCommand, ObjectCannedACL } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { 
   createS3Instance, 
   s3Config, 
@@ -35,7 +37,7 @@ export const uploadAvatarToS3 = async (file: Express.Multer.File, userId: string
       Key: fileName,
       Body: file.buffer,
       ContentType: file.mimetype,
-      ACL: 'public-read', // Make the file publicly accessible
+      ACL: ObjectCannedACL.public_read, // Make the file publicly accessible
       Metadata: {
         userId: userId,
         originalName: file.originalname,
@@ -44,11 +46,12 @@ export const uploadAvatarToS3 = async (file: Express.Multer.File, userId: string
       }
     };
 
-    // Upload to S3
-    const result = await s3.upload(uploadParams).promise();
+    // Upload to S3 using SDK v3
+    const command = new PutObjectCommand(uploadParams);
+    await s3.send(command);
 
     // Return the public URL
-    return result.Location;
+    return `https://${s3Config.bucket}.s3.${s3Config.region}.amazonaws.com/${fileName}`;
   } catch (error) {
     console.error('S3 upload error:', error);
     if (error instanceof Error) {
@@ -75,7 +78,8 @@ export const deleteAvatarFromS3 = async (avatarUrl: string): Promise<void> => {
       Key: key
     };
 
-    await s3.deleteObject(deleteParams).promise();
+    const command = new DeleteObjectCommand(deleteParams);
+    await s3.send(command);
   } catch (error) {
     console.error('S3 delete error:', error);
     throw new Error('S3 delete failed');
@@ -102,15 +106,16 @@ export const generatePresignedUploadUrl = async (userId: string, fileType: strin
       Bucket: s3Config.bucket,
       Key: fileName,
       ContentType: fileType,
-      ACL: 'public-read',
-      Expires: 300, // 5 minutes
+      ACL: ObjectCannedACL.public_read,
+      Expires: new Date(Date.now() + 5 * 60 * 1000), // 5 minutes from now
       Metadata: {
         userId: userId,
         uploadedAt: new Date().toISOString()
       }
     };
 
-    const presignedUrl = await s3.getSignedUrlPromise('putObject', params);
+    const command = new PutObjectCommand(params);
+    const presignedUrl = await getSignedUrl(s3, command, { expiresIn: 3600 }); // 1 hour
     
     return presignedUrl;
   } catch (error) {
@@ -164,7 +169,7 @@ export const uploadMediaToS3 = async (file: Express.Multer.File, userId: string,
       Key: fileName,
       Body: file.buffer,
       ContentType: file.mimetype,
-      ACL: 'public-read',
+      ACL: ObjectCannedACL.public_read,
       Metadata: {
         userId: userId,
         conversationId: conversationId,
@@ -174,11 +179,12 @@ export const uploadMediaToS3 = async (file: Express.Multer.File, userId: string,
       }
     };
 
-    // Upload to S3
-    const result = await s3.upload(uploadParams).promise();
+    // Upload to S3 using SDK v3
+    const command = new PutObjectCommand(uploadParams);
+    await s3.send(command);
 
     // Return the public URL
-    return result.Location;
+    return `https://${s3Config.bucket}.s3.${s3Config.region}.amazonaws.com/${fileName}`;
   } catch (error) {
     console.error('S3 media upload error:', error);
     if (error instanceof Error) {

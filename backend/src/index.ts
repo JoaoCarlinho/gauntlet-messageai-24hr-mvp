@@ -2,13 +2,14 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { createServer } from 'http';
-import prisma from './config/database';
+import prisma, { connectWithRetry, disconnectDatabase, checkDatabaseConnection } from './config/database';
 import { configureAWS } from './config/aws';
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/users.routes';
 import conversationRoutes from './routes/conversations.routes';
 import messageRoutes from './routes/messages.routes';
 import { initializeSocketServer } from './socket';
+import logger from './utils/logger';
 
 // Load environment variables
 dotenv.config();
@@ -16,36 +17,31 @@ dotenv.config();
 // Database initialization function
 async function initializeDatabase() {
   try {
-    console.log('🔄 Initializing database connection...');
+    logger.info('Initializing database connection...');
     
-    // Test database connection
-    await prisma.$connect();
-    console.log('✅ Database connected successfully');
-    
-    // Test basic query to ensure tables exist
-    await prisma.$queryRaw`SELECT 1`;
-    console.log('✅ Database schema verified');
+    // Use enhanced connection with retry logic
+    await connectWithRetry();
     
     // Check if User table exists
     const userCount = await prisma.user.count();
-    console.log(`📊 Found ${userCount} users in database`);
+    logger.info(`Found ${userCount} users in database`);
     
   } catch (error) {
-    console.error('❌ Database initialization failed:', error);
+    logger.logError(error as Error, { operation: 'database_initialization' });
     
     // If it's a table not found error, try to run migrations
     if (error instanceof Error && error.message.includes('does not exist')) {
-      console.log('🔄 Attempting to run database migrations...');
+      logger.info('Attempting to run database migrations...');
       try {
         const { execSync } = require('child_process');
         execSync('npx prisma migrate deploy', { stdio: 'inherit' });
-        console.log('✅ Database migrations completed');
+        logger.info('Database migrations completed');
         
         // Retry connection
         await prisma.$connect();
-        console.log('✅ Database connected after migrations');
+        logger.info('Database connected after migrations');
       } catch (migrationError) {
-        console.error('❌ Migration failed:', migrationError);
+        logger.logError(migrationError as Error, { operation: 'database_migration' });
         process.exit(1);
       }
     } else {
@@ -84,19 +80,59 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Request logging middleware
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-  next();
-});
+// Enhanced logging middleware
+app.use(logger.requestLogger());
 
 // Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
-  });
+app.get('/health', async (req, res) => {
+  try {
+    const startTime = Date.now();
+    
+    // Check database connection
+    const dbConnected = await checkDatabaseConnection();
+    
+    // Check AWS configuration
+    const awsConfigured = !!(process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY);
+    
+    // Check JWT configuration
+    const jwtConfigured = !!process.env.JWT_SECRET;
+    
+    const responseTime = Date.now() - startTime;
+    
+    const healthStatus = {
+      status: dbConnected ? 'ok' : 'degraded',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV || 'development',
+      version: process.env.npm_package_version || '1.0.0',
+      responseTime: `${responseTime}ms`,
+      services: {
+        database: dbConnected ? 'connected' : 'disconnected',
+        aws: awsConfigured ? 'configured' : 'not_configured',
+        jwt: jwtConfigured ? 'configured' : 'not_configured',
+        socket: 'active'
+      },
+      memory: {
+        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB',
+        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + 'MB'
+      },
+      railway: {
+        environment: process.env.RAILWAY_ENVIRONMENT || 'unknown',
+        publicDomain: process.env.RAILWAY_PUBLIC_DOMAIN || 'localhost'
+      }
+    };
+    
+    const statusCode = dbConnected ? 200 : 503;
+    res.status(statusCode).json(healthStatus);
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(503).json({
+      status: 'error',
+      timestamp: new Date().toISOString(),
+      error: 'Health check failed',
+      uptime: process.uptime()
+    });
+  }
 });
 
 // API routes
@@ -158,7 +194,15 @@ app.get('/api/v1', (req, res) => {
 
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error:', err);
+  const requestId = (req as any).requestId;
+  const userId = (req as any).user?.id;
+  
+  logger.logError(err, {
+    method: req.method,
+    url: req.url,
+    statusCode: err.status || 500
+  }, requestId, userId);
+  
   res.status(err.status || 500).json({
     error: process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message,
     ...(process.env.NODE_ENV !== 'production' && { stack: err.stack })
@@ -173,29 +217,7 @@ app.use('*', (req, res) => {
   });
 });
 
-// Graceful shutdown
-const gracefulShutdown = async (signal: string) => {
-  console.log(`${signal} received, shutting down gracefully`);
-  
-  // Close HTTP server
-  httpServer.close(() => {
-    console.log('HTTP server closed');
-  });
-  
-  // Close Socket.io server
-  io.close(() => {
-    console.log('Socket.io server closed');
-  });
-  
-  // Disconnect from database
-  await prisma.$disconnect();
-  console.log('Database disconnected');
-  
-  process.exit(0);
-};
-
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+// Graceful shutdown will be defined later
 
 // Initialize Socket.io server
 const io = initializeSocketServer(httpServer);
@@ -208,16 +230,64 @@ async function startServer() {
     
     // Start HTTP server
     httpServer.listen(PORT, () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`📊 Health check: http://localhost:${PORT}/health`);
-      console.log(`🔗 API base: http://localhost:${PORT}/api/v1`);
-      console.log(`🔌 Socket.io server initialized and ready for connections`);
+      logger.info(`Server running on port ${PORT}`);
+      logger.info(`Health check: http://localhost:${PORT}/health`);
+      logger.info(`API base: http://localhost:${PORT}/api/v1`);
+      logger.info(`Socket.io server initialized and ready for connections`);
     });
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    logger.logError(error as Error, { operation: 'server_startup' });
     process.exit(1);
   }
 }
+
+// Graceful shutdown handling
+const gracefulShutdown = async (signal: string) => {
+  logger.info(`Received ${signal}. Starting graceful shutdown...`);
+  
+  try {
+    // Close HTTP server
+    if (httpServer) {
+      await new Promise<void>((resolve) => {
+        httpServer.close(() => {
+          logger.info('HTTP server closed');
+          resolve();
+        });
+      });
+    }
+    
+    // Close Socket.io server
+    if (io) {
+      io.close(() => {
+        logger.info('Socket.io server closed');
+      });
+    }
+    
+    // Disconnect database
+    await disconnectDatabase();
+    
+    logger.info('Graceful shutdown completed');
+    process.exit(0);
+  } catch (error) {
+    logger.logError(error as Error, { operation: 'graceful_shutdown' });
+    process.exit(1);
+  }
+};
+
+// Handle shutdown signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (error) => {
+  logger.logError(error, { operation: 'uncaught_exception' });
+  gracefulShutdown('uncaughtException');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('Unhandled Rejection', { promise: promise.toString(), reason });
+  gracefulShutdown('unhandledRejection');
+});
 
 // Start the server
 startServer();
