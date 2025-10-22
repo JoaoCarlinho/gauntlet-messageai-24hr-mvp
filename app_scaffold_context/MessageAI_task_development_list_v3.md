@@ -1813,8 +1813,8 @@ git push origin feature/chat-room-ui
 
 **Your Actions**:
 
-* \[ \] Create PR \#10: "Chat Room UI Components"  
-* \[ \] Merge to main
+* \[x\] Create PR \#10: "Chat Room UI Components"  
+* \[x\] Merge to main
 
 ---
 
@@ -1835,11 +1835,11 @@ git checkout \-b feature/sqlite-storage
 
 **Implementation Steps**:
 
-* \[ \] Create Users table  
-* \[ \] Create Conversations table  
-* \[ \] Create Messages table  
-* \[ \] Create ReadReceipts table  
-* \[ \] Add indexes for performance
+* \[x\] Create Users table  
+* \[x\] Create Conversations table  
+* \[x\] Create Messages table  
+* \[x\] Create ReadReceipts table  
+* \[x\] Add indexes for performance
 
 ---
 
@@ -1852,11 +1852,11 @@ git checkout \-b feature/sqlite-storage
 
 **Implementation Steps**:
 
-* \[ \] Create functions to insert/update/delete messages  
-* \[ \] Add queries to fetch conversation messages  
-* \[ \] Create functions to update message status  
-* \[ \] Add conversation CRUD operations  
-* \[ \] Include read receipt management
+* \[x\] Create functions to insert/update/delete messages  
+* \[x\] Add queries to fetch conversation messages  
+* \[x\] Create functions to update message status  
+* \[x\] Add conversation CRUD operations  
+* \[x\] Include read receipt management
 
 ---
 

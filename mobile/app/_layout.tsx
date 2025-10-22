@@ -1,22 +1,72 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import * as SQLite from 'expo-sqlite';
 import { useAuth } from '../hooks/useAuth';
+import { migrateDatabase } from '../db/schema';
+import { createDatabaseQueries } from '../db/queries';
 
 export default function RootLayout() {
   const { isAuthenticated, isLoading, initializeAuth } = useAuth();
+  const [isDatabaseReady, setIsDatabaseReady] = useState(false);
+  const [databaseError, setDatabaseError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Initialize authentication state on app load
-    initializeAuth();
+    // Initialize database and authentication state on app load
+    const initializeApp = async () => {
+      try {
+        // Initialize database first
+        await initializeDatabase();
+        setIsDatabaseReady(true);
+        
+        // Then initialize authentication
+        initializeAuth();
+      } catch (error) {
+        console.error('Failed to initialize app:', error);
+        setDatabaseError(error instanceof Error ? error.message : 'Unknown database error');
+        setIsDatabaseReady(true); // Still allow app to continue
+      }
+    };
+
+    initializeApp();
   }, [initializeAuth]);
 
-  if (isLoading) {
+  const initializeDatabase = async (): Promise<void> => {
+    try {
+      console.log('Initializing SQLite database...');
+      
+      // Open the database
+      const db = SQLite.openDatabaseSync('messageai.db');
+      
+      // Run migrations
+      await migrateDatabase(db);
+      
+      // Create database queries instance (this will be used throughout the app)
+      const queries = createDatabaseQueries(db);
+      
+      // Store the database instance globally for use throughout the app
+      // We'll add this to a context or store later
+      console.log('Database initialized successfully');
+      
+    } catch (error) {
+      console.error('Database initialization failed:', error);
+      throw error;
+    }
+  };
+
+  if (isLoading || !isDatabaseReady) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Loading MessageAI...</Text>
+        <Text style={styles.loadingText}>
+          {!isDatabaseReady ? 'Initializing database...' : 'Loading MessageAI...'}
+        </Text>
+        {databaseError && (
+          <Text style={styles.errorText}>
+            Database warning: {databaseError}
+          </Text>
+        )}
         <StatusBar style="auto" />
       </View>
     );
@@ -54,5 +104,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#666',
     fontWeight: '500',
+  },
+  errorText: {
+    marginTop: 8,
+    fontSize: 14,
+    color: '#FF6B6B',
+    textAlign: 'center',
+    paddingHorizontal: 20,
   },
 });
