@@ -6,8 +6,12 @@ import {
   updateCurrentUser,
   uploadAvatar,
   searchUsersEndpoint,
+  addUserPushToken,
+  removeUserPushToken,
+  getUserPushTokensEndpoint,
   validateProfileUpdate,
-  validateUserSearch
+  validateUserSearch,
+  validatePushToken
 } from '../controllers/users.controller';
 
 const router = Router();
@@ -55,5 +59,23 @@ router.post('/avatar', upload.single('avatar'), uploadAvatar);
  * Search users by display name or email
  */
 router.get('/search', searchUsersEndpoint);
+
+/**
+ * POST /api/v1/users/push-token
+ * Add push token to user
+ */
+router.post('/push-token', validatePushToken, addUserPushToken);
+
+/**
+ * DELETE /api/v1/users/push-token
+ * Remove push token from user
+ */
+router.delete('/push-token', removeUserPushToken);
+
+/**
+ * GET /api/v1/users/push-tokens
+ * Get user's push tokens
+ */
+router.get('/push-tokens', getUserPushTokensEndpoint);
 
 export default router;

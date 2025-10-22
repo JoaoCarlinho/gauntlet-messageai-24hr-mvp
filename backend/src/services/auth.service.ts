@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt';
 import prisma from '../config/database';
 import { generateTokenPair, verifyRefreshToken } from '../utils/jwt';
+import { addPushToken } from './users.service';
 
 export interface RegisterData {
   email: string;
@@ -12,6 +13,9 @@ export interface RegisterData {
 export interface LoginData {
   email: string;
   password: string;
+  pushToken?: string;
+  platform?: string;
+  deviceId?: string;
 }
 
 export interface AuthResult {
@@ -106,7 +110,7 @@ export const registerUser = async (data: RegisterData): Promise<AuthResult> => {
  * Login user
  */
 export const loginUser = async (data: LoginData): Promise<AuthResult> => {
-  const { email, password } = data;
+  const { email, password, pushToken, platform, deviceId } = data;
 
   // Find user by email
   const user = await prisma.user.findUnique({
@@ -131,6 +135,21 @@ export const loginUser = async (data: LoginData): Promise<AuthResult> => {
       lastSeen: new Date()
     }
   });
+
+  // Add push token if provided
+  if (pushToken && platform) {
+    try {
+      await addPushToken(user.id, {
+        pushToken,
+        platform,
+        deviceId
+      });
+      console.log('Push token added during login for user:', user.id);
+    } catch (error) {
+      console.error('Failed to add push token during login:', error);
+      // Don't fail login if push token addition fails
+    }
+  }
 
   // Generate tokens
   const tokens = generateTokenPair(user.id, user.email);

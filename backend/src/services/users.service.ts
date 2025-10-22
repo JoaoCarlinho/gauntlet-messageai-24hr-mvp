@@ -18,6 +18,12 @@ export interface UpdateProfileData {
   avatarUrl?: string;
 }
 
+export interface PushTokenData {
+  pushToken: string;
+  platform: string;
+  deviceId?: string;
+}
+
 export interface UserConversation {
   id: string;
   type: string;
@@ -389,5 +395,210 @@ export const userExists = async (userId: string): Promise<boolean> => {
   } catch (error) {
     console.error('Error checking if user exists:', error);
     return false;
+  }
+};
+
+/**
+ * Add push token to user
+ */
+export const addPushToken = async (
+  userId: string, 
+  pushTokenData: PushTokenData
+): Promise<boolean> => {
+  try {
+    // Validate input
+    if (!pushTokenData.pushToken || !pushTokenData.platform) {
+      throw new Error('Push token and platform are required');
+    }
+
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, pushTokens: true }
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Check if token already exists
+    if (user.pushTokens.includes(pushTokenData.pushToken)) {
+      console.log('Push token already exists for user:', userId);
+      return true;
+    }
+
+    // Add token to user's push tokens array
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        pushTokens: {
+          push: pushTokenData.pushToken
+        },
+        updatedAt: new Date()
+      }
+    });
+
+    console.log('Push token added for user:', userId);
+    return true;
+  } catch (error) {
+    console.error('Error adding push token:', error);
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Failed to add push token');
+  }
+};
+
+/**
+ * Remove push token from user
+ */
+export const removePushToken = async (
+  userId: string, 
+  pushToken: string
+): Promise<boolean> => {
+  try {
+    // Validate input
+    if (!pushToken) {
+      throw new Error('Push token is required');
+    }
+
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, pushTokens: true }
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Check if token exists
+    if (!user.pushTokens.includes(pushToken)) {
+      console.log('Push token not found for user:', userId);
+      return true; // Already removed
+    }
+
+    // Remove token from user's push tokens array
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        pushTokens: {
+          set: user.pushTokens.filter(token => token !== pushToken)
+        },
+        updatedAt: new Date()
+      }
+    });
+
+    console.log('Push token removed for user:', userId);
+    return true;
+  } catch (error) {
+    console.error('Error removing push token:', error);
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Failed to remove push token');
+  }
+};
+
+/**
+ * Get user's push tokens
+ */
+export const getUserPushTokens = async (userId: string): Promise<string[]> => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { pushTokens: true }
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return user.pushTokens;
+  } catch (error) {
+    console.error('Error getting user push tokens:', error);
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Failed to get user push tokens');
+  }
+};
+
+/**
+ * Update user's push tokens (replace all tokens)
+ */
+export const updateUserPushTokens = async (
+  userId: string, 
+  pushTokens: string[]
+): Promise<boolean> => {
+  try {
+    // Validate input
+    if (!Array.isArray(pushTokens)) {
+      throw new Error('Push tokens must be an array');
+    }
+
+    // Check if user exists
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true }
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Update user's push tokens
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        pushTokens: pushTokens,
+        updatedAt: new Date()
+      }
+    });
+
+    console.log('Push tokens updated for user:', userId);
+    return true;
+  } catch (error) {
+    console.error('Error updating user push tokens:', error);
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Failed to update user push tokens');
+  }
+};
+
+/**
+ * Get all users with push tokens (for sending notifications)
+ */
+export const getUsersWithPushTokens = async (userIds?: string[]): Promise<Array<{
+  id: string;
+  displayName: string;
+  pushTokens: string[];
+}>> => {
+  try {
+    const whereClause = userIds ? {
+      id: { in: userIds },
+      pushTokens: { not: { equals: [] } }
+    } : {
+      pushTokens: { not: { equals: [] } }
+    };
+
+    const users = await prisma.user.findMany({
+      where: whereClause,
+      select: {
+        id: true,
+        displayName: true,
+        pushTokens: true
+      }
+    });
+
+    return users.map(user => ({
+      id: user.id,
+      displayName: user.displayName,
+      pushTokens: user.pushTokens
+    }));
+  } catch (error) {
+    console.error('Error getting users with push tokens:', error);
+    throw new Error('Failed to get users with push tokens');
   }
 };

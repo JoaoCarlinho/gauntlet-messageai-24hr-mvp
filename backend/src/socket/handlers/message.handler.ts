@@ -2,6 +2,7 @@ import { Socket } from 'socket.io';
 import * as messageService from '../../services/message.service';
 import { roomManager, ROOM_TYPES } from '../room-manager';
 import * as presenceService from '../../services/presence.service';
+import { sendMessageNotification } from '../../services/notification.service';
 
 // Types for socket message events
 export interface SendMessageData {
@@ -126,6 +127,14 @@ export const handleSendMessage = async (socket: Socket, data: SendMessageData): 
 
     // Update sender's last seen timestamp
     await presenceService.updateUserLastSeen(socket.user.id);
+
+    // Send push notifications to offline users
+    await sendPushNotificationsToOfflineUsers(
+      conversationId,
+      message,
+      socket.user.displayName,
+      onlineMembers
+    );
 
     console.log(`📨 Message sent by ${socket.user.displayName} in conversation ${conversationId}`);
   } catch (error) {
@@ -565,6 +574,51 @@ const getUserDetails = async (userId: string): Promise<{ id: string; displayName
   } catch (error) {
     console.error('Error getting user details:', error);
     return null;
+  }
+};
+
+/**
+ * Send push notifications to offline users in a conversation
+ */
+const sendPushNotificationsToOfflineUsers = async (
+  conversationId: string,
+  message: any,
+  senderName: string,
+  onlineMembers: string[]
+): Promise<void> => {
+  try {
+    // Get all conversation members
+    const conversationMembers = await getConversationMembers(conversationId);
+    
+    // Filter out the sender and online members to get offline recipients
+    const offlineRecipients = conversationMembers.filter(
+      memberId => memberId !== message.senderId && !onlineMembers.includes(memberId)
+    );
+
+    // If there are offline recipients, send push notifications
+    if (offlineRecipients.length > 0) {
+      console.log(`📱 Sending push notifications to ${offlineRecipients.length} offline users`);
+      
+      const notificationResult = await sendMessageNotification(
+        conversationId,
+        message.senderId,
+        senderName,
+        message.content,
+        message.id,
+        message.type
+      );
+
+      if (notificationResult.success) {
+        console.log(`✅ Push notifications sent successfully: ${notificationResult.sentCount} delivered, ${notificationResult.failedCount} failed`);
+      } else {
+        console.log(`❌ Push notification failed: ${notificationResult.errors.join(', ')}`);
+      }
+    } else {
+      console.log('📱 No offline users to notify');
+    }
+  } catch (error) {
+    console.error('Error sending push notifications to offline users:', error);
+    // Don't throw error - notification failure shouldn't break message sending
   }
 };
 
