@@ -6,6 +6,9 @@
     "orientation": "portrait",
     "scheme": "messageai",
     "userInterfaceStyle": "automatic",
+    "extra": {
+      "projectId": "000e0f25-0b45-4ae6-b74d-8bea7af91095"
+    },
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash-icon.png",

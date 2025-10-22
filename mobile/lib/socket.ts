@@ -60,7 +60,13 @@ class SocketManager {
       // Get authentication token
       const token = await getToken();
       if (!token) {
-        throw new Error('No authentication token available');
+        console.log('No authentication token available, skipping socket connection');
+        this.updateConnectionStatus({
+          connecting: false,
+          connected: false,
+          error: null, // Don't treat this as an error, just not connected
+        });
+        return;
       }
 
       console.log('Connecting to socket server:', this.config.url);

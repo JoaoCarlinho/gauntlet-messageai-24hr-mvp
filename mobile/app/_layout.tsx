@@ -22,6 +22,7 @@ export default function RootLayout() {
   // App state management for background sync
   const appState = useRef(AppState.currentState);
   const lastSyncTime = useRef<Date | null>(null);
+  const isInitialized = useRef(false);
   
   // Get socket connection and message store
   const { connect: connectSocket, isConnected } = useSocket();
@@ -29,9 +30,16 @@ export default function RootLayout() {
   const { syncMessageToDatabase } = useActions(messagesLogic);
 
   useEffect(() => {
+    // Prevent multiple initializations
+    if (isInitialized.current) {
+      return;
+    }
+
     // Initialize database and authentication state on app load
     const initializeApp = async () => {
       try {
+        isInitialized.current = true;
+        
         // Initialize database first
         await initializeDatabase();
         setIsDatabaseReady(true);
@@ -45,11 +53,12 @@ export default function RootLayout() {
         console.error('Failed to initialize app:', error);
         setDatabaseError(error instanceof Error ? error.message : 'Unknown database error');
         setIsDatabaseReady(true); // Still allow app to continue
+        isInitialized.current = false; // Allow retry on error
       }
     };
 
     initializeApp();
-  }, [initializeAuth]);
+  }, []); // Empty dependency array - run only once
 
   // Set up app state listener for background sync
   useEffect(() => {
@@ -71,13 +80,11 @@ export default function RootLayout() {
 
   const initializeDatabase = async (): Promise<void> => {
     try {
-      console.log('Initializing SQLite database...');
-      
       // Open the database
       const db = SQLite.openDatabaseSync('messageai.db');
       
-      // Run migrations
-      await migrateDatabase(db);
+      // Run migrations (now synchronous)
+      migrateDatabase(db);
       
       // Create database queries instance (this will be used throughout the app)
       const queries = createDatabaseQueries(db);
@@ -94,7 +101,6 @@ export default function RootLayout() {
 
   const initializeNotifications = async (): Promise<void> => {
     try {
-      console.log('Initializing notifications...');
       await notificationManager.initialize();
       console.log('Notifications initialized successfully');
     } catch (error) {

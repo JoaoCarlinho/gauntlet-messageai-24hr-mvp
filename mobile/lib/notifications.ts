@@ -2,6 +2,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { router } from 'expo-router';
+import Constants from 'expo-constants';
 import api from './api';
 
 // Configure notification behavior
@@ -98,20 +99,33 @@ class NotificationManager {
         console.warn('Must use physical device for push notifications');
         return null;
       }
+      // Resolve projectId from env or config. Do not use a fallback placeholder UUID in dev.
+      const projectId = process.env.EXPO_PUBLIC_PROJECT_ID || Constants.expoConfig?.extra?.projectId;
 
-      const token = await Notifications.getExpoPushTokenAsync({
-        projectId: process.env.EXPO_PUBLIC_PROJECT_ID,
-      });
+      if (!projectId || typeof projectId !== 'string' || projectId.length === 0) {
+        console.warn('EXPO_PUBLIC_PROJECT_ID is not set or invalid. Skipping push token registration in this environment.');
+        return null;
+      }
 
-      this.pushToken = token.data;
-      console.log('Expo push token obtained:', this.pushToken);
-      
-      // Send token to backend
-      await this.sendTokenToBackend(this.pushToken);
-      
-      return this.pushToken;
+      // Try to obtain token, but catch and log errors without throwing to avoid crashing app startup
+      try {
+        const token = await Notifications.getExpoPushTokenAsync({ projectId });
+        this.pushToken = token.data;
+        console.log('Expo push token obtained:', this.pushToken);
+
+        // Send token to backend (handle 404 gracefully)
+        const sent = await this.sendTokenToBackend(this.pushToken);
+        if (!sent) {
+          console.warn('Push token was obtained but failed to be saved on backend (check endpoint).');
+        }
+
+        return this.pushToken;
+      } catch (err) {
+        console.error('Error getting Expo push token (non-fatal):', err);
+        return null;
+      }
     } catch (error) {
-      console.error('Error getting push token:', error);
+      console.error('Unexpected error in getPushToken:', error);
       return null;
     }
   }
@@ -126,16 +140,27 @@ class NotificationManager {
         platform: Platform.OS,
         deviceId: Device.osInternalBuildId || 'unknown',
       });
-
-      if (response.data.success) {
+      if (response.status === 200 && response.data && response.data.success) {
         console.log('Push token sent to backend successfully');
         return true;
-      } else {
-        console.error('Failed to send push token to backend:', response.data.error);
+      }
+
+      // Handle 404 and other non-success responses gracefully
+      if (response.status === 404) {
+        console.warn('Push token endpoint not found (404). Check backend route /users/push-token');
         return false;
       }
+
+      console.error('Failed to send push token to backend:', response.status, response.data);
+      return false;
     } catch (error) {
-      console.error('Error sending push token to backend:', error);
+      // If axios error with response, surface status for debugging
+      if (error?.response) {
+        console.warn('Error sending push token to backend:', error.response.status, error.response.data);
+        return false;
+      }
+
+      console.error('Unexpected error sending push token to backend:', error);
       return false;
     }
   }

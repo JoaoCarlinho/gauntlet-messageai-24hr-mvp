@@ -811,10 +811,6 @@ export const messagesLogic = kea({
       (connectionStatus: any) => connectionStatus,
     ],
     
-    isOffline: [
-      (selectors: any) => [selectors.isOffline],
-      (isOffline: any) => isOffline,
-    ],
   },
 });
 
