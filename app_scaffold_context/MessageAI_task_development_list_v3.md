@@ -1659,8 +1659,8 @@ git push origin feature/mobile-auth
 
 **Your Actions**:
 
-* \[ \] Create PR \#8: "Mobile Authentication"  
-* \[ \] Merge to main
+* \[x\] Create PR \#8: "Mobile Authentication"  
+* \[x\] Merge to main
 
 ---
 
