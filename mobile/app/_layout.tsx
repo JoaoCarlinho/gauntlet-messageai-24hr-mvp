@@ -147,22 +147,29 @@ export default function RootLayout() {
           const queries = createDatabaseQueries(db);
           
           for (const message of messages) {
-            await queries.insertMessage(message);
-            // Convert MessageWithReadReceipts to Message format for syncMessageToDatabase
-            const messageForSync = {
-              ...message,
+            // Convert MessageWithReadReceipts to Message format for database
+            const messageForDB = {
+              id: message.id,
+              content: message.content,
+              type: message.type,
+              conversationId: message.conversationId,
+              senderId: message.sender.id,
+              status: message.status,
+              createdAt: message.createdAt,
+              updatedAt: message.updatedAt,
               sender: {
                 id: message.sender.id,
                 displayName: message.sender.displayName,
-                avatarUrl: message.sender.avatarUrl,
-                email: '', // Add missing fields with defaults
-                lastSeen: new Date().toISOString(),
+                avatarUrl: message.sender.avatarUrl || undefined,
+                email: 'user@example.com', // Default value
+                lastSeen: new Date(),
                 isOnline: false,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
+                createdAt: new Date(),
+                updatedAt: new Date()
               }
             };
-            syncMessageToDatabase(messageForSync);
+            await queries.insertMessage(messageForDB);
+            syncMessageToDatabase(messageForDB);
           }
           
           console.log(`Synced ${messages.length} messages for conversation ${conversation.id}`);
@@ -223,20 +230,34 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <View style={styles.container}>
-        <Stack screenOptions={{ headerShown: false }}>
-          {/* Always define all screens - conditional rendering handled by screen components */}
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(tabs)" />
-          <Stack.Screen name="chat/[id]" />
-          <Stack.Screen name="group/new" />
-        </Stack>
-        
-        {/* Connection Status Banner - only show for authenticated users */}
-        {isAuthenticated && <ConnectionStatus />}
-        
-        <StatusBar style="auto" />
-      </View>
+      <Stack screenOptions={{ headerShown: false }}>
+        {/* Always define all screens - conditional rendering handled by screen components */}
+        <Stack.Screen 
+          name="(auth)"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen 
+          name="(tabs)"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen 
+          name="chat/[id]"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen 
+          name="group/new"
+          options={{ headerShown: false }}
+        />
+      </Stack>
+      
+      {/* Connection Status Banner - only show for authenticated users */}
+      {isAuthenticated && (
+        <View style={styles.statusContainer}>
+          <ConnectionStatus />
+        </View>
+      )}
+      
+      <StatusBar style="auto" />
     </QueryClientProvider>
   );
 }
@@ -263,5 +284,12 @@ const styles = StyleSheet.create({
     color: '#FF6B6B',
     textAlign: 'center',
     paddingHorizontal: 20,
+  },
+  statusContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
   },
 });

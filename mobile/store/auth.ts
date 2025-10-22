@@ -1,4 +1,5 @@
 import { kea } from 'kea';
+import { DeviceEventEmitter } from 'react-native';
 import { authAPI, tokenManager } from '../lib/api';
 import { User, LoginRequest, RegisterRequest, AuthResponse } from '../types';
 import * as SecureStore from 'expo-secure-store';
@@ -162,6 +163,11 @@ export const authLogic = kea({
         console.error('Logout API error:', error);
         // Continue with local logout even if API fails
       } finally {
+        // Remove event listener
+        if (values.logoutListener) {
+          values.logoutListener.remove();
+        }
+        
         // Clear local state and storage
         actions.clearAuth();
         await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
@@ -248,10 +254,16 @@ export const authLogic = kea({
           console.log('No stored auth data found');
         }
         
-        // Set up global error handler for authentication failures
-        // Note: React Native doesn't have window.addEventListener, so we'll use a different approach
-        // For now, we'll handle auth failures through the API layer and token refresh mechanism
-        console.log('Auth initialization completed - using React Native compatible event handling');
+        // Set up global error handler for authentication failures using React Native's event system
+        const logoutListener = DeviceEventEmitter.addListener('auth:logout', (data: { reason?: string }) => {
+          console.log('Global auth logout triggered:', data?.reason);
+          actions.logout();
+        });
+        
+        // Store listener reference for cleanup
+        values.logoutListener = logoutListener;
+        
+        console.log('Auth initialization completed - using React Native event system');
         
         actions.setLoading(false);
       } catch (error) {
