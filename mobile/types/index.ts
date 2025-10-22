@@ -364,6 +364,8 @@ export interface ChatItemProps {
 export interface InputToolbarProps {
   onSendMessage: (content: string) => void;
   onSendImage?: () => void;
+  onTypingStart?: () => void;
+  onTypingStop?: () => void;
   placeholder?: string;
   disabled?: boolean;
 }

@@ -22,6 +22,11 @@ interface MessagesActions {
   updateMessageStatus: (data: MessageStatusUpdateData) => void;
   markMessageAsRead: (data: ReadReceiptData) => void;
   
+  // Optimistic UI actions
+  confirmMessageSent: (tempId: string, realId: string) => void;
+  markMessageFailed: (tempId: string, error: string) => void;
+  retryMessage: (tempId: string) => void;
+  
   // Message loading
   loadMessages: (conversationId: string, limit?: number, beforeMessageId?: string) => void;
   loadMoreMessages: (conversationId: string, beforeMessageId: string) => void;
@@ -47,14 +52,23 @@ interface MessagesActions {
   updateMessageInDatabase: (messageId: string, updates: Partial<Message>) => void;
 }
 
-// Helper function to generate temporary ID
+// Helper function to generate temporary ID (UUID-like)
 const generateTempId = (): string => {
   return `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
+// Helper function to generate UUID v4
+const generateUUID = (): string => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 // Helper function to create optimistic message
 const createOptimisticMessage = (data: SendMessageData, currentUserId: string): Message => {
-  const tempId = data.tempId || generateTempId();
+  const tempId = data.tempId || generateUUID();
   const now = new Date();
   
   return {
@@ -99,6 +113,11 @@ export const messagesLogic = kea({
     updateMessage: (messageId: string, updates: Partial<Message>) => ({ messageId, updates }),
     updateMessageStatus: (data: MessageStatusUpdateData) => ({ data }),
     markMessageAsRead: (data: ReadReceiptData) => ({ data }),
+    
+    // Optimistic UI actions
+    confirmMessageSent: (tempId: string, realId: string) => ({ tempId, realId }),
+    markMessageFailed: (tempId: string, error: string) => ({ tempId, error }),
+    retryMessage: (tempId: string) => ({ tempId }),
     
     // Message loading
     loadMessages: (conversationId: string, limit?: number, beforeMessageId?: string) => ({ 
@@ -167,6 +186,56 @@ export const messagesLogic = kea({
             newState[conversationId] = [
               ...messages.slice(0, messageIndex),
               { ...messages[messageIndex], ...updates, updatedAt: new Date() },
+              ...messages.slice(messageIndex + 1),
+            ];
+          }
+        });
+        
+        return newState;
+      },
+      
+      confirmMessageSent: (state, { tempId, realId }) => {
+        const newState = { ...state };
+        
+        // Find and update the message with temp ID to real ID
+        Object.keys(newState).forEach(conversationId => {
+          const messages = newState[conversationId];
+          const messageIndex = messages.findIndex(m => m.id === tempId);
+          
+          if (messageIndex !== -1) {
+            newState[conversationId] = [
+              ...messages.slice(0, messageIndex),
+              { 
+                ...messages[messageIndex], 
+                id: realId, 
+                status: 'sent',
+                updatedAt: new Date() 
+              },
+              ...messages.slice(messageIndex + 1),
+            ];
+          }
+        });
+        
+        return newState;
+      },
+      
+      markMessageFailed: (state, { tempId, error }) => {
+        const newState = { ...state };
+        
+        // Find and update the message status to failed
+        Object.keys(newState).forEach(conversationId => {
+          const messages = newState[conversationId];
+          const messageIndex = messages.findIndex(m => m.id === tempId);
+          
+          if (messageIndex !== -1) {
+            newState[conversationId] = [
+              ...messages.slice(0, messageIndex),
+              { 
+                ...messages[messageIndex], 
+                status: 'failed',
+                error: error,
+                updatedAt: new Date() 
+              },
               ...messages.slice(messageIndex + 1),
             ];
           }
@@ -248,6 +317,32 @@ export const messagesLogic = kea({
         }
         return state;
       },
+      
+      confirmMessageSent: (state, { tempId }) => {
+        // Remove from pending when message is confirmed
+        const newState = { ...state };
+        delete newState[tempId];
+        return newState;
+      },
+      
+      markMessageFailed: (state, { tempId }) => {
+        // Keep in pending for retry, but mark as failed
+        return state;
+      },
+      
+      retryMessage: (state, { tempId }) => {
+        // Reset status to sending for retry
+        const newState = { ...state };
+        if (newState[tempId]) {
+          newState[tempId] = {
+            ...newState[tempId],
+            status: 'sending',
+            error: undefined,
+            updatedAt: new Date(),
+          };
+        }
+        return newState;
+      },
     },
     
     lastMessageIds: {
@@ -273,8 +368,15 @@ export const messagesLogic = kea({
     // Send message listener
     sendMessage: async ({ data }: any) => {
       try {
-        // Get current user ID (you'll need to get this from auth store)
-        const currentUserId = 'current_user_id'; // TODO: Get from auth store
+        // Get current user ID from auth store
+        const authState = values.auth || {};
+        const currentUserId = authState.user?.id;
+        
+        if (!currentUserId) {
+          actions.setError('User not authenticated');
+          actions.setLoading(false);
+          return;
+        }
         
         // Create optimistic message
         const optimisticMessage = createOptimisticMessage(data, currentUserId);
@@ -296,6 +398,72 @@ export const messagesLogic = kea({
         console.error('Send message error:', error);
         actions.setError(error instanceof Error ? error.message : 'Failed to send message');
         actions.setLoading(false);
+      }
+    },
+    
+    // Confirm message sent listener
+    confirmMessageSent: async ({ tempId, realId }: any) => {
+      try {
+        // Update message with real ID and sent status
+        actions.updateMessage(tempId, { 
+          id: realId, 
+          status: 'sent',
+          updatedAt: new Date() 
+        });
+        
+        // Update in database
+        actions.updateMessageInDatabase(tempId, { 
+          id: realId, 
+          status: 'sent' 
+        });
+        
+        // Remove from pending
+        actions.confirmMessageSent(tempId, realId);
+      } catch (error) {
+        console.error('Confirm message sent error:', error);
+      }
+    },
+    
+    // Mark message failed listener
+    markMessageFailed: async ({ tempId, error }: any) => {
+      try {
+        // Update message status to failed
+        actions.updateMessage(tempId, { 
+          status: 'failed',
+          error: error,
+          updatedAt: new Date() 
+        });
+        
+        // Update in database
+        actions.updateMessageInDatabase(tempId, { 
+          status: 'failed',
+          error: error 
+        });
+      } catch (error) {
+        console.error('Mark message failed error:', error);
+      }
+    },
+    
+    // Retry message listener
+    retryMessage: async ({ tempId }: any) => {
+      try {
+        // Reset message status to sending
+        actions.updateMessage(tempId, { 
+          status: 'sending',
+          error: undefined,
+          updatedAt: new Date() 
+        });
+        
+        // Update in database
+        actions.updateMessageInDatabase(tempId, { 
+          status: 'sending',
+          error: undefined 
+        });
+        
+        // Re-emit socket event (this will be handled by the socket hook)
+        // The socket hook will re-emit the 'send_message' event
+      } catch (error) {
+        console.error('Retry message error:', error);
       }
     },
     

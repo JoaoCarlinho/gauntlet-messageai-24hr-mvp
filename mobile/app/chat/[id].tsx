@@ -1,166 +1,248 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
   FlatList,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-
-// Mock data for now - will be replaced with actual data
-const mockMessages = [
-  {
-    id: '1',
-    content: 'Hey, how are you doing?',
-    senderId: 'other',
-    senderName: 'John Doe',
-    timestamp: '2:30 PM',
-    status: 'read',
-  },
-  {
-    id: '2',
-    content: 'I\'m doing great! How about you?',
-    senderId: 'me',
-    senderName: 'Me',
-    timestamp: '2:32 PM',
-    status: 'read',
-  },
-  {
-    id: '3',
-    content: 'Pretty good, thanks for asking!',
-    senderId: 'other',
-    senderName: 'John Doe',
-    timestamp: '2:33 PM',
-    status: 'delivered',
-  },
-];
+import { useValues } from 'kea';
+import { authLogic } from '../../store/auth';
+import { useMessages } from '../../hooks/useMessages';
+import { useSocket } from '../../hooks/useSocket';
+import { MessageBubble, InputToolbar, TypingIndicator } from '../../components/chat';
+import { Message } from '../../types';
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const [messages, setMessages] = useState(mockMessages);
-  const [newMessage, setNewMessage] = useState('');
+  const conversationId = id as string;
+  
+  // Get current user from auth store
+  const { currentUser } = useValues(authLogic);
+  
+  // Use messages hook for message operations
+  const {
+    messages,
+    isLoading,
+    error,
+    hasMessages,
+    lastMessage,
+    typingUsers,
+    sendMessage,
+    loadMessages,
+    markMessageAsRead,
+    joinConversation,
+    leaveConversation,
+    refreshMessages,
+  } = useMessages({
+    conversationId,
+    autoLoad: true,
+    loadLimit: 50,
+  });
+  
+  // Use socket hook for real-time features
+  const {
+    isConnected,
+    startTyping,
+    stopTyping,
+  } = useSocket({
+    onMessage: handleNewMessage,
+    onTyping: handleTypingUpdate,
+  });
+  
+  // Refs
+  const flatListRef = useRef<FlatList>(null);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50,
+    minimumViewTime: 1000,
+  });
+  
+  // State
   const [isTyping, setIsTyping] = useState(false);
-
-  // Mock conversation data
-  const conversation = {
-    id: id,
-    name: 'John Doe',
-    isOnline: true,
-  };
-
-  useEffect(() => {
-    // TODO: Load conversation and messages from API
-    console.log('Loading conversation:', id);
-  }, [id]);
-
-  const handleSendMessage = () => {
-    if (!newMessage.trim()) return;
-
-    const message = {
-      id: Date.now().toString(),
-      content: newMessage.trim(),
-      senderId: 'me',
-      senderName: 'Me',
-      timestamp: new Date().toLocaleTimeString([], { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      }),
-      status: 'sending',
-    };
-
-    setMessages(prev => [...prev, message]);
-    setNewMessage('');
-
-    // TODO: Send message via socket/API
-    console.log('Sending message:', message);
-
-    // Simulate message being sent
+  const [conversationName, setConversationName] = useState('Chat');
+  
+  // Handle new message from socket
+  function handleNewMessage(message: Message) {
+    // Messages are automatically handled by the useMessages hook
+    // Scroll to bottom when new message arrives
     setTimeout(() => {
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === message.id 
-            ? { ...msg, status: 'sent' as const }
-            : msg
-        )
-      );
-    }, 1000);
-  };
-
-  const handleTyping = (text: string) => {
-    setNewMessage(text);
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  }
+  
+  // Handle typing updates from socket
+  function handleTypingUpdate(event: any) {
+    // Typing indicators are handled by the useMessages hook
+  }
+  
+  // Handle sending message
+  const handleSendMessage = useCallback((content: string) => {
+    if (!content.trim() || !currentUser) return;
     
-    // TODO: Emit typing indicator
-    if (text.length > 0 && !isTyping) {
+    sendMessage(content, 'text');
+    
+    // Scroll to bottom after sending
+    setTimeout(() => {
+      flatListRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+  }, [sendMessage, currentUser]);
+  
+  // Handle typing start/stop
+  const handleTypingStart = useCallback(() => {
+    if (!isTyping && isConnected) {
       setIsTyping(true);
-      // Emit typing start
-    } else if (text.length === 0 && isTyping) {
-      setIsTyping(false);
-      // Emit typing stop
+      startTyping(conversationId);
+      
+      // Clear existing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      
+      // Set timeout to stop typing
+      typingTimeoutRef.current = setTimeout(() => {
+        handleTypingStop();
+      }, 3000);
     }
-  };
-
-  const renderMessage = ({ item }: { item: typeof mockMessages[0] }) => {
-    const isMe = item.senderId === 'me';
+  }, [isTyping, isConnected, conversationId, startTyping]);
+  
+  const handleTypingStop = useCallback(() => {
+    if (isTyping && isConnected) {
+      setIsTyping(false);
+      stopTyping(conversationId);
+      
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+    }
+  }, [isTyping, isConnected, conversationId, stopTyping]);
+  
+  
+  // Handle message press (for read receipts)
+  const handleMessagePress = useCallback((message: Message) => {
+    if (message.senderId !== currentUser?.id && message.status !== 'read') {
+      markMessageAsRead(message.id);
+    }
+  }, [currentUser, markMessageAsRead]);
+  
+  // Handle when messages become visible (for read receipts)
+  const handleViewableItemsChanged = useCallback(({ viewableItems }: any) => {
+    if (!currentUser) return;
+    
+    // Mark messages as read when they become visible
+    viewableItems.forEach((item: any) => {
+      const message = item.item as Message;
+      if (message.senderId !== currentUser.id && message.status !== 'read') {
+        markMessageAsRead(message.id);
+      }
+    });
+  }, [currentUser, markMessageAsRead]);
+  
+  // Render message item
+  const renderMessage = useCallback(({ item }: { item: Message }) => {
+    const isOwn = item.senderId === currentUser?.id;
     
     return (
-      <View style={[styles.messageContainer, isMe && styles.myMessageContainer]}>
-        <View style={[styles.messageBubble, isMe && styles.myMessageBubble]}>
-          <Text style={[styles.messageText, isMe && styles.myMessageText]}>
-            {item.content}
-          </Text>
-          <View style={styles.messageFooter}>
-            <Text style={[styles.timestamp, isMe && styles.myTimestamp]}>
-              {item.timestamp}
-            </Text>
-            {isMe && (
-              <Ionicons
-                name={
-                  item.status === 'read' ? 'checkmark-done' :
-                  item.status === 'delivered' ? 'checkmark-done' :
-                  item.status === 'sent' ? 'checkmark' : 'time'
-                }
-                size={16}
-                color={
-                  item.status === 'read' ? '#007AFF' :
-                  item.status === 'delivered' ? '#007AFF' :
-                  item.status === 'sent' ? '#8E8E93' : '#8E8E93'
-                }
-                style={styles.statusIcon}
-              />
-            )}
-          </View>
-        </View>
+      <MessageBubble
+        message={item}
+        isOwn={isOwn}
+        showAvatar={!isOwn}
+        showTimestamp={true}
+        onPress={() => handleMessagePress(item)}
+        onLongPress={() => {
+          // TODO: Show message options (copy, delete, etc.)
+        }}
+      />
+    );
+  }, [currentUser, handleMessagePress]);
+  
+  // Render typing indicator
+  const renderTypingIndicator = useCallback(() => {
+    if (typingUsers.length === 0) return null;
+    
+    return (
+      <TypingIndicator
+        typingUsers={typingUsers}
+        conversationId={conversationId}
+      />
+    );
+  }, [typingUsers, conversationId]);
+  
+  // Initialize conversation
+  useEffect(() => {
+    if (conversationId) {
+      // Join conversation room
+      joinConversation();
+      
+      // Load messages
+      loadMessages();
+      
+      // TODO: Load conversation details (name, participants, etc.)
+      setConversationName(`Chat ${conversationId.slice(-4)}`);
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      leaveConversation();
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, [conversationId, joinConversation, leaveConversation, loadMessages]);
+  
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (hasMessages) {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    }
+  }, [hasMessages, messages.length]);
+  
+
+  // Show loading state
+  if (isLoading && !hasMessages) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.loadingText}>Loading messages...</Text>
       </View>
     );
-  };
-
-  const renderTypingIndicator = () => (
-    <View style={styles.typingContainer}>
-      <View style={styles.typingBubble}>
-        <Text style={styles.typingText}>John is typing...</Text>
+  }
+  
+  // Show error state
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Failed to load messages</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={refreshMessages}>
+          <Text style={styles.retryButtonText}>Retry</Text>
+        </TouchableOpacity>
       </View>
-    </View>
-  );
+    );
+  }
 
   return (
     <KeyboardAvoidingView 
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#007AFF" />
         </TouchableOpacity>
         <View style={styles.headerInfo}>
-          <Text style={styles.headerTitle}>{conversation.name}</Text>
+          <Text style={styles.headerTitle}>{conversationName}</Text>
           <Text style={styles.headerSubtitle}>
-            {conversation.isOnline ? 'Online' : 'Offline'}
+            {isConnected ? 'Online' : 'Connecting...'}
           </Text>
         </View>
         <TouchableOpacity>
@@ -168,35 +250,39 @@ export default function ChatScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Messages List */}
       <FlatList
+        ref={flatListRef}
         data={messages}
         renderItem={renderMessage}
         keyExtractor={(item) => item.id}
         style={styles.messagesList}
         contentContainerStyle={styles.messagesContent}
-        ListFooterComponent={isTyping ? renderTypingIndicator : null}
+        ListFooterComponent={renderTypingIndicator}
         inverted={false}
+        onViewableItemsChanged={handleViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig.current}
+        onContentSizeChange={() => {
+          // Auto-scroll to bottom when content size changes
+          setTimeout(() => {
+            flatListRef.current?.scrollToEnd({ animated: true });
+          }, 100);
+        }}
+        showsVerticalScrollIndicator={false}
       />
 
-      <View style={styles.inputContainer}>
-        <View style={styles.inputWrapper}>
-          <TextInput
-            style={styles.textInput}
-            value={newMessage}
-            onChangeText={handleTyping}
-            placeholder="Type a message..."
-            multiline
-            maxLength={1000}
-          />
-          <TouchableOpacity style={styles.sendButton} onPress={handleSendMessage}>
-            <Ionicons 
-              name="send" 
-              size={20} 
-              color={newMessage.trim() ? '#007AFF' : '#C7C7CC'} 
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
+      {/* Input Toolbar */}
+      <InputToolbar
+        onSendMessage={handleSendMessage}
+        onSendImage={() => {
+          // TODO: Implement image sending
+          Alert.alert('Coming Soon', 'Image sending will be available soon!');
+        }}
+        onTypingStart={handleTypingStart}
+        onTypingStop={handleTypingStop}
+        placeholder="Type a message..."
+        disabled={!isConnected}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -205,6 +291,42 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '500',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#FF3B30',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   header: {
     flexDirection: 'row',
@@ -233,87 +355,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   messagesContent: {
-    padding: 16,
-  },
-  messageContainer: {
-    marginBottom: 12,
-    alignItems: 'flex-start',
-  },
-  myMessageContainer: {
-    alignItems: 'flex-end',
-  },
-  messageBubble: {
-    maxWidth: '80%',
-    backgroundColor: '#E5E5EA',
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  myMessageBubble: {
-    backgroundColor: '#007AFF',
-  },
-  messageText: {
-    fontSize: 16,
-    color: '#000',
-    lineHeight: 20,
-  },
-  myMessageText: {
-    color: '#fff',
-  },
-  messageFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  timestamp: {
-    fontSize: 12,
-    color: '#8E8E93',
-  },
-  myTimestamp: {
-    color: 'rgba(255, 255, 255, 0.7)',
-  },
-  statusIcon: {
-    marginLeft: 4,
-  },
-  typingContainer: {
-    marginBottom: 12,
-    alignItems: 'flex-start',
-  },
-  typingBubble: {
-    backgroundColor: '#E5E5EA',
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  typingText: {
-    fontSize: 14,
-    color: '#8E8E93',
-    fontStyle: 'italic',
-  },
-  inputContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5EA',
-    backgroundColor: '#fff',
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    backgroundColor: '#F2F2F7',
-    borderRadius: 20,
-    paddingHorizontal: 16,
     paddingVertical: 8,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 16,
-    color: '#000',
-    maxHeight: 100,
-    paddingVertical: 4,
-  },
-  sendButton: {
-    marginLeft: 8,
-    padding: 8,
   },
 });
