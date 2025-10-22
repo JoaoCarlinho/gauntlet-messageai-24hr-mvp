@@ -2,6 +2,7 @@ import { useValues, useActions } from 'kea';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { conversationsLogic } from '../store/conversations';
 import { conversationsAPI } from '../lib/api';
+import { useAuth } from './useAuth';
 import { 
   Conversation, 
   ConversationWithLastMessage, 
@@ -57,6 +58,7 @@ interface UseConversationsReturn {
  */
 export const useConversations = (): UseConversationsReturn => {
   const queryClient = useQueryClient();
+  const { isAuthenticated } = useAuth();
   
   // Get values from Kea store
   const {
@@ -89,7 +91,7 @@ export const useConversations = (): UseConversationsReturn => {
     setError,
   } = useActions(conversationsLogic);
   
-  // React Query for conversations list
+  // React Query for conversations list - only run when authenticated
   const conversationsQuery = useQuery({
     queryKey: [CONVERSATIONS_QUERY_KEY],
     queryFn: async () => {
@@ -98,6 +100,7 @@ export const useConversations = (): UseConversationsReturn => {
       loadConversationsAction();
       return data;
     },
+    enabled: isAuthenticated, // Only run when user is authenticated
     staleTime: 5 * 60 * 1000, // 5 minutes
     gcTime: 10 * 60 * 1000, // 10 minutes (renamed from cacheTime)
     refetchOnWindowFocus: false,

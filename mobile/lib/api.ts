@@ -412,6 +412,12 @@ export const conversationsAPI = {
         return [];
       }
     } catch (error: any) {
+      // Handle authentication errors gracefully
+      if (error?.response?.status === 401) {
+        console.log('Authentication required - returning empty conversations list');
+        return [];
+      }
+      
       // If it's a 404 or empty response, return empty array instead of throwing
       if (error?.response?.status === 404 || error?.response?.status === 200) {
         console.log('No conversations endpoint or empty response - returning empty array');
