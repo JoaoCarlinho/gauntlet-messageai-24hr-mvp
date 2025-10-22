@@ -2432,7 +2432,7 @@ git push origin feature/push-notifications
 
 ### **PR \#18: Offline Support & Sync** ✅ **COMPLETED**
 
-#### **Task 18.1: Implement Message Queue**
+#### **Task 18.1: Implement Message Queue** ✅ **COMPLETED**
 
 **Description**: Queue messages when offline and sync on reconnect  
  **Git Actions**:
@@ -2448,15 +2448,15 @@ git checkout \-b feature/offline-support
 
 **Implementation Steps**:
 
-* \[ \] Detect when socket disconnects  
-* \[ \] Queue outgoing messages in local DB with status="queued"  
-* \[ \] On reconnect, send queued messages  
-* \[ \] Update message status after successful send  
-* \[ \] Show "connecting" indicator in UI
+* \[x\] Detect when socket disconnects  
+* \[x\] Queue outgoing messages in local DB with status="queued"  
+* \[x\] On reconnect, send queued messages  
+* \[x\] Update message status after successful send  
+* \[x\] Show "connecting" indicator in UI
 
 ---
 
-#### **Task 18.2: Add Connection Status Indicator**
+#### **Task 18.2: Add Connection Status Indicator** ✅ **COMPLETED**
 
 **Description**: Show user when app is offline  
  **Files Created**:
@@ -2469,10 +2469,10 @@ git checkout \-b feature/offline-support
 
 **Implementation Steps**:
 
-* \[ \] Create banner component that shows "No connection"  
-* \[ \] Display when socket is disconnected  
-* \[ \] Show "Reconnecting..." when attempting to reconnect  
-* \[ \] Hide when connected
+* \[x\] Create banner component that shows "No connection"  
+* \[x\] Display when socket is disconnected  
+* \[x\] Show "Reconnecting..." when attempting to reconnect  
+* \[x\] Hide when connected
 
 ---
 
