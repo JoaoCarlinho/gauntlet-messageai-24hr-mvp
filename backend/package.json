@@ -9,6 +9,8 @@
     "start": "node dist/index.js",
     "start:prod": "npm run migrate && node dist/index.js",
     "migrate": "npx prisma migrate deploy && npx prisma generate",
+    "fix-db": "node fix-database.js",
+    "start:railway": "npm run fix-db && npm start",
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate",
     "prisma:studio": "prisma studio",

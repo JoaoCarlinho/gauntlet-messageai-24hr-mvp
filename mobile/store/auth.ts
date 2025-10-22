@@ -216,9 +216,9 @@ export const authLogic = kea({
             actions.setUser(userData);
             actions.setTokens(accessToken, refreshToken);
             
-            // Verify token is still valid by trying to refresh
-            // This will update tokens if needed or logout if invalid
-            await authAPI.refreshToken();
+            // Don't verify token immediately - let the app load first
+            // Token validation will happen when making API calls
+            console.log('Auth initialized with stored data');
           } catch (parseError) {
             console.error('Error parsing stored user data:', parseError);
             // Clear invalid stored data
@@ -226,6 +226,8 @@ export const authLogic = kea({
             await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
             await SecureStore.deleteItemAsync(STORAGE_KEYS.USER_DATA);
           }
+        } else {
+          console.log('No stored auth data found');
         }
         
         actions.setLoading(false);
