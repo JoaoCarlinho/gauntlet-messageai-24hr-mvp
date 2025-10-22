@@ -12,6 +12,7 @@
     "emergency-fix": "node scripts/emergency-fix.js",
     "resolve-migrations": "node scripts/resolve-migration-state.js",
     "railway-fix": "node scripts/railway-fix.js",
+    "immediate-fix": "node scripts/immediate-fix.js",
     "migrate": "npx prisma migrate deploy && npx prisma generate",
     "migrate:deploy": "node deploy-migration.js",
     "fix-db": "node fix-database.js",
