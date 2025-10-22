@@ -225,17 +225,11 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <View style={styles.container}>
         <Stack screenOptions={{ headerShown: false }}>
-          {isAuthenticated ? (
-            // Authenticated user - show main app
-            <>
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="chat/[id]" />
-              <Stack.Screen name="group/new" />
-            </>
-          ) : (
-            // Unauthenticated user - show auth screens
-            <Stack.Screen name="(auth)" />
-          )}
+          {/* Always define all screens - conditional rendering handled by screen components */}
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="chat/[id]" />
+          <Stack.Screen name="group/new" />
         </Stack>
         
         {/* Connection Status Banner - only show for authenticated users */}
