@@ -113,14 +113,9 @@ export const authLogic = kea({
       try {
         const authResponse: AuthResponse = await authAPI.login(credentials);
         
-        // Update state
+        // Update state (this will also persist to SecureStore via tokenManager)
         actions.setUser(authResponse.user);
         actions.setTokens(authResponse.accessToken, authResponse.refreshToken);
-        
-        // Persist to SecureStore
-        await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, authResponse.accessToken);
-        await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, authResponse.refreshToken);
-        await SecureStore.setItemAsync(STORAGE_KEYS.USER_DATA, JSON.stringify(authResponse.user));
         
         actions.setLoading(false);
         actions.setError(null);
@@ -136,14 +131,9 @@ export const authLogic = kea({
       try {
         const authResponse: AuthResponse = await authAPI.register(userData);
         
-        // Update state
+        // Update state (this will also persist to SecureStore via tokenManager)
         actions.setUser(authResponse.user);
         actions.setTokens(authResponse.accessToken, authResponse.refreshToken);
-        
-        // Persist to SecureStore
-        await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, authResponse.accessToken);
-        await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, authResponse.refreshToken);
-        await SecureStore.setItemAsync(STORAGE_KEYS.USER_DATA, JSON.stringify(authResponse.user));
         
         actions.setLoading(false);
         actions.setError(null);
@@ -182,12 +172,8 @@ export const authLogic = kea({
         
         const tokens = await authAPI.refreshToken();
         
-        // Update state - keep existing user, just update tokens
+        // Update state - keep existing user, just update tokens (this will also persist to SecureStore via tokenManager)
         actions.setTokens(tokens.accessToken, tokens.refreshToken);
-        
-        // Persist to SecureStore
-        await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, tokens.accessToken);
-        await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, tokens.refreshToken);
         
         actions.setLoading(false);
         actions.setError(null);
@@ -212,13 +198,22 @@ export const authLogic = kea({
           try {
             const userData = JSON.parse(userDataString);
             
-            // Set state from stored data
-            actions.setUser(userData);
-            actions.setTokens(accessToken, refreshToken);
-            
-            // Don't verify token immediately - let the app load first
-            // Token validation will happen when making API calls
-            console.log('Auth initialized with stored data');
+            // Validate tokens before setting state
+            if (typeof accessToken === 'string' && typeof refreshToken === 'string') {
+              // Set state from stored data
+              actions.setUser(userData);
+              actions.setTokens(accessToken, refreshToken);
+              
+              // Don't verify token immediately - let the app load first
+              // Token validation will happen when making API calls
+              console.log('Auth initialized with stored data');
+            } else {
+              console.warn('Invalid stored tokens found, clearing auth data');
+              // Clear invalid stored data
+              await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
+              await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+              await SecureStore.deleteItemAsync(STORAGE_KEYS.USER_DATA);
+            }
           } catch (parseError) {
             console.error('Error parsing stored user data:', parseError);
             // Clear invalid stored data

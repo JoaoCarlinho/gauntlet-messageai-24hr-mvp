@@ -156,9 +156,18 @@ export const conversationsLogic = kea({
         actions.setConversations(sortedConversations);
         actions.setLoading(false);
         actions.setError(null);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error loading conversations:', error);
-        actions.setError(error instanceof Error ? error.message : 'Failed to load conversations');
+        
+        // Handle authentication errors gracefully
+        if (error?.response?.status === 401 || error?.message?.includes('Token expired')) {
+          console.log('Authentication required - user needs to log in');
+          actions.setConversations([]);
+          actions.setError(null); // Don't show error for auth issues
+        } else {
+          actions.setError(error instanceof Error ? error.message : 'Failed to load conversations');
+        }
+        
         actions.setLoading(false);
       }
     },
