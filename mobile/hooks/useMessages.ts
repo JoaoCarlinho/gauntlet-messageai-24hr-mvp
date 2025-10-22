@@ -2,7 +2,7 @@ import { useEffect, useCallback, useRef } from 'react';
 import { useValues, useActions } from 'kea';
 import { messagesLogic } from '../store/messages';
 import { authLogic } from '../store/auth';
-import { useSocket } from './useSocket';
+import { useSocket, MessageEvent as SocketMessageEvent } from './useSocket';
 import { Message, SendMessageData, MessageStatusUpdateData, ReadReceiptData } from '../types';
 import { createDatabaseQueries } from '../db/queries';
 import * as SQLite from 'expo-sqlite';
@@ -82,14 +82,25 @@ export const useMessages = (options: UseMessagesOptions): UseMessagesReturn => {
     markMessageAsRead: socketMarkMessageAsRead,
     joinRoom,
     leaveRoom,
-    onMessage,
-    onMessageStatus,
-    onReadReceipt,
-    onTyping,
     isConnected,
   } = useSocket({
-    onMessage: handleMessageReceived,
-    onMessageStatus: handleMessageStatusUpdate,
+    onMessage: (msg: SocketMessageEvent) => {
+      handleMessageReceived({
+        id: msg.id,
+        conversationId: msg.conversationId,
+        senderId: msg.senderId,
+        content: msg.content,
+        type: msg.type,
+        mediaUrl: msg.mediaUrl,
+        status: msg.status,
+        createdAt: new Date(msg.createdAt),
+        updatedAt: new Date(msg.updatedAt),
+        sender: msg.sender
+      } as Message);
+    },
+    onMessageStatus: (messageId: string, status: 'sending' | 'sent' | 'delivered' | 'read' | 'failed') => {
+      handleMessageStatusUpdate({ messageId, status, conversationId });
+    },
     onReadReceipt: handleReadReceipt,
     onTyping: handleTypingUpdate,
   });
@@ -109,7 +120,7 @@ export const useMessages = (options: UseMessagesOptions): UseMessagesReturn => {
   function handleMessageReceived(message: Message) {
     if (message.conversationId === conversationId) {
       // Check if this is a confirmation of a message we sent optimistically
-      const existingMessage = messages.find(m => 
+      const existingMessage = messages.find((m: Message) => 
         m.content === message.content && 
         m.senderId === message.senderId &&
         m.status === 'sending'
@@ -224,16 +235,16 @@ export const useMessages = (options: UseMessagesOptions): UseMessagesReturn => {
   }, [lastMessage, markMessageAsRead]);
   
   // Retry failed message
-  const retryMessage = useCallback((messageId: string) => {
+  const retryFailedMessage = useCallback((messageId: string) => {
     // Retry the message in store
     retryMessage(messageId);
     
     // Re-send via socket
-    const message = messages.find(m => m.id === messageId);
+    const message = messages.find((m: Message) => m.id === messageId);
     if (message) {
       socketSendMessage(conversationId, message.content, message.type, message.mediaUrl);
     }
-  }, [messages, socketSendMessage, conversationId]);
+  }, [messages, socketSendMessage, conversationId, retryMessage]);
   
   // Join conversation
   const joinConversation = useCallback(() => {
@@ -317,6 +328,7 @@ export const useMessages = (options: UseMessagesOptions): UseMessagesReturn => {
     loadMoreMessages,
     markMessageAsRead,
     markAllMessagesAsRead,
+    retryMessage: retryFailedMessage,
     
     // Socket operations
     joinConversation,
