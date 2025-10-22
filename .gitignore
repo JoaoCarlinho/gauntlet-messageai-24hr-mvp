@@ -48,6 +48,7 @@ mobile/.env
 *.aab
 
 # Logs
+logs/
 *.log
 npm-debug.log*
 
