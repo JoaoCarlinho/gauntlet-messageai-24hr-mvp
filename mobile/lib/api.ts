@@ -59,12 +59,25 @@ export const tokenManager = {
     }
   },
 
-  async setTokens(accessToken: string, refreshToken: string): Promise<void> {
+  async setTokens(accessToken: string | null, refreshToken: string | null): Promise<void> {
     try {
+      // Validate tokens before storing
+      if (!accessToken || typeof accessToken !== 'string') {
+        console.warn('Invalid access token provided to setTokens:', accessToken);
+        return;
+      }
+      
+      if (!refreshToken || typeof refreshToken !== 'string') {
+        console.warn('Invalid refresh token provided to setTokens:', refreshToken);
+        return;
+      }
+
       await Promise.all([
         SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, accessToken),
         SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, refreshToken),
       ]);
+      
+      console.log('Tokens stored successfully');
     } catch (error) {
       console.error('Error setting tokens:', error);
       throw error;
@@ -92,9 +105,15 @@ export const tokenManager = {
     }
   },
 
-  async setUserData(user: User): Promise<void> {
+  async setUserData(user: User | null): Promise<void> {
     try {
+      if (!user) {
+        console.warn('Invalid user data provided to setUserData:', user);
+        return;
+      }
+      
       await SecureStore.setItemAsync(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
+      console.log('User data stored successfully');
     } catch (error) {
       console.error('Error setting user data:', error);
       throw error;
@@ -182,13 +201,24 @@ export const authAPI = {
     try {
       const response = await apiClient.post('/auth/login', credentials);
       
+      console.log('Login response:', JSON.stringify(response.data, null, 2));
+      
       // Handle backend response structure: { message, user, tokens }
       if (response.data.user && response.data.tokens) {
+        const { accessToken, refreshToken } = response.data.tokens;
+        
+        // Validate tokens before proceeding
+        if (!accessToken || !refreshToken) {
+          console.error('Missing tokens in login response:', { accessToken, refreshToken });
+          throw new Error('Invalid login response: missing tokens');
+        }
+        
         const authData = {
           user: response.data.user,
-          accessToken: response.data.tokens.accessToken,
-          refreshToken: response.data.tokens.refreshToken
+          accessToken,
+          refreshToken
         };
+        
         await tokenManager.setTokens(authData.accessToken, authData.refreshToken);
         await tokenManager.setUserData(authData.user);
         return authData;
@@ -221,13 +251,24 @@ export const authAPI = {
     try {
       const response = await apiClient.post('/auth/register', userData);
       
+      console.log('Register response:', JSON.stringify(response.data, null, 2));
+      
       // Handle backend response structure: { message, user, tokens }
       if (response.data.user && response.data.tokens) {
+        const { accessToken, refreshToken } = response.data.tokens;
+        
+        // Validate tokens before proceeding
+        if (!accessToken || !refreshToken) {
+          console.error('Missing tokens in register response:', { accessToken, refreshToken });
+          throw new Error('Invalid registration response: missing tokens');
+        }
+        
         const authData = {
           user: response.data.user,
-          accessToken: response.data.tokens.accessToken,
-          refreshToken: response.data.tokens.refreshToken
+          accessToken,
+          refreshToken
         };
+        
         await tokenManager.setTokens(authData.accessToken, authData.refreshToken);
         await tokenManager.setUserData(authData.user);
         return authData;
@@ -266,10 +307,20 @@ export const authAPI = {
       refreshToken,
     });
 
+    console.log('Refresh token response:', JSON.stringify(response.data, null, 2));
+
     // Handle backend response structure: { message, accessToken, expiresIn }
     if (response.data.accessToken) {
+      const newAccessToken = response.data.accessToken;
+      
+      // Validate new access token
+      if (!newAccessToken || typeof newAccessToken !== 'string') {
+        console.error('Invalid access token in refresh response:', newAccessToken);
+        throw new Error('Invalid refresh response: missing access token');
+      }
+      
       const tokens = {
-        accessToken: response.data.accessToken,
+        accessToken: newAccessToken,
         refreshToken: refreshToken // Keep the existing refresh token
       };
       await tokenManager.setTokens(tokens.accessToken, tokens.refreshToken);
