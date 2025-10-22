@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
-import { Button } from '../../components/ui/Button';
+import Button from '../../components/ui/Button';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');

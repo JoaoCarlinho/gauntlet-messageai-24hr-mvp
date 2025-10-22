@@ -63,7 +63,7 @@ const Avatar: React.FC<AvatarProps> = ({
       {avatarUrl ? (
         <Image
           source={{ uri: avatarUrl }}
-          style={[styles.image, avatarStyle]}
+          style={[styles.image, { width: size, height: size, borderRadius: size / 2 }]}
           resizeMode="cover"
         />
       ) : (

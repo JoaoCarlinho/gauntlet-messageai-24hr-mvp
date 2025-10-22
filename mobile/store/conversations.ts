@@ -37,7 +37,7 @@ interface ConversationsActions {
 }
 
 // Conversations logic
-export const conversationsLogic = kea<ConversationsState, ConversationsActions>({
+export const conversationsLogic = kea({
   path: ['conversations'],
   
   defaults: {
@@ -128,7 +128,7 @@ export const conversationsLogic = kea<ConversationsState, ConversationsActions>(
     },
   },
   
-  listeners: ({ actions, values }) => ({
+  listeners: ({ actions, values }: any) => ({
     // Load conversations listener
     loadConversations: async () => {
       try {
@@ -191,11 +191,11 @@ export const conversationsLogic = kea<ConversationsState, ConversationsActions>(
         const conversation = await conversationsAPI.createDirectConversation(data);
         
         // Convert to ConversationWithLastMessage format
-        const conversationWithLastMessage: ConversationWithLastMessage = {
+        const conversationWithLastMessage = {
           ...conversation,
           lastMessage: undefined,
           unreadCount: 0,
-        };
+        } as ConversationWithLastMessage;
         
         actions.addConversation(conversationWithLastMessage);
         actions.setLoading(false);
@@ -213,11 +213,11 @@ export const conversationsLogic = kea<ConversationsState, ConversationsActions>(
         const conversation = await conversationsAPI.createGroupConversation(data);
         
         // Convert to ConversationWithLastMessage format
-        const conversationWithLastMessage: ConversationWithLastMessage = {
+        const conversationWithLastMessage = {
           ...conversation,
           lastMessage: undefined,
           unreadCount: 0,
-        };
+        } as ConversationWithLastMessage;
         
         actions.addConversation(conversationWithLastMessage);
         actions.setLoading(false);
@@ -232,7 +232,7 @@ export const conversationsLogic = kea<ConversationsState, ConversationsActions>(
   
   // Selectors
   selectors: {
-    sortedConversations: [(selectors) => [selectors.conversations], (conversations) => {
+    sortedConversations: [(selectors: any) => [selectors.conversations], (conversations: any) => {
       // Additional sorting logic if needed
       return conversations.sort((a, b) => {
         const aTime = a.lastMessage?.createdAt ? new Date(a.lastMessage.createdAt).getTime() : new Date(a.updatedAt).getTime();
@@ -241,27 +241,27 @@ export const conversationsLogic = kea<ConversationsState, ConversationsActions>(
       });
     }],
     
-    directConversations: [(selectors) => [selectors.conversations], (conversations) => {
-      return conversations.filter(c => c.type === 'direct');
+    directConversations: [(selectors: any) => [selectors.conversations], (conversations: any) => {
+      return conversations.filter((c: any) => c.type === 'direct');
     }],
     
-    groupConversations: [(selectors) => [selectors.conversations], (conversations) => {
-      return conversations.filter(c => c.type === 'group');
+    groupConversations: [(selectors: any) => [selectors.conversations], (conversations: any) => {
+      return conversations.filter((c: any) => c.type === 'group');
     }],
     
-    conversationsWithUnread: [(selectors) => [selectors.conversations], (conversations) => {
-      return conversations.filter(c => (c.unreadCount || 0) > 0);
+    conversationsWithUnread: [(selectors: any) => [selectors.conversations], (conversations: any) => {
+      return conversations.filter((c: any) => (c.unreadCount || 0) > 0);
     }],
     
-    totalUnreadCount: [(selectors) => [selectors.conversations], (conversations) => {
-      return conversations.reduce((total, c) => total + (c.unreadCount || 0), 0);
+    totalUnreadCount: [(selectors: any) => [selectors.conversations], (conversations: any) => {
+      return conversations.reduce((total: any, c: any) => total + (c.unreadCount || 0), 0);
     }],
     
-    hasConversations: [(selectors) => [selectors.conversations], (conversations) => {
+    hasConversations: [(selectors: any) => [selectors.conversations], (conversations: any) => {
       return conversations.length > 0;
     }],
     
-    isConversationSelected: [(selectors) => [selectors.selectedConversation], (selectedConversation) => {
+    isConversationSelected: [(selectors: any) => [selectors.selectedConversation], (selectedConversation: any) => {
       return selectedConversation !== null;
     }],
   },

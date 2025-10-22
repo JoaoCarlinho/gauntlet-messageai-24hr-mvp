@@ -99,7 +99,7 @@ export const useConversations = (): UseConversationsReturn => {
       return data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
-    cacheTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes (renamed from cacheTime)
     refetchOnWindowFocus: false,
     retry: 2,
   });
@@ -114,7 +114,7 @@ export const useConversations = (): UseConversationsReturn => {
     },
     enabled: !!selectedConversation?.id,
     staleTime: 2 * 60 * 1000, // 2 minutes
-    cacheTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes (renamed from cacheTime)
   });
   
   // Mutation for creating direct conversation
@@ -127,11 +127,11 @@ export const useConversations = (): UseConversationsReturn => {
       queryClient.invalidateQueries({ queryKey: [CONVERSATIONS_QUERY_KEY] });
       
       // Convert to ConversationWithLastMessage format and add to store
-      const conversationWithLastMessage: ConversationWithLastMessage = {
+      const conversationWithLastMessage = {
         ...newConversation,
         lastMessage: undefined,
         unreadCount: 0,
-      };
+      } as ConversationWithLastMessage;
       addConversationAction(conversationWithLastMessage);
     },
     onError: (error) => {
@@ -149,11 +149,11 @@ export const useConversations = (): UseConversationsReturn => {
       queryClient.invalidateQueries({ queryKey: [CONVERSATIONS_QUERY_KEY] });
       
       // Convert to ConversationWithLastMessage format and add to store
-      const conversationWithLastMessage: ConversationWithLastMessage = {
+      const conversationWithLastMessage = {
         ...newConversation,
         lastMessage: undefined,
         unreadCount: 0,
-      };
+      } as ConversationWithLastMessage;
       addConversationAction(conversationWithLastMessage);
     },
     onError: (error) => {

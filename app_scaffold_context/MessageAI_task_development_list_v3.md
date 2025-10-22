@@ -1683,10 +1683,10 @@ git checkout \-b feature/chat-list
 
 **Implementation Steps**:
 
-* \[ \] Create Kea logic for conversations list  
-* \[ \] Add actions: loadConversations, selectConversation  
-* \[ \] Integrate with React Query for caching  
-* \[ \] Sort conversations by last message timestamp
+* \[x\] Create Kea logic for conversations list  
+* \[x\] Add actions: loadConversations, selectConversation  
+* \[x\] Integrate with React Query for caching  
+* \[x\] Sort conversations by last message timestamp
 
 ---
 
@@ -1699,11 +1699,11 @@ git checkout \-b feature/chat-list
 
 **Implementation Steps**:
 
-* \[ \] Display avatar, name, last message preview  
-* \[ \] Show timestamp (relative: "5m ago")  
-* \[ \] Display unread badge count  
-* \[ \] Show online status indicator  
-* \[ \] Add press handler to navigate to chat
+* \[x\] Display avatar, name, last message preview  
+* \[x\] Show timestamp (relative: "5m ago")  
+* \[x\] Display unread badge count  
+* \[x\] Show online status indicator  
+* \[x\] Add press handler to navigate to chat
 
 ---
 
@@ -1716,12 +1716,12 @@ git checkout \-b feature/chat-list
 
 **Implementation Steps**:
 
-* \[ \] Fetch conversations on mount  
-* \[ \] Render FlatList with ChatItem components  
-* \[ \] Add pull-to-refresh  
-* \[ \] Show empty state for no conversations  
-* \[ \] Add floating action button to start new chat  
-* \[ \] Handle navigation to chat room
+* \[x\] Fetch conversations on mount  
+* \[x\] Render FlatList with ChatItem components  
+* \[x\] Add pull-to-refresh  
+* \[x\] Show empty state for no conversations  
+* \[x\] Add floating action button to start new chat  
+* \[x\] Handle navigation to chat room
 
 ---
 

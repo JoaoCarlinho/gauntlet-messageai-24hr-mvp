@@ -356,7 +356,7 @@ export interface MessageBubbleProps {
 }
 
 export interface ChatItemProps {
-  conversation: Conversation;
+  conversation: ConversationWithLastMessage;
   onPress: () => void;
   onLongPress?: () => void;
 }
@@ -432,85 +432,4 @@ export interface StoredUser {
   avatarUrl?: string;
 }
 
-// Export all types as default
-export default {
-  // Core Entity Types
-  User,
-  Conversation,
-  ConversationMember,
-  Message,
-  ReadReceipt,
-  
-  // Backend Service Types
-  UserProfile,
-  UpdateProfileData,
-  ConversationWithMembers,
-  ConversationWithLastMessage,
-  MessageWithSender,
-  MessageWithReadReceipts,
-  PresenceStatus,
-  UserPresenceUpdate,
-  ConversationPresence,
-  
-  // API Types
-  ApiResponse,
-  AuthResponse,
-  LoginRequest,
-  RegisterRequest,
-  CreateConversationRequest,
-  CreateDirectConversationData,
-  CreateGroupConversationData,
-  AddMemberData,
-  CreateMessageData,
-  MessagePaginationOptions,
-  MessageStatusUpdate,
-  ReadReceiptData,
-  SendMessageRequest,
-  UpdateProfileRequest,
-  
-  // Socket Types
-  SendMessageData,
-  MarkReadData,
-  MarkMessagesReadData,
-  MessageStatusUpdateData,
-  NewMessageData,
-  MessageUpdateData,
-  SocketEvents,
-  
-  // Navigation Types
-  RootStackParamList,
-  AuthStackParamList,
-  TabsStackParamList,
-  
-  // State Types
-  AuthState,
-  ConversationsState,
-  MessagesState,
-  PresenceState,
-  
-  // UI Component Props
-  MessageBubbleProps,
-  ChatItemProps,
-  InputToolbarProps,
-  TypingIndicatorProps,
-  AvatarProps,
-  StatusIndicatorProps,
-  
-  // Form Types
-  LoginFormData,
-  RegisterFormData,
-  
-  // Error Types
-  ApiError,
-  ValidationError,
-  
-  // Utility Types
-  MessageStatus,
-  MessageType,
-  ConversationType,
-  SocketConnectionState,
-  
-  // Storage Types
-  StoredTokens,
-  StoredUser,
-};
+// All types are exported individually above

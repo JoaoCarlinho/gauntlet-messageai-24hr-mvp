@@ -40,7 +40,7 @@ interface AuthActions {
 }
 
 // Auth logic
-export const authLogic = kea<AuthState, AuthActions>({
+export const authLogic = kea({
   path: ['auth'],
   
   defaults: {
@@ -107,9 +107,9 @@ export const authLogic = kea<AuthState, AuthActions>({
     },
   },
   
-  listeners: ({ actions, values }) => ({
+  listeners: ({ actions, values }: any) => ({
     // Login listener
-    login: async ({ credentials }) => {
+    login: async ({ credentials }: any) => {
       try {
         const authResponse: AuthResponse = await authAPI.login(credentials);
         
@@ -132,7 +132,7 @@ export const authLogic = kea<AuthState, AuthActions>({
     },
     
     // Register listener
-    register: async ({ userData }) => {
+    register: async ({ userData }: any) => {
       try {
         const authResponse: AuthResponse = await authAPI.register(userData);
         
@@ -180,16 +180,14 @@ export const authLogic = kea<AuthState, AuthActions>({
           throw new Error('No refresh token available');
         }
         
-        const authResponse: AuthResponse = await authAPI.refreshToken();
+        const tokens = await authAPI.refreshToken();
         
-        // Update state
-        actions.setUser(authResponse.user);
-        actions.setTokens(authResponse.accessToken, authResponse.refreshToken);
+        // Update state - keep existing user, just update tokens
+        actions.setTokens(tokens.accessToken, tokens.refreshToken);
         
         // Persist to SecureStore
-        await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, authResponse.accessToken);
-        await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, authResponse.refreshToken);
-        await SecureStore.setItemAsync(STORAGE_KEYS.USER_DATA, JSON.stringify(authResponse.user));
+        await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, tokens.accessToken);
+        await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, tokens.refreshToken);
         
         actions.setLoading(false);
         actions.setError(null);
@@ -241,9 +239,9 @@ export const authLogic = kea<AuthState, AuthActions>({
   
   // Selectors
   selectors: {
-    isLoggedIn: [(selectors) => [selectors.isAuthenticated], (isAuthenticated) => isAuthenticated],
-    currentUser: [(selectors) => [selectors.user], (user) => user],
-    hasValidTokens: [(selectors) => [selectors.accessToken, selectors.refreshToken], (accessToken, refreshToken) => !!(accessToken && refreshToken)],
+    isLoggedIn: [(selectors: any) => [selectors.isAuthenticated], (isAuthenticated: any) => isAuthenticated],
+    currentUser: [(selectors: any) => [selectors.user], (user: any) => user],
+    hasValidTokens: [(selectors: any) => [selectors.accessToken, selectors.refreshToken], (accessToken: any, refreshToken: any) => !!(accessToken && refreshToken)],
   },
 });
 
