@@ -7,3 +7,5 @@ export { useSocket } from './useSocket';
 export { default as useSocketHook } from './useSocket';
 export { useMessages } from './useMessages';
 export { default as useMessagesHook } from './useMessages';
+export { usePresence } from './usePresence';
+export { default as usePresenceHook } from './usePresence';

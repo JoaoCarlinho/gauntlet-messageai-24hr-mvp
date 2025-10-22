@@ -17,6 +17,7 @@ import { authLogic } from '../../store/auth';
 import { useMessages } from '../../hooks/useMessages';
 import { useConversations } from '../../hooks/useConversations';
 import { useSocket } from '../../hooks/useSocket';
+import { usePresence } from '../../hooks/usePresence';
 import { MessageBubble, InputToolbar, TypingIndicator } from '../../components/chat';
 import { Message } from '../../types';
 
@@ -60,6 +61,9 @@ export default function ChatScreen() {
     onTyping: handleTypingUpdate,
   });
   
+  // Use presence hook for real-time presence updates
+  const { isUserOnline, getUserStatus, formatLastSeen, getConversationPresence } = usePresence();
+  
   // Refs
   const flatListRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -72,6 +76,80 @@ export default function ChatScreen() {
   const [isTyping, setIsTyping] = useState(false);
   const [conversationName, setConversationName] = useState('Chat');
   const [conversationType, setConversationType] = useState<'direct' | 'group'>('direct');
+  
+  // Get presence information for header
+  const getPresenceInfo = useCallback(() => {
+    if (!selectedConversation || !currentUser) {
+      return isConnected ? 'Online' : 'Connecting...';
+    }
+    
+    if (conversationType === 'direct') {
+      // For direct conversations, show the other user's status
+      const otherMember = selectedConversation.members?.find(
+        member => member.userId !== currentUser.id
+      );
+      
+      if (otherMember?.user?.id) {
+        const isOnline = isUserOnline(otherMember.user.id) || otherMember.user.isOnline;
+        
+        if (isOnline) {
+          return 'Online';
+        } else {
+          // Get last seen information
+          const presenceStatus = getUserStatus(otherMember.user.id);
+          const lastSeen = presenceStatus?.lastSeen || otherMember.user.lastSeen;
+          
+          if (lastSeen) {
+            return `Last seen ${formatLastSeen(lastSeen)}`;
+          } else {
+            return 'Offline';
+          }
+        }
+      }
+    } else {
+      // For group conversations, show member count
+      const memberIds = selectedConversation.members?.map(member => member.userId) || [];
+      const onlineCount = memberIds.filter(userId => 
+        userId !== currentUser.id && isUserOnline(userId)
+      ).length;
+      
+      const totalMembers = selectedConversation.members?.length || 0;
+      
+      if (onlineCount > 0) {
+        return `${onlineCount} member${onlineCount > 1 ? 's' : ''} online`;
+      } else {
+        return `${totalMembers} member${totalMembers > 1 ? 's' : ''}`;
+      }
+    }
+    
+    return isConnected ? 'Online' : 'Connecting...';
+  }, [selectedConversation, currentUser, conversationType, isUserOnline, getUserStatus, formatLastSeen, isConnected]);
+  
+  // Get presence status color for header subtitle
+  const getPresenceColor = useCallback(() => {
+    if (!selectedConversation || !currentUser) {
+      return isConnected ? '#34C759' : '#FF9500';
+    }
+    
+    if (conversationType === 'direct') {
+      const otherMember = selectedConversation.members?.find(
+        member => member.userId !== currentUser.id
+      );
+      
+      if (otherMember?.user?.id) {
+        const isOnline = isUserOnline(otherMember.user.id) || otherMember.user.isOnline;
+        return isOnline ? '#34C759' : '#8E8E93';
+      }
+    } else {
+      const memberIds = selectedConversation.members?.map(member => member.userId) || [];
+      const onlineCount = memberIds.filter(userId => 
+        userId !== currentUser.id && isUserOnline(userId)
+      ).length;
+      return onlineCount > 0 ? '#34C759' : '#8E8E93';
+    }
+    
+    return isConnected ? '#34C759' : '#FF9500';
+  }, [selectedConversation, currentUser, conversationType, isUserOnline, isConnected]);
   
   // Handle new message from socket
   function handleNewMessage(message: Message) {
@@ -266,8 +344,8 @@ export default function ChatScreen() {
         </TouchableOpacity>
         <View style={styles.headerInfo}>
           <Text style={styles.headerTitle}>{conversationName}</Text>
-          <Text style={styles.headerSubtitle}>
-            {isConnected ? 'Online' : 'Connecting...'}
+          <Text style={[styles.headerSubtitle, { color: getPresenceColor() }]}>
+            {getPresenceInfo()}
           </Text>
         </View>
         <TouchableOpacity>
@@ -373,7 +451,6 @@ const styles = StyleSheet.create({
   },
   headerSubtitle: {
     fontSize: 12,
-    color: '#34C759',
     marginTop: 2,
   },
   messagesList: {

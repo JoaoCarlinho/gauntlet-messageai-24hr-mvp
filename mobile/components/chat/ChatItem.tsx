@@ -10,6 +10,7 @@ import {
 import { ConversationWithLastMessage, ChatItemProps } from '../../types';
 import Avatar from '../ui/Avatar';
 import StatusIndicator from '../ui/StatusIndicator';
+import { usePresence } from '../../hooks/usePresence';
 
 const ChatItem: React.FC<ChatItemProps> = ({
   conversation,
@@ -17,6 +18,9 @@ const ChatItem: React.FC<ChatItemProps> = ({
   onLongPress,
 }) => {
   const { type, name, members, lastMessage, unreadCount } = conversation;
+  
+  // Use presence hook for real-time status updates
+  const { isUserOnline, getUserStatus, formatLastSeen } = usePresence();
 
   // Get the other user for direct conversations
   const getOtherUser = () => {
@@ -45,22 +49,39 @@ const ChatItem: React.FC<ChatItemProps> = ({
     return getOtherUser();
   };
 
-  // Get online status for direct conversations
+  // Get online status for direct conversations using real-time presence
   const getOnlineStatus = () => {
     if (type === 'direct') {
       const otherUser = getOtherUser();
-      return otherUser?.isOnline || false;
+      if (otherUser?.id) {
+        // Use real-time presence data if available, fallback to static data
+        return isUserOnline(otherUser.id) || otherUser.isOnline;
+      }
+      return false;
     }
     
-    // For group chats, show if any member is online
-    return members.some(member => member.user?.isOnline);
+    // For group chats, show if any member is online using real-time presence
+    return members.some(member => {
+      if (member.user?.id) {
+        return isUserOnline(member.user.id) || member.user.isOnline;
+      }
+      return member.user?.isOnline || false;
+    });
   };
 
-  // Get last seen for direct conversations
+  // Get last seen for direct conversations using real-time presence
   const getLastSeen = () => {
     if (type === 'direct') {
       const otherUser = getOtherUser();
-      return otherUser?.lastSeen;
+      if (otherUser?.id) {
+        // Get real-time presence data
+        const presenceStatus = getUserStatus(otherUser.id);
+        if (presenceStatus) {
+          return presenceStatus.lastSeen;
+        }
+        // Fallback to static data
+        return otherUser.lastSeen;
+      }
     }
     return undefined;
   };
@@ -162,11 +183,18 @@ const ChatItem: React.FC<ChatItemProps> = ({
           
           <View style={styles.statusContainer}>
             {type === 'direct' && (
-              <StatusIndicator
-                isOnline={isOnline}
-                lastSeen={lastSeen}
-                size={8}
-              />
+              <View style={styles.presenceContainer}>
+                <StatusIndicator
+                  isOnline={isOnline}
+                  lastSeen={lastSeen}
+                  size={8}
+                />
+                {!isOnline && lastSeen && (
+                  <Text style={styles.lastSeenText}>
+                    {formatLastSeen(lastSeen)}
+                  </Text>
+                )}
+              </View>
             )}
             
             {unreadCount && unreadCount > 0 && (
@@ -258,6 +286,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+  },
+  presenceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  lastSeenText: {
+    fontSize: 11,
+    color: '#8E8E93',
+    fontWeight: '400',
   },
   unreadBadge: {
     backgroundColor: '#007AFF',
