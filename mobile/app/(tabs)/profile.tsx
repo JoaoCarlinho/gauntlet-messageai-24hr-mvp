@@ -9,13 +9,16 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useAuth } from '../../hooks/useAuth';
 
 export default function ProfileScreen() {
-  const [user, setUser] = useState({
-    displayName: 'John Doe',
-    email: 'john.doe@example.com',
-    isOnline: true,
-  });
+  const { logout, user: authUser } = useAuth();
+  // Use actual auth user data instead of hardcoded values
+  const user = {
+    displayName: authUser?.displayName || 'User',
+    email: authUser?.email || 'user@example.com',
+    isOnline: authUser?.isOnline || false,
+  };
 
   const handleLogout = () => {
     Alert.alert(
@@ -27,9 +30,8 @@ export default function ProfileScreen() {
           text: 'Logout',
           style: 'destructive',
           onPress: () => {
-            // TODO: Implement actual logout logic
-            console.log('Logout pressed');
-            router.replace('/(auth)/login');
+            console.log('Logout pressed - calling actual logout function');
+            logout(); // This will clear auth state and trigger UI change
           },
         },
       ]
