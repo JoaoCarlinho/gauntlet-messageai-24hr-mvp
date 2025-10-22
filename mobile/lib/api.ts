@@ -112,7 +112,7 @@ export const tokenManager = {
 
 // Request interceptor to attach JWT token
 apiClient.interceptors.request.use(
-  async (config: AxiosRequestConfig) => {
+  async (config: any) => {
     const token = await tokenManager.getAccessToken();
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -434,15 +434,4 @@ export default {
   messages: messagesAPI,
   media: mediaAPI,
   health: healthAPI,
-};
-
-// Export individual APIs for convenience
-export {
-  authAPI,
-  usersAPI,
-  conversationsAPI,
-  messagesAPI,
-  mediaAPI,
-  healthAPI,
-  tokenManager,
 };

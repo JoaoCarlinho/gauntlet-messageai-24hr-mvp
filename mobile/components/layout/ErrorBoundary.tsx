@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
-import { Button } from '../ui/Button';
+import Button from '../ui/Button';
 
 interface Props {
   children: ReactNode;
