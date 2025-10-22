@@ -12,3 +12,9 @@ export {
   LastSeenIndicator,
 } from './StatusIndicator';
 export type { StatusIndicatorProps } from './StatusIndicator';
+
+export { default as ConnectionStatusIndicator } from './ConnectionStatusIndicator';
+export type { ConnectionStatusIndicatorProps } from './ConnectionStatusIndicator';
+
+export { default as ConnectionStatus } from './ConnectionStatus';
+export type { ConnectionStatusProps } from './ConnectionStatus';

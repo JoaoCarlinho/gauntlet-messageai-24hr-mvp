@@ -1,16 +1,32 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native';
+import { useEffect, useState, useRef } from 'react';
+import { View, Text, ActivityIndicator, StyleSheet, AppState, AppStateStatus } from 'react-native';
 import * as SQLite from 'expo-sqlite';
 import { useAuth } from '../hooks/useAuth';
 import { migrateDatabase } from '../db/schema';
 import { createDatabaseQueries } from '../db/queries';
+import { notificationManager } from '../lib/notifications';
+import { ConnectionStatus } from '../components/ui/ConnectionStatus';
+import { useSocket } from '../hooks/useSocket';
+import { messagesAPI } from '../lib/api';
+import { useValues, useActions } from 'kea';
+import { conversationsLogic } from '../store/conversations';
+import { messagesLogic } from '../store/messages';
 
 export default function RootLayout() {
   const { isAuthenticated, isLoading, initializeAuth } = useAuth();
   const [isDatabaseReady, setIsDatabaseReady] = useState(false);
   const [databaseError, setDatabaseError] = useState<string | null>(null);
+  
+  // App state management for background sync
+  const appState = useRef(AppState.currentState);
+  const lastSyncTime = useRef<Date | null>(null);
+  
+  // Get socket connection and message store
+  const { connect: connectSocket, isConnected } = useSocket();
+  const { conversations } = useValues(conversationsLogic);
+  const { syncMessageToDatabase } = useActions(messagesLogic);
 
   useEffect(() => {
     // Initialize database and authentication state on app load
@@ -19,6 +35,9 @@ export default function RootLayout() {
         // Initialize database first
         await initializeDatabase();
         setIsDatabaseReady(true);
+        
+        // Initialize notifications
+        await initializeNotifications();
         
         // Then initialize authentication
         initializeAuth();
@@ -31,6 +50,24 @@ export default function RootLayout() {
 
     initializeApp();
   }, [initializeAuth]);
+
+  // Set up app state listener for background sync
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    
+    // Set initial sync time when authenticated
+    if (!lastSyncTime.current) {
+      lastSyncTime.current = new Date();
+    }
+
+    return () => {
+      subscription?.remove();
+    };
+  }, [isAuthenticated, isConnected, conversations, connectSocket, syncMessageToDatabase]);
 
   const initializeDatabase = async (): Promise<void> => {
     try {
@@ -53,6 +90,99 @@ export default function RootLayout() {
       console.error('Database initialization failed:', error);
       throw error;
     }
+  };
+
+  const initializeNotifications = async (): Promise<void> => {
+    try {
+      console.log('Initializing notifications...');
+      await notificationManager.initialize();
+      console.log('Notifications initialized successfully');
+    } catch (error) {
+      console.error('Notification initialization failed:', error);
+      // Don't throw error - notifications are not critical for app functionality
+    }
+  };
+
+  // Background sync functions
+  const syncMissedMessages = async (): Promise<void> => {
+    if (!isAuthenticated || conversations.length === 0) {
+      return;
+    }
+
+    try {
+      console.log('Syncing missed messages...');
+      
+      // Get the last sync time or use 5 minutes ago as fallback
+      const since = lastSyncTime.current || new Date(Date.now() - 5 * 60 * 1000);
+      
+      // Sync messages for each conversation
+      for (const conversation of conversations) {
+        try {
+          const messages = await messagesAPI.getMessages(conversation.id, {
+            after: since.toISOString(),
+            limit: 100, // Reasonable limit to avoid overwhelming the app
+          });
+          
+          // Store messages in local database
+          const db = SQLite.openDatabaseSync('messageai.db');
+          const queries = createDatabaseQueries(db);
+          
+          for (const message of messages) {
+            await queries.insertMessage(message);
+            // Convert MessageWithReadReceipts to Message format for syncMessageToDatabase
+            const messageForSync = {
+              ...message,
+              sender: {
+                id: message.sender.id,
+                displayName: message.sender.displayName,
+                avatarUrl: message.sender.avatarUrl,
+                email: '', // Add missing fields with defaults
+                lastSeen: new Date().toISOString(),
+                isOnline: false,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              }
+            };
+            syncMessageToDatabase(messageForSync);
+          }
+          
+          console.log(`Synced ${messages.length} messages for conversation ${conversation.id}`);
+        } catch (error) {
+          console.error(`Failed to sync messages for conversation ${conversation.id}:`, error);
+        }
+      }
+      
+      // Update last sync time
+      lastSyncTime.current = new Date();
+      console.log('Background sync completed');
+      
+    } catch (error) {
+      console.error('Background sync failed:', error);
+    }
+  };
+
+  const handleAppStateChange = async (nextAppState: AppStateStatus): Promise<void> => {
+    console.log('App state changed from', appState.current, 'to', nextAppState);
+    
+    if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+      // App has come to the foreground
+      console.log('App came to foreground, starting sync...');
+      
+      // Reconnect socket if needed
+      if (!isConnected) {
+        try {
+          await connectSocket();
+          console.log('Socket reconnected on foreground');
+        } catch (error) {
+          console.error('Failed to reconnect socket on foreground:', error);
+        }
+      }
+      
+      // Sync missed messages
+      await syncMissedMessages();
+    }
+    
+    appState.current = nextAppState;
   };
 
   if (isLoading || !isDatabaseReady) {
@@ -87,6 +217,10 @@ export default function RootLayout() {
           <Stack.Screen name="(auth)" />
         )}
       </Stack>
+      
+      {/* Connection Status Banner - only show for authenticated users */}
+      {isAuthenticated && <ConnectionStatus />}
+      
       <StatusBar style="auto" />
     </>
   );
