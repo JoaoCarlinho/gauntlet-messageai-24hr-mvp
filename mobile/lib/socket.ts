@@ -1,5 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-import { getToken } from './storage';
+import { tokenManager } from './api';
 
 export interface SocketConfig {
   url: string;
@@ -58,7 +58,7 @@ class SocketManager {
       this.updateConnectionStatus({ connecting: true, error: null });
 
       // Get authentication token
-      const token = await getToken();
+      const token = await tokenManager.getAccessToken();
       if (!token) {
         console.log('No authentication token available, skipping socket connection');
         this.updateConnectionStatus({
