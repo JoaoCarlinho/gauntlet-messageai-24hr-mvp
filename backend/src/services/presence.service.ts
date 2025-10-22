@@ -83,6 +83,9 @@ export const notifyConversationsOfPresenceChange = async (
       select: { conversationId: true }
     });
 
+    // Get user's contacts (users they have direct conversations with)
+    const userContacts = await getUserContacts(userId);
+
     // Notify each conversation
     for (const membership of userConversations) {
       broadcastToConversation(membership.conversationId, 'user-presence-updated', {
@@ -96,7 +99,30 @@ export const notifyConversationsOfPresenceChange = async (
       });
     }
 
-    console.log(`📢 Notified ${userConversations.length} conversations of presence change for user ${userId}`);
+    // Emit user_online/user_offline to user's contacts
+    for (const contactId of userContacts) {
+      if (presenceStatus.isOnline) {
+        sendToUser(contactId, 'user_online', {
+          userId: presenceStatus.userId,
+          displayName: presenceStatus.displayName,
+          avatarUrl: presenceStatus.avatarUrl,
+          isOnline: true,
+          lastSeen: presenceStatus.lastSeen,
+          onlineAt: new Date()
+        });
+      } else {
+        sendToUser(contactId, 'user_offline', {
+          userId: presenceStatus.userId,
+          displayName: presenceStatus.displayName,
+          avatarUrl: presenceStatus.avatarUrl,
+          isOnline: false,
+          lastSeen: presenceStatus.lastSeen,
+          offlineAt: new Date()
+        });
+      }
+    }
+
+    console.log(`📢 Notified ${userConversations.length} conversations and ${userContacts.length} contacts of presence change for user ${userId}`);
   } catch (error) {
     console.error('Error notifying conversations of presence change:', error);
     throw new Error('Failed to notify conversations');
@@ -219,8 +245,12 @@ export const startUserHeartbeat = (userId: string): void => {
           const sockets = await io.in(`user:${userId}`).fetchSockets();
           if (sockets.length === 0) {
             // User is no longer connected, mark as offline
+            console.log(`💓 Heartbeat timeout: User ${userId} is no longer connected, marking as offline`);
             await updateUserPresence(userId, false);
             stopUserHeartbeat(userId);
+          } else {
+            // User is still connected, update last seen
+            await updateUserLastSeen(userId);
           }
         }
       } catch (error) {
@@ -230,7 +260,7 @@ export const startUserHeartbeat = (userId: string): void => {
     }, HEARTBEAT_INTERVAL);
 
     activeHeartbeats.set(userId, heartbeat as any);
-    console.log(`💓 Started heartbeat monitoring for user ${userId}`);
+    console.log(`💓 Started heartbeat monitoring for user ${userId} (interval: ${HEARTBEAT_INTERVAL}ms)`);
   } catch (error) {
     console.error('Error starting user heartbeat:', error);
   }
@@ -375,4 +405,59 @@ export const broadcastPresenceToUser = (userId: string, presenceData: any): void
  */
 export const broadcastPresenceToConversation = (conversationId: string, presenceData: any): void => {
   broadcastToConversation(conversationId, 'presence-update', presenceData);
+};
+
+/**
+ * Get user's contacts (users they have direct conversations with)
+ */
+export const getUserContacts = async (userId: string): Promise<string[]> => {
+  try {
+    // Get all direct conversations the user is part of
+    const directConversations = await prisma.conversation.findMany({
+      where: {
+        type: 'direct',
+        members: {
+          some: { userId }
+        }
+      },
+      include: {
+        members: {
+          where: { userId: { not: userId } },
+          select: { userId: true }
+        }
+      }
+    });
+
+    // Extract contact user IDs
+    const contactIds: string[] = [];
+    for (const conversation of directConversations) {
+      for (const member of conversation.members) {
+        if (member.userId !== userId) {
+          contactIds.push(member.userId);
+        }
+      }
+    }
+
+    // Remove duplicates
+    return [...new Set(contactIds)];
+  } catch (error) {
+    console.error('Error getting user contacts:', error);
+    return [];
+  }
+};
+
+/**
+ * Start periodic cleanup of stale presence data
+ */
+export const startPresenceCleanup = (): void => {
+  // Run cleanup every 5 minutes
+  setInterval(async () => {
+    try {
+      await cleanupStalePresence();
+    } catch (error) {
+      console.error('Error in periodic presence cleanup:', error);
+    }
+  }, 5 * 60 * 1000); // 5 minutes
+
+  console.log('🧹 Started periodic presence cleanup (every 5 minutes)');
 };
