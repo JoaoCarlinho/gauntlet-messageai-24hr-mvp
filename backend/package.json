@@ -5,9 +5,10 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon src/index.ts",
-    "build": "tsc",
+    "build": "tsc && npx prisma generate",
     "start": "node dist/index.js",
     "start:prod": "npm run migrate && node dist/index.js",
+    "deploy:prod": "node dist/scripts/deploy.js && node dist/index.js",
     "migrate": "npx prisma migrate deploy && npx prisma generate",
     "migrate:deploy": "node deploy-migration.js",
     "fix-db": "node fix-database.js",
