@@ -1519,10 +1519,10 @@ git checkout \-b feature/mobile-navigation
 
 **Implementation Steps**:
 
-* \[ \] Create styled Button component  
-* \[ \] Create Avatar with initials fallback  
-* \[ \] Create online/offline StatusIndicator  
-* \[ \] Add ErrorBoundary for crash protection
+* \[x\] Create styled Button component  
+* \[x\] Create Avatar with initials fallback  
+* \[x\] Create online/offline StatusIndicator  
+* \[x\] Add ErrorBoundary for crash protection
 
 ---
 
@@ -1538,8 +1538,8 @@ git push origin feature/mobile-navigation
 
 **Your Actions**:
 
-* \[ \] Create PR \#7: "Mobile Navigation & Base Structure"  
-* \[ \] Merge to main
+* \[x\] Create PR \#7: "Mobile Navigation & Base Structure"  
+* \[x\] Merge to main
 
 ---
 
@@ -1560,10 +1560,10 @@ git checkout \-b feature/mobile-auth
 
 **Implementation Steps**:
 
-* \[ \] Create Kea logic for auth state (user, tokens, isAuthenticated)  
-* \[ \] Add actions: login, register, logout, refreshToken  
-* \[ \] Add listeners for API calls  
-* \[ \] Persist auth state to SecureStore
+* \[x\] Create Kea logic for auth state (user, tokens, isAuthenticated)  
+* \[x\] Add actions: login, register, logout, refreshToken  
+* \[x\] Add listeners for API calls  
+* \[x\] Persist auth state to SecureStore
 
 ---
 
@@ -1576,9 +1576,9 @@ git checkout \-b feature/mobile-auth
 
 **Implementation Steps**:
 
-* \[ \] Create hook that uses Kea auth logic  
-* \[ \] Export login, register, logout functions  
-* \[ \] Include loading and error states
+* \[x\] Create hook that uses Kea auth logic  
+* \[x\] Export login, register, logout functions  
+* \[x\] Include loading and error states
 
 ---
 
@@ -1591,12 +1591,12 @@ git checkout \-b feature/mobile-auth
 
 **Implementation Steps**:
 
-* \[ \] Create form with email/password inputs  
-* \[ \] Add form validation  
-* \[ \] Connect to auth hook  
-* \[ \] Handle loading states and errors  
-* \[ \] Navigate to chat list on success  
-* \[ \] Add link to register screen
+* \[x\] Create form with email/password inputs  
+* \[x\] Add form validation  
+* \[x\] Connect to auth hook  
+* \[x\] Handle loading states and errors  
+* \[x\] Navigate to chat list on success  
+* \[x\] Add link to register screen
 
 ---
 
@@ -1609,11 +1609,11 @@ git checkout \-b feature/mobile-auth
 
 **Implementation Steps**:
 
-* \[ \] Create form with email, password, display name  
-* \[ \] Add validation (password strength, email format)  
-* \[ \] Connect to auth hook  
-* \[ \] Handle registration errors  
-* \[ \] Navigate to chat list on success
+* \[x\] Create form with email, password, display name  
+* \[x\] Add validation (password strength, email format)  
+* \[x\] Connect to auth hook  
+* \[x\] Handle registration errors  
+* \[x\] Navigate to chat list on success
 
 ---
 
@@ -1626,10 +1626,10 @@ git checkout \-b feature/mobile-auth
 
 **Implementation Steps**:
 
-* \[ \] Check auth state on app load  
-* \[ \] Redirect to login if not authenticated  
-* \[ \] Redirect to chat list if authenticated  
-* \[ \] Show loading screen during check
+* \[x\] Check auth state on app load  
+* \[x\] Redirect to login if not authenticated  
+* \[x\] Redirect to chat list if authenticated  
+* \[x\] Show loading screen during check
 
 ---
 
@@ -1638,12 +1638,12 @@ git checkout \-b feature/mobile-auth
 **Description**: Verify login/register works  
  **Your Actions**:
 
-* \[ \] Copy backend API URL to `mobile/.env`: `API_URL=https://your-railway-app.railway.app`  
-* \[ \] Start mobile app: `cd mobile && npx expo start`  
-* \[ \] Test registration on device/simulator  
-* \[ \] Test login  
-* \[ \] Verify token storage in SecureStore  
-* \[ \] Test logout
+* \[x\] Copy backend API URL to `mobile/.env`: `API_URL=https://your-railway-app.railway.app`  
+* \[x\] Start mobile app: `cd mobile && npx expo start`  
+* \[x\] Test registration on device/simulator  
+* \[x\] Test login  
+* \[x\] Verify token storage in SecureStore  
+* \[x\] Test logout
 
 ---
 
