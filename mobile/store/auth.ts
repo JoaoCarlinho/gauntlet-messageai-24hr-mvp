@@ -158,6 +158,11 @@ export const authLogic = kea({
         await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
         await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
         await SecureStore.deleteItemAsync(STORAGE_KEYS.USER_DATA);
+        
+        // Clean up socket connections and stop background activities
+        const { socketManager } = await import('../lib/socket');
+        socketManager.cleanup();
+        
         actions.setLoading(false);
       }
     },
