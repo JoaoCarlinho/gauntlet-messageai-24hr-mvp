@@ -241,7 +241,7 @@ async function verifyHealth() {
     
     // Verify database connectivity
     console.log('📊 Verifying database connectivity...');
-    execSync('npx prisma db execute --stdin', {
+    execSync('npx prisma db execute --stdin --schema=./prisma/schema.prisma', {
       input: 'SELECT 1 as health_check;',
       stdio: 'pipe',
       cwd: path.join(__dirname, '..')
