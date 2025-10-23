@@ -4,7 +4,7 @@
     "buildCommand": "npm run build"
   },
   "deploy": {
-    "startCommand": "npm run build && npm run immediate-fix && npm start",
+    "startCommand": "npm run build && npm run clean-slate && npm start",
     "healthcheckPath": "/health",
     "healthcheckTimeout": 30,
     "restartPolicyType": "ON_FAILURE",

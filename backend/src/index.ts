@@ -143,8 +143,9 @@ app.get('/health', async (req, res) => {
       railway: {
         environment: process.env.RAILWAY_ENVIRONMENT || 'unknown',
         publicDomain: process.env.RAILWAY_PUBLIC_DOMAIN || 'localhost',
-        deploymentId: process.env.RAILWAY_DEPLOYMENT_ID || 'unknown',
-        lastDbReset: process.env.LAST_DB_RESET || 'unknown'
+        deploymentId: process.env.RAILWAY_DEPLOYMENT_ID || process.env.DEPLOYMENT_ID || 'unknown',
+        lastDbReset: process.env.LAST_DB_RESET || 'unknown',
+        cleanSlateReset: process.env.CLEAN_SLATE_RESET || 'false'
       }
     };
     
