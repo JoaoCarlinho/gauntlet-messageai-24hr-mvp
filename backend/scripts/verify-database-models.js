@@ -82,10 +82,11 @@ async function verifyModel(modelName, modelInfo) {
   console.log(`\n🔍 Verifying ${modelName} model...`);
   
   try {
-    // Test model accessibility
-    const model = prisma[modelName.toLowerCase()];
+    // Test model accessibility - convert to camelCase for Prisma
+    const camelCaseModelName = modelName.charAt(0).toLowerCase() + modelName.slice(1);
+    const model = prisma[camelCaseModelName];
     if (!model) {
-      throw new Error(`${modelName} model not accessible via Prisma client`);
+      throw new Error(`${modelName} model not accessible via Prisma client (tried ${camelCaseModelName})`);
     }
     
     // Test count operation

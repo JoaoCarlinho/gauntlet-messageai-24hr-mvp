@@ -169,7 +169,9 @@ async function verifyAllModels() {
     // Check each model
     for (const model of expectedModels) {
       try {
-        const count = await prisma[model.toLowerCase()].count();
+        // Convert to camelCase for Prisma model access
+        const camelCaseModelName = model.charAt(0).toLowerCase() + model.slice(1);
+        const count = await prisma[camelCaseModelName].count();
         console.log(`✅ ${model} model: ${count} records (table exists and accessible)`);
       } catch (error) {
         console.error(`❌ ${model} model verification failed:`, error.message);
