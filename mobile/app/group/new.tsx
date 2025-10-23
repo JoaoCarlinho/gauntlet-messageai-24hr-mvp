@@ -43,6 +43,14 @@ export default function NewGroupScreen() {
   const searchUsers = useCallback(async (query: string) => {
     if (!query.trim()) {
       setUsers([]);
+      setSearchError(null);
+      return;
+    }
+
+    // Check minimum query length
+    if (query.trim().length < 2) {
+      setUsers([]);
+      setSearchError(null);
       return;
     }
 
@@ -62,8 +70,20 @@ export default function NewGroupScreen() {
       setUsers(searchResults);
     } catch (error) {
       console.error('Search users error:', error);
-      setSearchError(error instanceof Error ? error.message : 'Failed to search users');
-      setUsers([]);
+      
+      // Handle specific error cases
+      if (error instanceof Error) {
+        if (error.message.includes('Search query too short')) {
+          setSearchError(null); // Don't show error for short queries
+          setUsers([]);
+        } else {
+          setSearchError(error.message);
+          setUsers([]);
+        }
+      } else {
+        setSearchError('Failed to search users');
+        setUsers([]);
+      }
     } finally {
       setIsSearching(false);
     }
@@ -265,6 +285,11 @@ export default function NewGroupScreen() {
                 <View style={styles.errorContainer}>
                   <Text style={styles.errorText}>{searchError}</Text>
                 </View>
+              ) : isSearching ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color="#007AFF" />
+                  <Text style={styles.loadingText}>Searching users...</Text>
+                </View>
               ) : users.length > 0 ? (
                 <FlatList
                   data={users}
@@ -273,11 +298,16 @@ export default function NewGroupScreen() {
                   style={styles.searchResultsList}
                   showsVerticalScrollIndicator={false}
                 />
-              ) : !isSearching ? (
+              ) : searchQuery.trim().length >= 2 ? (
                 <View style={styles.noResultsContainer}>
                   <Text style={styles.noResultsText}>No users found</Text>
+                  <Text style={styles.noResultsSubtext}>Try searching with a different name or email</Text>
                 </View>
-              ) : null}
+              ) : (
+                <View style={styles.minimumLengthContainer}>
+                  <Text style={styles.minimumLengthText}>Type at least 2 characters to search</Text>
+                </View>
+              )}
             </View>
           )}
 
@@ -504,6 +534,32 @@ const styles = StyleSheet.create({
   noResultsText: {
     color: '#8E8E93',
     fontSize: 16,
+    textAlign: 'center',
+  },
+  noResultsSubtext: {
+    fontSize: 14,
+    color: '#C7C7CC',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#8E8E93',
+    marginLeft: 8,
+  },
+  minimumLengthContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  minimumLengthText: {
+    fontSize: 14,
+    color: '#C7C7CC',
     textAlign: 'center',
   },
   

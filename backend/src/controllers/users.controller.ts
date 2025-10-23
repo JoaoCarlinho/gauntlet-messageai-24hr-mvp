@@ -250,7 +250,8 @@ export const searchUsersEndpoint = async (req: Request, res: Response) => {
     const users = await searchUsers(query, req.user.id);
 
     res.status(200).json({
-      users,
+      success: true,
+      data: users,
       count: users.length
     });
   } catch (error) {

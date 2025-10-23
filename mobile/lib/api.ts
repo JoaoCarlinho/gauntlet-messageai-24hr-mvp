@@ -425,11 +425,22 @@ export const usersAPI = {
   },
 
   async searchUsers(query: string): Promise<User[]> {
-    const response = await apiClient.get<ApiResponse<User[]>>(`/users/search?q=${encodeURIComponent(query)}`);
-    if (response.data.success && response.data.data) {
-      return response.data.data;
+    try {
+      const response = await apiClient.get<ApiResponse<User[]>>(`/users/search?q=${encodeURIComponent(query)}`);
+      if (response.data.success && response.data.data) {
+        return response.data.data;
+      }
+      throw new Error(response.data.error || 'Failed to search users');
+    } catch (error: any) {
+      // Handle specific error responses
+      if (error.response?.data?.error) {
+        throw new Error(error.response.data.error);
+      }
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw error;
     }
-    throw new Error(response.data.error || 'Failed to search users');
   },
 };
 
