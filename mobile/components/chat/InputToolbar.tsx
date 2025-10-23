@@ -152,7 +152,7 @@ const InputToolbar: React.FC<InputToolbarProps> = ({
               activeOpacity={0.7}
             >
               <View style={styles.imageButton}>
-                <Text style={[styles.imageButtonText, disabled && styles.disabledButtonText]}>
+                <Text style={[styles.imageButtonText, Boolean(disabled) && styles.disabledButtonText]}>
                   📷
                 </Text>
               </View>

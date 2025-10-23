@@ -191,7 +191,7 @@ const ChatItem: React.FC<ChatItemProps> = ({
                 />
                 {!isOnline && lastSeen && (
                   <Text style={styles.lastSeenText}>
-                    {formatLastSeen(lastSeen)}
+                    {formatLastSeen(lastSeen) || 'Offline'}
                   </Text>
                 )}
               </View>

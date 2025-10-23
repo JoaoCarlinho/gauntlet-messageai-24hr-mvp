@@ -91,14 +91,21 @@ export const usePresence = (): UsePresenceReturn => {
       handleUserOffline(data);
     };
 
-    // Add event listeners using socket manager
-    socketManager.on('user_online', handleOnlineEvent);
-    socketManager.on('user_offline', handleOfflineEvent);
+    // Add event listeners using socket manager only if socket is initialized
+    if (socketManager && socketManager.connected) {
+      socketManager.on('user_online', handleOnlineEvent);
+      socketManager.on('user_offline', handleOfflineEvent);
+    } else {
+      console.warn('Cannot add listener - socket not initialized: user_online');
+      console.warn('Cannot add listener - socket not initialized: user_offline');
+    }
 
     // Cleanup function
     return () => {
-      socketManager.off('user_online', handleOnlineEvent);
-      socketManager.off('user_offline', handleOfflineEvent);
+      if (socketManager && socketManager.connected) {
+        socketManager.off('user_online', handleOnlineEvent);
+        socketManager.off('user_offline', handleOfflineEvent);
+      }
     };
   }, [handleUserOnline, handleUserOffline]);
 
