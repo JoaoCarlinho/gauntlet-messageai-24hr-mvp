@@ -91,7 +91,7 @@ const httpServer = createServer(app);
 // CORS configuration for both Express and Socket.io
 const corsOptions = {
   origin: process.env.NODE_ENV === 'production' 
-    ? process.env.FRONTEND_URL || 'https://yourdomain.com'
+    ? [process.env.FRONTEND_URL || 'https://yourdomain.com', 'http://localhost:8081', 'http://localhost:3000', 'http://localhost:3001']
     : ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000', 'http://localhost:8081'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,

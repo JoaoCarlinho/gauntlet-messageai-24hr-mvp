@@ -29,8 +29,8 @@ export interface SocketConfig {
 export const socketConfig: SocketConfig = {
   cors: {
     origin: process.env.NODE_ENV === 'production' 
-      ? process.env.FRONTEND_URL || 'https://yourdomain.com'
-      : ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000'],
+      ? [process.env.FRONTEND_URL || 'https://yourdomain.com', 'http://localhost:8081', 'http://localhost:3000', 'http://localhost:3001']
+      : ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000', 'http://localhost:8081'],
     methods: ['GET', 'POST'],
     credentials: true
   },
