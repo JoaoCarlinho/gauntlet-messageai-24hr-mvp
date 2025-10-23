@@ -42,6 +42,24 @@ class NotificationManager {
     if (this.isInitialized) return;
 
     try {
+      // Check if running on web platform
+      if (Platform.OS === 'web') {
+        console.log('Web platform detected - push notifications not supported');
+        console.log('Notifications will be handled through web APIs if available');
+        this.isInitialized = true;
+        return;
+      }
+
+      // Check if running in Expo Go (development mode)
+      const isExpoGo = Constants.appOwnership === 'expo';
+      
+      if (isExpoGo) {
+        console.log('Running in Expo Go - push notifications have limited functionality');
+        console.log('For full push notification support, use a development build');
+        this.isInitialized = true;
+        return;
+      }
+
       // Request permissions
       await this.requestPermissions();
       
@@ -120,6 +138,12 @@ class NotificationManager {
    */
   async requestPermissions(): Promise<boolean> {
     try {
+      // Skip on web platform
+      if (Platform.OS === 'web') {
+        console.log('Web platform - skipping notification permissions request');
+        return false;
+      }
+
       if (!Device.isDevice) {
         console.warn('Must use physical device for push notifications');
         return false;
@@ -151,6 +175,12 @@ class NotificationManager {
    */
   async getPushToken(): Promise<string | null> {
     try {
+      // Skip on web platform
+      if (Platform.OS === 'web') {
+        console.log('Web platform - skipping push token request');
+        return null;
+      }
+
       if (!Device.isDevice) {
         console.warn('Must use physical device for push notifications');
         return null;
@@ -169,11 +199,8 @@ class NotificationManager {
         this.pushToken = token.data;
         console.log('Expo push token obtained:', this.pushToken);
 
-        // Send token to backend (handle 404 gracefully)
-        const sent = await this.sendTokenToBackend(this.pushToken);
-        if (!sent) {
-          console.warn('Push token was obtained but failed to be saved on backend (check endpoint).');
-        }
+        // Don't send token to backend during initialization - wait for authentication
+        console.log('Push token obtained, will be sent to backend after user authentication');
 
         return this.pushToken;
       } catch (err) {

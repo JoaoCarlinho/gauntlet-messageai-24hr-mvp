@@ -2,7 +2,38 @@ import { kea } from 'kea';
 import { DeviceEventEmitter } from 'react-native';
 import { authAPI, tokenManager } from '../lib/api';
 import { User, LoginRequest, RegisterRequest, AuthResponse } from '../types';
-import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
+
+// Platform-specific storage imports
+let platformStorage: any;
+
+if (Platform.OS === 'web') {
+  try {
+    const { webStorageFallback } = require('../lib/web-storage-fallback');
+    platformStorage = webStorageFallback;
+  } catch (error) {
+    console.error('Failed to load web storage fallback in auth:', error);
+    // Fallback to a mock storage if web storage fails
+    platformStorage = {
+      getItemAsync: async () => null,
+      setItemAsync: async () => {},
+      deleteItemAsync: async () => {},
+    };
+  }
+} else {
+  try {
+    const { mobileStorage } = require('../lib/mobile-storage');
+    platformStorage = mobileStorage;
+  } catch (error) {
+    console.error('Failed to load mobile storage in auth:', error);
+    // Fallback to a mock storage if mobile storage fails
+    platformStorage = {
+      getItemAsync: async () => null,
+      setItemAsync: async () => {},
+      deleteItemAsync: async () => {},
+    };
+  }
+}
 
 // Storage keys for persistence
 const STORAGE_KEYS = {
@@ -170,9 +201,9 @@ export const authLogic = kea({
         
         // Clear local state and storage
         actions.clearAuth();
-        await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
-        await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
-        await SecureStore.deleteItemAsync(STORAGE_KEYS.USER_DATA);
+        await platformStorage.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
+        await platformStorage.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+        await platformStorage.deleteItemAsync(STORAGE_KEYS.USER_DATA);
         
         // Clean up socket connections and stop background activities
         const { socketManager } = await import('../lib/socket');
@@ -195,10 +226,14 @@ export const authLogic = kea({
         // Update state - keep existing user and refresh token, just update access token
         actions.setTokens(tokens.accessToken, tokens.refreshToken);
         
-        // Reconnect socket with fresh token
+        // Reconnect socket with fresh token (but don't fail if socket fails)
         try {
           const { socketManager } = await import('../lib/socket');
-          await socketManager.reconnectWithFreshToken();
+          // Only reconnect if socket is currently connected or was trying to connect
+          const connectionStatus = socketManager.getConnectionStatus();
+          if (connectionStatus.connected || connectionStatus.connecting) {
+            await socketManager.reconnectWithFreshToken();
+          }
         } catch (socketError) {
           console.warn('Failed to reconnect socket after token refresh:', socketError);
           // Don't fail the token refresh if socket reconnection fails
@@ -218,9 +253,9 @@ export const authLogic = kea({
       try {
         // Try to load stored auth data
         const [accessToken, refreshToken, userDataString] = await Promise.all([
-          SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN),
-          SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN),
-          SecureStore.getItemAsync(STORAGE_KEYS.USER_DATA),
+          platformStorage.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN),
+          platformStorage.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN),
+          platformStorage.getItemAsync(STORAGE_KEYS.USER_DATA),
         ]);
         
         if (accessToken && refreshToken && userDataString) {
@@ -239,16 +274,16 @@ export const authLogic = kea({
             } else {
               console.warn('Invalid stored tokens found, clearing auth data');
               // Clear invalid stored data
-              await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
-              await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
-              await SecureStore.deleteItemAsync(STORAGE_KEYS.USER_DATA);
+              await platformStorage.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
+              await platformStorage.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+              await platformStorage.deleteItemAsync(STORAGE_KEYS.USER_DATA);
             }
           } catch (parseError) {
             console.error('Error parsing stored user data:', parseError);
             // Clear invalid stored data
-            await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
-            await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
-            await SecureStore.deleteItemAsync(STORAGE_KEYS.USER_DATA);
+            await platformStorage.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
+            await platformStorage.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+            await platformStorage.deleteItemAsync(STORAGE_KEYS.USER_DATA);
           }
         } else {
           console.log('No stored auth data found');

@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useValues, useActions } from 'kea';
 import { conversationsLogic } from '../../store/conversations';
 import { useAuth } from '../../hooks/useAuth';
+import { useSocket } from '../../hooks/useSocket';
 import ChatItem from '../../components/chat/ChatItem';
 import { ConversationWithLastMessage } from '../../types';
 
@@ -20,13 +21,15 @@ export default function ChatListScreen() {
   const { conversations, isLoading, error } = useValues(conversationsLogic);
   const { loadConversations, refreshConversations } = useActions(conversationsLogic);
   const { isAuthenticated } = useAuth();
+  const { isConnected } = useSocket();
 
   useEffect(() => {
-    // Only load conversations if user is authenticated
-    if (isAuthenticated) {
+    // Only load conversations if user is authenticated and socket is connected
+    if (isAuthenticated && isConnected) {
+      console.log('Loading conversations after socket connection established');
       loadConversations();
     }
-  }, [loadConversations, isAuthenticated]);
+  }, [loadConversations, isAuthenticated, isConnected]);
 
   const handleRefresh = async () => {
     refreshConversations();

@@ -1,7 +1,6 @@
 import { kea } from 'kea';
 import { Message, MessageStatus, SendMessageData, MessageStatusUpdateData, ReadReceiptData } from '../types';
-import { createDatabaseQueries } from '../db/queries';
-import * as SQLite from 'expo-sqlite';
+import { getDatabaseQueries } from '../db/database';
 
 // Messages state interface
 interface MessagesState {
@@ -128,7 +127,7 @@ export const messagesLogic = kea({
     markMessageAsRead: (data: ReadReceiptData) => ({ data }),
     
     // Optimistic UI actions
-    confirmMessageSent: (tempId: string, realId: string) => ({ tempId, realId }),
+    confirmMessageSent: (tempId: string, realId: string, conversationId?: string) => ({ tempId, realId, conversationId }),
     markMessageFailed: (tempId: string, error: string) => ({ tempId, error }),
     retryMessage: (tempId: string) => ({ tempId }),
     
@@ -137,6 +136,10 @@ export const messagesLogic = kea({
       conversationId, 
       limit: limit || 50, 
       beforeMessageId 
+    }),
+    setMessages: (conversationId: string, messages: Message[]) => ({ 
+      conversationId, 
+      messages 
     }),
     loadMoreMessages: (conversationId: string, beforeMessageId: string) => ({ 
       conversationId, 
@@ -156,6 +159,7 @@ export const messagesLogic = kea({
     // State management
     setLoading: (loading: boolean) => ({ loading }),
     setError: (error: string | null) => ({ error }),
+    updateConversationLastMessage: (message: Message) => ({ message }),
     clearMessages: (conversationId: string) => ({ conversationId }),
     clearAllMessages: true,
     
@@ -177,9 +181,12 @@ export const messagesLogic = kea({
         const conversationId = message.conversationId;
         const existingMessages = state[conversationId] || [];
         
+        console.log(`Store: Adding message ${message.id} to conversation ${conversationId}, current count: ${existingMessages.length}`);
+        
         // Check if message already exists (avoid duplicates)
         const messageExists = existingMessages.some(m => m.id === message.id);
         if (messageExists) {
+          console.log(`Store: Message ${message.id} already exists, skipping`);
           return state;
         }
         
@@ -187,6 +194,8 @@ export const messagesLogic = kea({
         const updatedMessages = [...existingMessages, message].sort(
           (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         );
+        
+        console.log(`Store: Message ${message.id} added successfully, new count: ${updatedMessages.length}`);
         
         return {
           ...state,
@@ -196,6 +205,7 @@ export const messagesLogic = kea({
       
       updateMessage: (state, { messageId, updates }) => {
         const newState = { ...state };
+        let messageFound = false;
         
         // Find and update the message in all conversations
         Object.keys(newState).forEach(conversationId => {
@@ -203,6 +213,8 @@ export const messagesLogic = kea({
           const messageIndex = messages.findIndex(m => m.id === messageId);
           
           if (messageIndex !== -1) {
+            messageFound = true;
+            console.log(`Store: Updating message ${messageId} in conversation ${conversationId} with updates:`, updates);
             newState[conversationId] = [
               ...messages.slice(0, messageIndex),
               { ...messages[messageIndex], ...updates, updatedAt: new Date() },
@@ -211,11 +223,26 @@ export const messagesLogic = kea({
           }
         });
         
+        if (!messageFound) {
+          console.log(`Store: WARNING - Message ${messageId} not found for update`);
+        }
+        
         return newState;
       },
       
       confirmMessageSent: (state, { tempId, realId }) => {
         const newState = { ...state };
+        let messageFound = false;
+        
+        // Check if we've already processed this confirmation
+        const alreadyConfirmed = Object.values(newState).some(messages => 
+          messages.some(m => m.id === realId && m.status === 'sent')
+        );
+        
+        if (alreadyConfirmed) {
+          console.log(`Store: Message ${realId} already confirmed, ignoring duplicate confirmation`);
+          return state;
+        }
         
         // Find and update the message with temp ID to real ID
         Object.keys(newState).forEach(conversationId => {
@@ -223,6 +250,8 @@ export const messagesLogic = kea({
           const messageIndex = messages.findIndex(m => m.id === tempId);
           
           if (messageIndex !== -1) {
+            messageFound = true;
+            console.log(`Store: Updating message status from ${tempId} to ${realId} in conversation ${conversationId}`);
             newState[conversationId] = [
               ...messages.slice(0, messageIndex),
               { 
@@ -235,6 +264,10 @@ export const messagesLogic = kea({
             ];
           }
         });
+        
+        if (!messageFound) {
+          console.log(`Store: WARNING - Message with tempId ${tempId} not found in any conversation`);
+        }
         
         return newState;
       },
@@ -265,6 +298,12 @@ export const messagesLogic = kea({
       },
       
       loadMessages: (state, { conversationId, messages }) => {
+        return {
+          ...state,
+          [conversationId]: messages,
+        };
+      },
+      setMessages: (state, { conversationId, messages }) => {
         return {
           ...state,
           [conversationId]: messages,
@@ -414,13 +453,17 @@ export const messagesLogic = kea({
   
   listeners: ({ actions, values }: any) => ({
     // Send message listener
-    sendMessage: async ({ data }: any) => {
+    sendMessage: ({ data }: any) => {
       try {
-        // Get current user ID from auth store
-        const authState = values.auth || {};
+        // Get current user ID from auth store synchronously
+        const { authLogic } = require('./auth');
+        const authState = authLogic.values;
         const currentUserId = authState.user?.id;
         
+        console.log('Store: Auth state:', { hasUser: !!authState.user, userId: currentUserId });
+        
         if (!currentUserId) {
+          console.log('Store: No current user found, setting error');
           actions.setError('User not authenticated');
           actions.setLoading(false);
           return;
@@ -429,8 +472,11 @@ export const messagesLogic = kea({
         // Create optimistic message
         const optimisticMessage = createOptimisticMessage(data, currentUserId);
         
-        // Add optimistic message to state
+        // Add optimistic message to state IMMEDIATELY (synchronous)
         actions.addMessage(optimisticMessage);
+        
+        // Update conversation's lastMessage
+        actions.updateConversationLastMessage(optimisticMessage);
         
         // Check if we're offline
         if (values.isOffline || values.connectionStatus === 'disconnected') {
@@ -438,11 +484,14 @@ export const messagesLogic = kea({
           const queuedMessage = { ...optimisticMessage, status: 'queued' as MessageStatus };
           actions.queueMessage(queuedMessage);
           actions.updateMessage(optimisticMessage.id, { status: 'queued' });
+          // Async database sync
           actions.syncMessageToDatabase(queuedMessage);
           console.log('Message queued for offline sending:', queuedMessage.id);
         } else {
           // Store in pending messages and send immediately
           actions.updateMessage(optimisticMessage.id, { status: 'sending' });
+          console.log('Store: Syncing optimistic message to database:', optimisticMessage.id);
+          // Async database sync
           actions.syncMessageToDatabase(optimisticMessage);
           
           // Emit socket event (this will be handled by the socket hook)
@@ -458,9 +507,12 @@ export const messagesLogic = kea({
     },
     
     // Confirm message sent listener
-    confirmMessageSent: async ({ tempId, realId }: any) => {
+    confirmMessageSent: async ({ tempId, realId, conversationId }: any) => {
       try {
+        console.log('Store: Confirming message sent:', tempId, '->', realId);
+        
         // Update message with real ID and sent status
+        console.log('Store: Updating message in state with real ID');
         actions.updateMessage(tempId, { 
           id: realId, 
           status: 'sent',
@@ -468,13 +520,38 @@ export const messagesLogic = kea({
         });
         
         // Update in database
+        console.log('Store: Updating message in database with real ID');
         actions.updateMessageInDatabase(tempId, { 
           id: realId, 
           status: 'sent' 
         });
         
-        // Remove from pending
-        actions.confirmMessageSent(tempId, realId);
+        // Update conversation's lastMessage if we have the conversationId
+        if (conversationId) {
+          const { messages } = values;
+          const conversationMessages = messages[conversationId] || [];
+          const message = conversationMessages.find((msg: any) => msg.id === tempId || msg.id === realId);
+          if (message) {
+            console.log('Store: Updating conversation lastMessage');
+            actions.updateConversationLastMessage({ ...message, conversationId });
+          }
+        } else {
+          // Fallback: search through all conversations (less efficient but works)
+          const { messages } = values;
+          const foundConversationId = Object.keys(messages).find(id => 
+            messages[id].some((msg: any) => msg.id === tempId || msg.id === realId)
+          );
+          
+          if (foundConversationId) {
+            const message = messages[foundConversationId].find((msg: any) => msg.id === tempId || msg.id === realId);
+            if (message) {
+              console.log('Store: Updating conversation lastMessage (fallback)');
+              actions.updateConversationLastMessage({ ...message, conversationId: foundConversationId });
+            }
+          }
+        }
+        
+        console.log('Store: Message confirmation completed successfully');
       } catch (error) {
         console.error('Confirm message sent error:', error);
       }
@@ -526,19 +603,81 @@ export const messagesLogic = kea({
     // Load messages listener
     loadMessages: async ({ conversationId, limit, beforeMessageId }: any) => {
       try {
-        // Open database
-        const db = SQLite.openDatabaseSync('messageai.db');
-        const queries = createDatabaseQueries(db);
+        // Get database queries instance (ensures tables are created)
+        const queries = getDatabaseQueries();
         
-        // Load messages from database
-        const messages = await queries.getMessagesForConversation(
+        // Load messages from database (offset is 0 for initial load)
+        let messages = await queries.getMessagesForConversation(
           conversationId,
           limit,
-          beforeMessageId
+          0 // offset parameter, not beforeMessageId
         );
         
+        console.log(`Store: Retrieved ${messages.length} messages for conversation ${conversationId}`);
+        
+        // If no messages in local database, try to load from API
+        if (messages.length === 0) {
+          console.log(`Store: No messages in local database, fetching from API for conversation ${conversationId}`);
+          try {
+            const { messagesAPI } = await import('../lib/api');
+            const apiMessages = await messagesAPI.getMessages(conversationId, {
+              limit: limit,
+              page: 1
+            });
+            
+            console.log(`Store: API retrieved ${apiMessages.length} messages for conversation ${conversationId}`);
+            
+            // Convert API messages to local format and store in database
+            for (const apiMessage of apiMessages) {
+              const localMessage = {
+                id: apiMessage.id,
+                conversationId: apiMessage.conversationId,
+                senderId: apiMessage.senderId,
+                content: apiMessage.content,
+                type: apiMessage.type,
+                mediaUrl: apiMessage.mediaUrl,
+                status: apiMessage.status,
+                createdAt: new Date(apiMessage.createdAt),
+                updatedAt: new Date(apiMessage.updatedAt),
+                sender: apiMessage.sender
+              };
+              
+              // Store in database
+              await queries.insertMessage(localMessage);
+              
+              // Store sender information if available
+              if (apiMessage.sender) {
+                await queries.insertUser({
+                  id: apiMessage.sender.id,
+                  email: apiMessage.sender.email || 'user@example.com',
+                  phoneNumber: undefined,
+                  displayName: apiMessage.sender.displayName,
+                  avatarUrl: apiMessage.sender.avatarUrl,
+                  lastSeen: new Date(),
+                  isOnline: false,
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                });
+              }
+            }
+            
+            // Reload from database after syncing
+            messages = await queries.getMessagesForConversation(
+              conversationId,
+              limit,
+              0
+            );
+            
+            console.log(`Store: After API sync, retrieved ${messages.length} messages for conversation ${conversationId}`);
+            
+          } catch (apiError) {
+            console.error('Store: Failed to load messages from API:', apiError);
+            // Continue with empty messages from database
+          }
+        }
+        
         // Update state
-        actions.loadMessages(conversationId, messages);
+        actions.setMessages(conversationId, messages);
         
         actions.setLoading(false);
       } catch (error) {
@@ -551,19 +690,19 @@ export const messagesLogic = kea({
     // Load more messages listener
     loadMoreMessages: async ({ conversationId, beforeMessageId }: any) => {
       try {
-        // Open database
-        const db = SQLite.openDatabaseSync('messageai.db');
-        const queries = createDatabaseQueries(db);
+        // Get database queries instance (ensures tables are created)
+        const queries = getDatabaseQueries();
+        
+        // Get existing messages to calculate offset
+        const existingMessages = values.messages[conversationId] || [];
+        const offset = existingMessages.length;
         
         // Load more messages from database
         const messages = await queries.getMessagesForConversation(
           conversationId,
           50,
-          beforeMessageId
+          offset
         );
-        
-        // Get existing messages
-        const existingMessages = values.messages[conversationId] || [];
         
         // Merge and sort messages
         const allMessages = [...existingMessages, ...messages].sort(
@@ -592,6 +731,9 @@ export const messagesLogic = kea({
         
         // Update last message ID
         actions.updateMessage(message.id, { status: 'delivered' });
+        
+        // Update conversation's lastMessage
+        actions.updateConversationLastMessage(message);
       } catch (error) {
         console.error('Handle message received error:', error);
       }
@@ -626,11 +768,12 @@ export const messagesLogic = kea({
     // Sync message to database
     syncMessageToDatabase: async ({ message }: any) => {
       try {
-        const db = SQLite.openDatabaseSync('messageai.db');
-        const queries = createDatabaseQueries(db);
+        console.log('Store: Syncing message to database:', message.id, message.content.substring(0, 20) + '...');
+        const queries = getDatabaseQueries();
         
         // Insert or update message in database
-        await queries.insertMessage(message, message.id.startsWith('temp_') ? message.id : undefined);
+        await queries.insertMessage(message);
+        console.log('Store: Successfully synced message to database:', message.id);
       } catch (error) {
         console.error('Sync message to database error:', error);
       }
@@ -639,15 +782,82 @@ export const messagesLogic = kea({
     // Update message in database
     updateMessageInDatabase: async ({ messageId, updates }: any) => {
       try {
-        const db = SQLite.openDatabaseSync('messageai.db');
-        const queries = createDatabaseQueries(db);
+        console.log('Store: Updating message in database:', messageId, updates);
+        const queries = getDatabaseQueries();
         
-        // Update message status in database
-        if (updates.status) {
-          await queries.updateMessageStatus(messageId, updates.status);
+        // If we're updating the ID (from tempId to realId), we need to handle this specially
+        if (updates.id && updates.id !== messageId) {
+          console.log('Store: Updating message ID from', messageId, 'to', updates.id);
+          // First, get the current message
+          const currentMessage = await queries.getMessageById(messageId);
+          console.log('Store: Retrieved current message:', currentMessage ? 'found' : 'not found');
+          
+          if (currentMessage) {
+            // Create a new message with the real ID
+            const updatedMessage = {
+              ...currentMessage,
+              id: updates.id,
+              status: updates.status || currentMessage.status,
+              updatedAt: updates.updatedAt || new Date()
+            };
+            
+            console.log('Store: Inserting updated message with real ID');
+            // Insert the message with the new ID
+            await queries.insertMessage(updatedMessage);
+            
+            console.log('Store: Deleting old message with temp ID');
+            // Delete the old message with temp ID
+            await queries.deleteMessage(messageId);
+            
+            console.log('Store: Successfully updated message ID in database');
+          } else {
+            console.log('Store: ERROR - Could not find message with tempId:', messageId);
+          }
+        } else {
+          // Regular status update
+          if (updates.status) {
+            await queries.updateMessageStatus(messageId, updates.status);
+          }
         }
       } catch (error) {
         console.error('Update message in database error:', error);
+      }
+    },
+    
+    // Update conversation's lastMessage
+    updateConversationLastMessage: async ({ message }: any) => {
+      try {
+        // Import conversations logic to update the conversation
+        const { conversationsLogic } = await import('./conversations');
+        const { updateConversation } = conversationsLogic.actions;
+        
+        // Get current conversations from the conversations store, not messages store
+        const conversationsState = conversationsLogic.values;
+        const conversations = conversationsState.conversations || [];
+        const conversation = conversations.find((c: any) => c.id === message.conversationId);
+        
+        if (conversation) {
+          // Create updated conversation with new lastMessage
+          const updatedConversation = {
+            ...conversation,
+            lastMessage: {
+              id: message.id,
+              content: message.content,
+              type: message.type,
+              createdAt: message.createdAt,
+              sender: {
+                id: message.sender.id,
+                displayName: message.sender.displayName,
+              }
+            },
+            updatedAt: new Date().toISOString()
+          };
+          
+          // Update the conversation
+          updateConversation(updatedConversation);
+        }
+      } catch (error) {
+        console.error('Update conversation lastMessage error:', error);
       }
     },
     
@@ -666,8 +876,7 @@ export const messagesLogic = kea({
     queueMessage: async ({ message }: any) => {
       try {
         // Store queued message in database
-        const db = SQLite.openDatabaseSync('messageai.db');
-        const queries = createDatabaseQueries(db);
+        const queries = getDatabaseQueries();
         
         await queries.insertMessage(message, message.id);
         console.log('Message queued in database:', message.id);
@@ -715,8 +924,7 @@ export const messagesLogic = kea({
     removeQueuedMessage: async ({ tempId }: any) => {
       try {
         // Remove from database
-        const db = SQLite.openDatabaseSync('messageai.db');
-        const queries = createDatabaseQueries(db);
+        const queries = getDatabaseQueries();
         
         await queries.deleteMessage(tempId);
         console.log('Queued message removed from database:', tempId);

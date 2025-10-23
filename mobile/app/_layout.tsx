@@ -1,15 +1,14 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState, useRef } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, AppState, AppStateStatus } from 'react-native';
+import { View, Text, ActivityIndicator, StyleSheet, AppState, AppStateStatus, Platform } from 'react-native';
 import * as SQLite from 'expo-sqlite';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
-import { migrateDatabase } from '../db/schema';
-import { createDatabaseQueries } from '../db/queries';
+import { getDatabase, getDatabaseQueries, verifyDatabaseState } from '../db/database';
 import { notificationManager } from '../lib/notifications';
-import { ConnectionStatus } from '../components/ui/ConnectionStatus';
+import { ConnectionStatusIndicator as ConnectionStatus } from '../components/ui/ConnectionStatusIndicator';
 import { useSocket } from '../hooks/useSocket';
 import { messagesAPI } from '../lib/api';
 import { useValues, useActions } from 'kea';
@@ -74,6 +73,24 @@ export default function RootLayout() {
     initializeApp();
   }, []); // Empty dependency array - run only once
 
+  // Initialize socket connection when authenticated
+  useEffect(() => {
+    if (isAuthenticated && !isConnected) {
+      const initializeSocket = async () => {
+        try {
+          // Add a small delay to ensure auth state is fully settled
+          await new Promise(resolve => setTimeout(resolve, 500));
+          await connectSocket();
+          console.log('Socket connected on authentication');
+        } catch (error) {
+          console.error('Failed to connect socket on authentication:', error);
+        }
+      };
+      
+      initializeSocket();
+    }
+  }, [isAuthenticated, isConnected, connectSocket]);
+
   // Set up app state listener for background sync
   useEffect(() => {
     if (!isAuthenticated) {
@@ -94,27 +111,47 @@ export default function RootLayout() {
 
   const initializeDatabase = async (): Promise<void> => {
     try {
-      // Open the database
-      const db = SQLite.openDatabaseSync('messageai.db');
+      // Check if we're on web platform
+      const isWeb = Platform.OS === 'web';
       
-      // Run migrations (now synchronous)
-      migrateDatabase(db);
+      if (isWeb) {
+        console.log('Web platform detected - using simplified database initialization');
+        // On web, we'll skip database initialization for now
+        // The app will work with API-only mode
+        return;
+      }
       
-      // Create database queries instance (this will be used throughout the app)
-      const queries = createDatabaseQueries(db);
+      // Initialize the database (this will create tables if they don't exist)
+      getDatabase();
       
-      // Store the database instance globally for use throughout the app
-      // We'll add this to a context or store later
-      console.log('Database initialized successfully');
+      // Verify that all tables were created successfully
+      const isVerified = verifyDatabaseState();
+      if (!isVerified) {
+        throw new Error('Database verification failed - tables not created properly');
+      }
+      
+      console.log('Database initialized and verified successfully');
       
     } catch (error) {
       console.error('Database initialization failed:', error);
+      const isWeb = Platform.OS === 'web';
+      if (isWeb) {
+        console.log('Web platform - continuing without local database');
+        // Don't throw error on web, allow app to continue
+        return;
+      }
       throw error;
     }
   };
 
   const initializeNotifications = async (): Promise<void> => {
     try {
+      const isWeb = Platform.OS === 'web';
+      if (isWeb) {
+        console.log('Web platform detected - skipping notification initialization');
+        return;
+      }
+      
       await notificationManager.initialize();
       console.log('Notifications initialized successfully');
     } catch (error) {
@@ -139,13 +176,12 @@ export default function RootLayout() {
       for (const conversation of conversations) {
         try {
           const messages = await messagesAPI.getMessages(conversation.id, {
-            after: since.toISOString(),
             limit: 100, // Reasonable limit to avoid overwhelming the app
+            page: 1, // Start from first page for background sync
           });
           
           // Store messages in local database
-          const db = SQLite.openDatabaseSync('messageai.db');
-          const queries = createDatabaseQueries(db);
+          const queries = getDatabaseQueries();
           
           for (const message of messages) {
             // Convert MessageWithReadReceipts to Message format for database
@@ -252,10 +288,10 @@ export default function RootLayout() {
           />
         </Stack>
         
-        {/* Connection Status Banner - only show for authenticated users */}
+        {/* Connection Status Banner - only show for authenticated users when disconnected */}
         {isAuthenticated && (
           <View style={styles.statusContainer}>
-            <ConnectionStatus />
+            <ConnectionStatus showWhenConnected={false} />
           </View>
         )}
         
@@ -290,9 +326,10 @@ const styles = StyleSheet.create({
   },
   statusContainer: {
     position: 'absolute',
-    top: 0,
+    top: 50, // Move below the status bar
     left: 0,
     right: 0,
     zIndex: 100,
+    pointerEvents: 'none', // Allow touch events to pass through
   },
 });

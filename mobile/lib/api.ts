@@ -1,5 +1,36 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
-import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
+
+// Platform-specific storage imports
+let platformStorage: any;
+
+if (Platform.OS === 'web') {
+  try {
+    const { webStorageFallback } = require('./web-storage-fallback');
+    platformStorage = webStorageFallback;
+  } catch (error) {
+    console.error('Failed to load web storage fallback in api:', error);
+    // Fallback to a mock storage if web storage fails
+    platformStorage = {
+      getItemAsync: async () => null,
+      setItemAsync: async () => {},
+      deleteItemAsync: async () => {},
+    };
+  }
+} else {
+  try {
+    const { mobileStorage } = require('./mobile-storage');
+    platformStorage = mobileStorage;
+  } catch (error) {
+    console.error('Failed to load mobile storage in api:', error);
+    // Fallback to a mock storage if mobile storage fails
+    platformStorage = {
+      getItemAsync: async () => null,
+      setItemAsync: async () => {},
+      deleteItemAsync: async () => {},
+    };
+  }
+}
 import {
   ApiResponse,
   AuthResponse,
@@ -43,7 +74,7 @@ const apiClient: AxiosInstance = axios.create({
 export const tokenManager = {
   async getAccessToken(): Promise<string | null> {
     try {
-      return await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
+      return await platformStorage.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
     } catch (error) {
       console.error('Error getting access token:', error);
       return null;
@@ -52,7 +83,7 @@ export const tokenManager = {
 
   async getRefreshToken(): Promise<string | null> {
     try {
-      return await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+      return await platformStorage.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
     } catch (error) {
       console.error('Error getting refresh token:', error);
       return null;
@@ -68,11 +99,11 @@ export const tokenManager = {
       }
       
       // Store access token
-      await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+      await platformStorage.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
       
       // Only store refresh token if provided and valid
       if (refreshToken && typeof refreshToken === 'string') {
-        await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
+        await platformStorage.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
         console.log('Both tokens stored successfully');
       } else {
         console.log('Access token stored, refresh token not provided or invalid');
@@ -86,8 +117,8 @@ export const tokenManager = {
   async clearTokens(): Promise<void> {
     try {
       await Promise.all([
-        SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN),
-        SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN),
+        platformStorage.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN),
+        platformStorage.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN),
       ]);
     } catch (error) {
       console.error('Error clearing tokens:', error);
@@ -96,7 +127,7 @@ export const tokenManager = {
 
   async getUserData(): Promise<User | null> {
     try {
-      const userData = await SecureStore.getItemAsync(STORAGE_KEYS.USER_DATA);
+      const userData = await platformStorage.getItemAsync(STORAGE_KEYS.USER_DATA);
       return userData ? JSON.parse(userData) : null;
     } catch (error) {
       console.error('Error getting user data:', error);
@@ -111,7 +142,7 @@ export const tokenManager = {
         return;
       }
       
-      await SecureStore.setItemAsync(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
+      await platformStorage.setItemAsync(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
       console.log('User data stored successfully');
     } catch (error) {
       console.error('Error setting user data:', error);
@@ -121,7 +152,7 @@ export const tokenManager = {
 
   async clearUserData(): Promise<void> {
     try {
-      await SecureStore.deleteItemAsync(STORAGE_KEYS.USER_DATA);
+      await platformStorage.deleteItemAsync(STORAGE_KEYS.USER_DATA);
     } catch (error) {
       console.error('Error clearing user data:', error);
     }
@@ -156,18 +187,22 @@ apiClient.interceptors.response.use(
       try {
         const refreshToken = await tokenManager.getRefreshToken();
         if (!refreshToken) {
-          // No refresh token - handle gracefully for push token registration
-          // Don't throw error for push token endpoints as they're not critical
-          if (originalRequest.url?.includes('/push-token')) {
-            console.warn('Push token registration failed - no authentication tokens available');
-            return Promise.reject(error);
-          }
+          // No refresh token - handle gracefully
+          console.log('No refresh token available, user needs to login');
           
-          // For other endpoints, clear tokens and trigger logout
+          // Clear any stale tokens
           await tokenManager.clearTokens();
           await tokenManager.clearUserData();
           
-          // Trigger global logout event using React Native event system
+          // For non-critical endpoints, just reject the request
+          if (originalRequest.url?.includes('/push-token') || 
+              originalRequest.url?.includes('/logout') ||
+              originalRequest.url?.includes('/refresh')) {
+            console.log('Non-critical endpoint failed due to no auth - rejecting gracefully');
+            return Promise.reject(error);
+          }
+          
+          // For critical endpoints, trigger logout event but don't throw error
           try {
             const { DeviceEventEmitter } = require('react-native');
             DeviceEventEmitter.emit('auth:logout', { reason: 'No refresh token available' });
@@ -175,7 +210,8 @@ apiClient.interceptors.response.use(
             console.warn('Could not emit auth:logout event:', eventError);
           }
           
-          throw new Error('No refresh token available');
+          // Return the original error instead of throwing a new one
+          return Promise.reject(error);
         }
 
         console.log('Attempting to refresh access token...');
@@ -197,6 +233,7 @@ apiClient.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
           return apiClient(originalRequest);
         } else {
+          console.error('Invalid refresh response:', response.data);
           throw new Error('Invalid refresh response: missing access token');
         }
       } catch (refreshError) {
@@ -487,11 +524,18 @@ export const conversationsAPI = {
   },
 
   async getConversation(conversationId: string): Promise<Conversation> {
-    const response = await apiClient.get<ApiResponse<Conversation>>(`/conversations/${conversationId}`);
-    if (response.data.success && response.data.data) {
+    const response = await apiClient.get(`/conversations/${conversationId}`);
+    
+    // Handle different response formats from backend
+    if (response.data && response.data.conversation) {
+      // Backend returns: { message: string, conversation: Conversation }
+      return response.data.conversation;
+    } else if (response.data && response.data.success && response.data.data) {
+      // Legacy format: { success: true, data: Conversation }
       return response.data.data;
+    } else {
+      throw new Error(response.data?.error || 'Failed to get conversation');
     }
-    throw new Error(response.data.error || 'Failed to get conversation');
   },
 
   async createDirectConversation(data: CreateDirectConversationData): Promise<Conversation> {
@@ -546,14 +590,52 @@ export const messagesAPI = {
     if (options.before) params.append('before', options.before);
     if (options.after) params.append('after', options.after);
 
-    const response = await apiClient.get<ApiResponse<MessageWithReadReceipts[]>>(
-      `/conversations/${conversationId}/messages?${params.toString()}`
-    );
+    try {
+      const response = await apiClient.get(
+        `/conversations/${conversationId}/messages?${params.toString()}`
+      );
 
-    if (response.data.success && response.data.data) {
-      return response.data.data;
+      console.log(`API: Response status: ${response.status}, data keys:`, Object.keys(response.data || {}));
+
+      // Handle different response formats from backend
+      if (response.data && response.data.messages !== undefined) {
+        // Backend returns: { message: string, messages: [], pagination: {} }
+        console.log(`API: Retrieved ${response.data.messages.length} messages from backend`);
+        return response.data.messages || [];
+      } else if (response.data && response.data.success && response.data.data) {
+        // Legacy format: { success: true, data: [] }
+        console.log(`API: Retrieved ${response.data.data.length} messages from backend (legacy format)`);
+        return response.data.data;
+      } else if (response.data && Array.isArray(response.data)) {
+        // Direct array response
+        console.log(`API: Retrieved ${response.data.length} messages from backend (direct array)`);
+        return response.data;
+      } else {
+        // No messages found - return empty array instead of throwing error
+        console.log('API: No messages found - returning empty array');
+        return [];
+      }
+    } catch (error: any) {
+      console.error('API: Error fetching messages:', error);
+      console.error('API: Error response:', error.response?.data);
+      console.error('API: Error status:', error.response?.status);
+      
+      // Handle authentication errors gracefully
+      if (error?.response?.status === 401) {
+        console.log('API: Authentication required - returning empty messages list');
+        return [];
+      }
+      
+      // If it's a 404 or empty response, return empty array instead of throwing
+      if (error?.response?.status === 404 || error?.response?.status === 200) {
+        console.log('API: No messages endpoint or empty response - returning empty array');
+        return [];
+      }
+      
+      // For other errors, log and return empty array instead of throwing
+      console.warn('API: Unexpected error fetching messages, returning empty array:', error?.message);
+      return [];
     }
-    throw new Error(response.data.error || 'Failed to get messages');
   },
 
   async sendMessage(conversationId: string, messageData: CreateMessageData): Promise<Message> {

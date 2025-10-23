@@ -199,7 +199,7 @@ export const resetDatabase = (db: SQLite.SQLiteDatabase): void => {
 export const getDatabaseVersion = (db: SQLite.SQLiteDatabase): number => {
   try {
     const result = db.getFirstSync('SELECT version FROM db_version ORDER BY version DESC LIMIT 1;');
-    return result ? result.version : 0;
+    return result ? (result as any).version : 0;
   } catch (error) {
     console.error('Error getting database version:', error);
     return 0;
@@ -238,7 +238,7 @@ export const createDatabaseQueries = (db: SQLite.SQLiteDatabase) => {
     createUser: (user: DatabaseSchema['users']) => {
       db.runSync(
         'INSERT OR REPLACE INTO users (id, email, phone_number, display_name, avatar_url, last_seen, is_online, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [user.id, user.email, user.phone_number, user.display_name, user.avatar_url, user.last_seen, user.is_online, user.created_at, user.updated_at]
+        [user.id, user.email, user.phone_number || null, user.display_name, user.avatar_url || null, user.last_seen, user.is_online, user.created_at, user.updated_at]
       );
     },
     
@@ -254,7 +254,7 @@ export const createDatabaseQueries = (db: SQLite.SQLiteDatabase) => {
     createConversation: (conversation: DatabaseSchema['conversations']) => {
       db.runSync(
         'INSERT OR REPLACE INTO conversations (id, type, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)',
-        [conversation.id, conversation.type, conversation.name, conversation.created_at, conversation.updated_at]
+        [conversation.id, conversation.type, conversation.name || null, conversation.created_at, conversation.updated_at]
       );
     },
     
@@ -270,7 +270,7 @@ export const createDatabaseQueries = (db: SQLite.SQLiteDatabase) => {
     createMessage: (message: DatabaseSchema['messages']) => {
       db.runSync(
         'INSERT OR REPLACE INTO messages (id, conversation_id, sender_id, content, type, media_url, status, created_at, updated_at, temp_id, sync_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [message.id, message.conversation_id, message.sender_id, message.content, message.type, message.media_url, message.status, message.created_at, message.updated_at, message.temp_id, message.sync_status]
+        [message.id, message.conversation_id, message.sender_id, message.content, message.type, message.media_url || null, message.status, message.created_at, message.updated_at, message.temp_id || null, message.sync_status]
       );
     },
     
@@ -292,7 +292,7 @@ export const createDatabaseQueries = (db: SQLite.SQLiteDatabase) => {
     addConversationMember: (member: DatabaseSchema['conversation_members']) => {
       db.runSync(
         'INSERT OR REPLACE INTO conversation_members (id, conversation_id, user_id, joined_at, last_read_at) VALUES (?, ?, ?, ?, ?)',
-        [member.id, member.conversation_id, member.user_id, member.joined_at, member.last_read_at]
+        [member.id, member.conversation_id, member.user_id, member.joined_at, member.last_read_at || null]
       );
     },
     

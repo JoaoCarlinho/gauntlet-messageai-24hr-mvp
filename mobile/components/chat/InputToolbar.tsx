@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
+  Text,
   TextInput,
   TouchableOpacity,
   StyleSheet,
@@ -19,6 +20,10 @@ const InputToolbar: React.FC<InputToolbarProps> = ({
   placeholder = 'Type a message...',
   disabled = false,
 }) => {
+  // Ensure disabled is always a boolean
+  const isDisabled = disabled === true;
+  
+  // Simplified styles without conditional logic to avoid Boolean constructor errors
   const [message, setMessage] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [inputHeight, setInputHeight] = useState(40);
@@ -30,7 +35,7 @@ const InputToolbar: React.FC<InputToolbarProps> = ({
 
   const handleSendMessage = () => {
     const trimmedMessage = message.trim();
-    if (trimmedMessage && !disabled) {
+    if (trimmedMessage && !isDisabled) {
       // Clear typing timeout and emit typing_stop
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
@@ -77,10 +82,12 @@ const InputToolbar: React.FC<InputToolbarProps> = ({
   };
 
   const handleFocus = () => {
+    console.log('InputToolbar: TextInput focused');
     setIsFocused(true);
   };
 
   const handleBlur = () => {
+    console.log('InputToolbar: TextInput blurred');
     setIsFocused(false);
     // Clear typing timeout when input loses focus
     if (typingTimeoutRef.current) {
@@ -102,12 +109,19 @@ const InputToolbar: React.FC<InputToolbarProps> = ({
   };
 
   const handleImagePress = () => {
-    if (onSendImage && !disabled) {
+    if (onSendImage && !isDisabled) {
       onSendImage();
     }
   };
 
-  const isSendDisabled = !message.trim() || disabled;
+  const focusInput = () => {
+    console.log('InputToolbar: Attempting to focus input, disabled:', isDisabled);
+    if (!isDisabled) {
+      textInputRef.current?.focus();
+    }
+  };
+
+  const isSendDisabled = !message.trim() || isDisabled;
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -119,15 +133,15 @@ const InputToolbar: React.FC<InputToolbarProps> = ({
   }, []);
 
   return (
-    <View style={[styles.container, isFocused && styles.focusedContainer]}>
+    <TouchableOpacity 
+      style={[styles.container, isFocused ? styles.focusedContainer : null]}
+      onPress={focusInput}
+      activeOpacity={1}
+    >
       <View style={styles.inputContainer}>
         <TextInput
           ref={textInputRef}
-          style={[
-            styles.textInput,
-            { height: inputHeight },
-            disabled && styles.disabledInput,
-          ]}
+          style={[styles.textInput, { height: inputHeight }]}
           value={message}
           onChangeText={handleTextChange}
           onFocus={handleFocus}
@@ -137,22 +151,27 @@ const InputToolbar: React.FC<InputToolbarProps> = ({
           placeholderTextColor="#8E8E93"
           multiline
           maxLength={1000}
-          editable={!disabled}
+          editable={!isDisabled}
           returnKeyType="send"
           onSubmitEditing={handleSendMessage}
           blurOnSubmit={false}
+          autoCorrect={true}
+          autoCapitalize="sentences"
+          keyboardType="default"
+          textContentType="none"
+          autoComplete="off"
         />
         
         <View style={styles.buttonContainer}>
           {onSendImage && (
             <TouchableOpacity
-              style={[styles.actionButton, disabled && styles.disabledButton]}
+              style={styles.actionButton}
               onPress={handleImagePress}
-              disabled={disabled}
+              disabled={isDisabled}
               activeOpacity={0.7}
             >
               <View style={styles.imageButton}>
-                <Text style={[styles.imageButtonText, Boolean(disabled) && styles.disabledButtonText]}>
+                <Text style={styles.imageButtonText}>
                   📷
                 </Text>
               </View>
@@ -160,29 +179,20 @@ const InputToolbar: React.FC<InputToolbarProps> = ({
           )}
           
           <TouchableOpacity
-            style={[
-              styles.sendButton,
-              isSendDisabled && styles.disabledSendButton,
-            ]}
+            style={styles.sendButton}
             onPress={handleSendMessage}
             disabled={isSendDisabled}
             activeOpacity={0.7}
           >
-            <View style={[
-              styles.sendButtonInner,
-              isSendDisabled && styles.disabledSendButtonInner,
-            ]}>
-              <Text style={[
-                styles.sendButtonText,
-                isSendDisabled && styles.disabledSendButtonText,
-              ]}>
+            <View style={styles.sendButtonInner}>
+              <Text style={styles.sendButtonText}>
                 ➤
               </Text>
             </View>
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 };
 

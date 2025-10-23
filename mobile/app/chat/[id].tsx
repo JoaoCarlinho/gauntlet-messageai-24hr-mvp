@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   TouchableOpacity,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useValues } from 'kea';
@@ -51,13 +52,60 @@ export default function ChatScreen() {
     loadLimit: 50,
   });
   
+  // Fallback: If no messages but conversation has lastMessage, create a temporary message
+  const displayMessages = React.useMemo(() => {
+    if (messages.length === 0 && selectedConversation?.lastMessage?.sender) {
+      console.log('ChatScreen: Using lastMessage as fallback for display');
+      // Convert conversation lastMessage to Message format
+      const fallbackMessage = {
+        id: selectedConversation.lastMessage.id,
+        conversationId: conversationId,
+        senderId: selectedConversation.lastMessage.sender.id,
+        content: selectedConversation.lastMessage.content,
+        type: selectedConversation.lastMessage.type,
+        mediaUrl: undefined,
+        status: 'sent' as const,
+        createdAt: selectedConversation.lastMessage.createdAt,
+        updatedAt: selectedConversation.lastMessage.createdAt,
+        sender: {
+          id: selectedConversation.lastMessage.sender.id,
+          email: 'user@example.com',
+          phoneNumber: undefined,
+          displayName: selectedConversation.lastMessage.sender.displayName,
+          avatarUrl: undefined,
+          lastSeen: new Date(),
+          isOnline: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }
+      };
+      return [fallbackMessage];
+    }
+    return messages;
+  }, [messages, selectedConversation?.lastMessage, conversationId]);
+  
   // Use socket hook for real-time features
   const {
     isConnected,
     startTyping,
     stopTyping,
   } = useSocket({
-    onMessage: handleNewMessage,
+    onMessage: (messageEvent) => {
+      // Convert MessageEvent to Message format
+      const message: Message = {
+        id: messageEvent.id,
+        conversationId: messageEvent.conversationId,
+        senderId: messageEvent.senderId,
+        content: messageEvent.content,
+        type: messageEvent.type,
+        mediaUrl: messageEvent.mediaUrl,
+        status: messageEvent.status,
+        createdAt: new Date(messageEvent.createdAt),
+        updatedAt: new Date(messageEvent.updatedAt),
+        sender: messageEvent.sender
+      };
+      handleNewMessage(message);
+    },
     onTyping: handleTypingUpdate,
   });
   
@@ -66,7 +114,7 @@ export default function ChatScreen() {
   
   // Refs
   const flatListRef = useRef<FlatList>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 50,
     minimumViewTime: 1000,
@@ -302,12 +350,27 @@ export default function ChatScreen() {
   
   // Auto-scroll to bottom when messages change
   useEffect(() => {
-    if (hasMessages) {
+    console.log(`ChatScreen: messages.length=${messages.length}, displayMessages.length=${displayMessages.length}, hasMessages=${hasMessages}`);
+    if (displayMessages.length > 0) {
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
     }
-  }, [hasMessages, messages.length]);
+  }, [displayMessages.length, hasMessages]);
+
+  // Fallback: If no messages but conversation has lastMessage, show it
+  useEffect(() => {
+    if (!hasMessages && selectedConversation?.lastMessage && messages.length === 0) {
+      console.log('ChatScreen: No messages in store, but conversation has lastMessage - this might be a sync issue');
+      console.log('ChatScreen: Last message from conversation:', selectedConversation.lastMessage);
+      
+      // Try to refresh messages first
+      refreshMessages();
+      
+      // If refresh doesn't work, we could potentially add the lastMessage to the store
+      // as a fallback, but for now let's just log it for debugging
+    }
+  }, [hasMessages, selectedConversation?.lastMessage, messages.length, refreshMessages]);
   
 
   // Show loading state
@@ -333,30 +396,39 @@ export default function ChatScreen() {
   }
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#007AFF" />
-        </TouchableOpacity>
-        <View style={styles.headerInfo}>
-          <Text style={styles.headerTitle}>{conversationName}</Text>
-          <Text style={[styles.headerSubtitle, { color: getPresenceColor() }]}>
-            {getPresenceInfo()}
-          </Text>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView 
+        style={styles.keyboardContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="arrow-back" size={24} color="#007AFF" />
+          </TouchableOpacity>
+          <View style={styles.headerInfo}>
+            <Text style={styles.headerTitle}>{conversationName}</Text>
+            <Text style={[styles.headerSubtitle, { color: getPresenceColor() }]}>
+              {getPresenceInfo()}
+            </Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.callButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="call-outline" size={24} color="#007AFF" />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity>
-          <Ionicons name="call-outline" size={24} color="#007AFF" />
-        </TouchableOpacity>
-      </View>
 
       {/* Messages List */}
       <FlatList
         ref={flatListRef}
-        data={messages}
+        data={displayMessages}
         renderItem={renderMessage}
         keyExtractor={(item) => item.id}
         style={styles.messagesList}
@@ -383,10 +455,11 @@ export default function ChatScreen() {
         }}
         onTypingStart={handleTypingStart}
         onTypingStop={handleTypingStop}
-        placeholder="Type a message..."
-        disabled={!isConnected}
+        placeholder={isConnected ? "Type a message..." : "Connecting..."}
+        disabled={false}
       />
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -394,6 +467,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+  },
+  keyboardContainer: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -439,10 +515,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E5E5EA',
     backgroundColor: '#fff',
+    minHeight: 60,
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 8,
   },
   headerInfo: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: 4,
+  },
+  callButton: {
+    padding: 8,
+    marginLeft: 8,
   },
   headerTitle: {
     fontSize: 16,

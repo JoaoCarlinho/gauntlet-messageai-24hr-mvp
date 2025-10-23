@@ -148,6 +148,19 @@ const ChatItem: React.FC<ChatItemProps> = ({
   const isOnline = getOnlineStatus();
   const lastSeen = getLastSeen();
   const lastMessagePreview = truncateMessage(getLastMessagePreview());
+  
+  // Ensure all values are properly typed and safe for rendering
+  const safeIsOnline = !!isOnline;
+  const safeLastSeen = React.useMemo(() => {
+    if (!lastSeen) return null;
+    if (lastSeen instanceof Date) return lastSeen;
+    try {
+      const date = new Date(lastSeen);
+      return isNaN(date.getTime()) ? null : date;
+    } catch {
+      return null;
+    }
+  }, [lastSeen]);
   const timestamp = lastMessage ? (() => {
     try {
       return formatTimestamp(new Date(lastMessage.createdAt));
@@ -204,40 +217,32 @@ const ChatItem: React.FC<ChatItemProps> = ({
             {type === 'direct' && (
               <View style={styles.presenceContainer}>
                 <StatusIndicator
-                  isOnline={isOnline}
-                  lastSeen={lastSeen || undefined}
+                  isOnline={safeIsOnline}
+                  lastSeen={safeLastSeen || undefined}
                   size={8}
                 />
-                {!isOnline && lastSeen && (
+                {!safeIsOnline && safeLastSeen && (
                   <Text style={styles.lastSeenText}>
-                    {(() => {
+                    {React.useMemo(() => {
                       try {
-                        if (lastSeen instanceof Date) {
-                          const formatted = formatLastSeen(lastSeen);
-                          return formatted || 'Offline';
-                        } else if (typeof lastSeen === 'string' || typeof lastSeen === 'number') {
-                          const formatted = formatLastSeen(new Date(lastSeen));
-                          return formatted || 'Offline';
+                        if (safeLastSeen instanceof Date) {
+                          const formatted = formatLastSeen(safeLastSeen);
+                          return String(formatted || 'Offline');
                         }
                         return 'Offline';
                       } catch (error) {
                         console.warn('Error formatting last seen:', error);
                         return 'Offline';
                       }
-                    })()}
+                    }, [safeLastSeen])}
                   </Text>
                 )}
               </View>
             )}
-            
-            {unreadCount && unreadCount > 0 && (
+            {unreadCount > 0 && (
               <View style={styles.unreadBadge}>
                 <Text style={styles.unreadText}>
-                  {(() => {
-                    const count = Number(unreadCount);
-                    if (isNaN(count) || count <= 0) return '0';
-                    return count > 99 ? '99+' : String(count);
-                  })()}
+                  {unreadCount > 99 ? '99+' : String(unreadCount)}
                 </Text>
               </View>
             )}

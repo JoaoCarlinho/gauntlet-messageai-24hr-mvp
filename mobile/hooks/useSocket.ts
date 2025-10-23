@@ -44,6 +44,7 @@ export interface PresenceEvent {
 
 export interface SocketEventHandlers {
   onMessage?: (message: MessageEvent) => void;
+  onMessageSent?: (data: any) => void;
   onMessageStatus?: (messageId: string, status: MessageEvent['status']) => void;
   onTyping?: (event: TypingEvent) => void;
   onReadReceipt?: (event: ReadReceiptEvent) => void;
@@ -71,11 +72,15 @@ export interface UseSocketReturn {
 }
 
 export const useSocket = (handlers: SocketEventHandlers = {}): UseSocketReturn => {
-  const [socketState, setSocketState] = useState<SocketState>({
-    connected: false,
-    connecting: false,
-    error: null,
-    reconnectAttempts: 0,
+  const [socketState, setSocketState] = useState<SocketState>(() => {
+    // Initialize with actual socket status if available
+    const isConnected = socketManager.isConnected();
+    return {
+      connected: isConnected,
+      connecting: false,
+      error: null,
+      reconnectAttempts: 0,
+    };
   });
 
   const handlersRef = useRef<SocketEventHandlers>(handlers);
@@ -95,6 +100,20 @@ export const useSocket = (handlers: SocketEventHandlers = {}): UseSocketReturn =
 
     socketManager.on('new_message', (message: MessageEvent) => {
       if (handlersRef.current.onMessage) handlersRef.current.onMessage(message);
+    });
+
+    socketManager.on('message_received', (message: MessageEvent) => {
+      console.log('Socket: Received message_received event:', message);
+      if (handlersRef.current.onMessage) handlersRef.current.onMessage(message);
+    });
+
+    socketManager.on('message_sent', (data: any) => {
+      console.log('Socket: Received message_sent event:', data);
+      // Handle message_sent confirmation differently - this is just a confirmation
+      // The actual message should already be in the UI optimistically
+      if (handlersRef.current.onMessageSent) {
+        handlersRef.current.onMessageSent(data);
+      }
     });
 
     socketManager.on('message_status_update', (data: { messageId: string; status: MessageEvent['status'] }) => {
@@ -140,6 +159,12 @@ export const useSocket = (handlers: SocketEventHandlers = {}): UseSocketReturn =
             reconnectAttempts: status.reconnectAttempts,
           };
 
+          console.log('Socket status change:', {
+            oldState: socketState,
+            newState: newState,
+            socketManagerConnected: socketManager.isConnected()
+          });
+
           setSocketState(newState);
 
           let messageStoreStatus: 'connected' | 'connecting' | 'disconnected' | 'reconnecting';
@@ -167,6 +192,13 @@ export const useSocket = (handlers: SocketEventHandlers = {}): UseSocketReturn =
         // Only register listeners if socket is already connected
         if (socketManager.isConnected()) {
           registerSocketListeners();
+          // Ensure local state is synchronized with actual socket status
+          setSocketState(prev => ({
+            ...prev,
+            connected: true,
+            connecting: false,
+            error: null
+          }));
         }
 
         return () => {
@@ -214,22 +246,32 @@ export const useSocket = (handlers: SocketEventHandlers = {}): UseSocketReturn =
     conversationId: string,
     content: string,
     type: 'text' | 'image' = 'text',
-    mediaUrl?: string
+    mediaUrl?: string,
+    tempId?: string
   ): void => {
     const messageData = {
       conversationId,
       content,
       type,
       mediaUrl,
-      tempId: `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      tempId: tempId || `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     };
 
-    if (socketState.connected) {
+    // Use socket manager's actual connection status instead of local state
+    const isSocketConnected = socketManager.isConnected();
+    console.log('Socket connection check:', {
+      socketManagerConnected: isSocketConnected,
+      localStateConnected: socketState.connected,
+      messageData: { conversationId, content: content.substring(0, 20) + '...' }
+    });
+    
+    if (isSocketConnected) {
+      console.log('Socket connected, sending message via socket');
       socketManager.emit('send_message', messageData);
     } else {
       console.log('Socket not connected, message will be queued');
     }
-  }, [socketState.connected]);
+  }, []);
 
   const markMessageAsRead = useCallback((messageId: string): void => {
     socketManager.emit('mark_message_read', { messageId });
@@ -252,11 +294,11 @@ export const useSocket = (handlers: SocketEventHandlers = {}): UseSocketReturn =
   }, []);
   
   const processQueuedMessagesOnReconnect = useCallback(() => {
-    if (socketState.connected && Object.keys(queuedMessages).length > 0) {
+    if (socketManager.isConnected() && Object.keys(queuedMessages).length > 0) {
       console.log('Processing queued messages on reconnect...');
       processQueuedMessages();
     }
-  }, [socketState.connected, queuedMessages, processQueuedMessages]);
+  }, [queuedMessages, processQueuedMessages]);
   
   useEffect(() => {
     processQueuedMessagesOnReconnect();
@@ -264,7 +306,7 @@ export const useSocket = (handlers: SocketEventHandlers = {}): UseSocketReturn =
 
   return {
     socketState,
-    isConnected: socketState.connected,
+    isConnected: socketManager.isConnected(),
     isConnecting: socketState.connecting,
     error: socketState.error,
     connect,

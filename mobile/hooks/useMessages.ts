@@ -4,8 +4,7 @@ import { messagesLogic } from '../store/messages';
 import { authLogic } from '../store/auth';
 import { useSocket, MessageEvent as SocketMessageEvent } from './useSocket';
 import { Message, SendMessageData, MessageStatusUpdateData, ReadReceiptData } from '../types';
-import { createDatabaseQueries } from '../db/queries';
-import * as SQLite from 'expo-sqlite';
+import { getDatabaseQueries } from '../db/database';
 
 export interface UseMessagesOptions {
   conversationId: string;
@@ -59,6 +58,7 @@ export const useMessages = (options: UseMessagesOptions): UseMessagesReturn => {
   const {
     sendMessage: sendMessageAction,
     loadMessages: loadMessagesAction,
+    setMessages: setMessagesAction,
     loadMoreMessages: loadMoreMessagesAction,
     addMessage,
     updateMessage,
@@ -98,6 +98,33 @@ export const useMessages = (options: UseMessagesOptions): UseMessagesReturn => {
         sender: msg.sender
       } as Message);
     },
+    onMessageSent: (data: any) => {
+      console.log('useMessages: Received message_sent confirmation:', data);
+      // This is a confirmation that our message was sent successfully
+      // We need to update the optimistic message with the real ID and status
+      if (data.tempId) {
+        // Check if we've already processed this confirmation
+        const existingMessage = messages.find((m: Message) => m.id === data.messageId);
+        if (existingMessage) {
+          console.log('useMessages: Message already confirmed, ignoring duplicate confirmation');
+          return;
+        }
+        
+        // Also check if we have a message with the tempId that's already been confirmed
+        const tempMessage = messages.find((m: Message) => m.id === data.tempId);
+        if (tempMessage && tempMessage.status === 'sent') {
+          console.log('useMessages: Message with tempId already confirmed, ignoring duplicate confirmation');
+          return;
+        }
+        
+        console.log('useMessages: Confirming message with tempId:', data.tempId, 'realId:', data.messageId);
+        confirmMessageSent(data.tempId, data.messageId, data.conversationId);
+        // Clear any error state since message was sent successfully
+        setError(null);
+      } else {
+        console.log('useMessages: No tempId in message_sent confirmation, ignoring');
+      }
+    },
     onMessageStatus: (messageId: string, status: 'sending' | 'sent' | 'delivered' | 'read' | 'failed') => {
       handleMessageStatusUpdate({ messageId, status, conversationId });
     },
@@ -116,8 +143,20 @@ export const useMessages = (options: UseMessagesOptions): UseMessagesReturn => {
   const hasMessages = messages.length > 0;
   const messageCount = messages.length;
   
+  // Debug logging
+  console.log(`useMessages: conversationId=${conversationId}, messageCount=${messageCount}, hasMessages=${hasMessages}, error=${error}`);
+  
   // Socket event handlers
   function handleMessageReceived(message: Message) {
+    console.log('useMessages: handleMessageReceived called with:', {
+      messageId: message.id,
+      conversationId: message.conversationId,
+      currentConversationId: conversationId,
+      content: message.content ? message.content.substring(0, 20) + '...' : 'undefined',
+      senderId: message.senderId,
+      status: message.status
+    });
+    
     if (message.conversationId === conversationId) {
       // Check if this is a confirmation of a message we sent optimistically
       const existingMessage = messages.find((m: Message) => 
@@ -128,12 +167,16 @@ export const useMessages = (options: UseMessagesOptions): UseMessagesReturn => {
       
       if (existingMessage) {
         // This is a confirmation of our optimistic message
+        console.log('useMessages: Confirming optimistic message:', existingMessage.id, '->', message.id);
         confirmMessageSent(existingMessage.id, message.id);
       } else {
         // This is a new message from another user
+        console.log('useMessages: Adding new message from another user:', message.id);
         addMessage(message);
         syncMessageToDatabase(message);
       }
+    } else {
+      console.log('useMessages: Message for different conversation, ignoring');
     }
   }
   
@@ -162,31 +205,115 @@ export const useMessages = (options: UseMessagesOptions): UseMessagesReturn => {
     }
   }
   
-  // Load messages from database
+  // Load messages from database and API
   const loadMessagesFromDB = useCallback(async (limit?: number, beforeMessageId?: string) => {
     try {
       setLoading(true);
       setError(null);
       
-      const db = SQLite.openDatabaseSync('messageai.db');
-      const queries = createDatabaseQueries(db);
+      const queries = getDatabaseQueries();
       
-      const messages = await queries.getMessagesForConversation(
+      // First try to load from local database
+      let messages = await queries.getMessagesForConversation(
         conversationId,
         limit || loadLimit,
-        beforeMessageId
+        0 // offset parameter, not beforeMessageId
       );
       
-      // Update store with loaded messages
-      loadMessagesAction(conversationId, messages);
+      console.log(`Database: Retrieved ${messages.length} messages for conversation ${conversationId}`);
+      
+      // If no messages in local database, try to load from API
+      if (messages.length === 0) {
+        console.log(`No messages in local database, fetching from API for conversation ${conversationId}`);
+        try {
+          const { messagesAPI } = await import('../lib/api');
+          const apiMessages = await messagesAPI.getMessages(conversationId, {
+            limit: limit || loadLimit,
+            page: 1
+          });
+          
+          console.log(`API: Retrieved ${apiMessages.length} messages for conversation ${conversationId}`);
+          
+          // Convert API messages to local format and store in database
+          for (const apiMessage of apiMessages) {
+            const localMessage = {
+              id: apiMessage.id,
+              conversationId: apiMessage.conversationId,
+              senderId: apiMessage.senderId,
+              content: apiMessage.content,
+              type: apiMessage.type,
+              mediaUrl: apiMessage.mediaUrl,
+              status: apiMessage.status,
+              createdAt: new Date(apiMessage.createdAt),
+              updatedAt: new Date(apiMessage.updatedAt),
+              sender: apiMessage.sender
+            };
+            
+            // Store in database
+            await queries.insertMessage(localMessage);
+            
+            // Store sender information if available
+            if (apiMessage.sender) {
+              await queries.insertUser({
+                id: apiMessage.sender.id,
+                email: apiMessage.sender.email || 'user@example.com',
+                phoneNumber: undefined,
+                displayName: apiMessage.sender.displayName,
+                avatarUrl: apiMessage.sender.avatarUrl,
+                lastSeen: new Date(),
+                isOnline: false,
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              });
+            }
+          }
+          
+          // Reload from database after syncing
+          messages = await queries.getMessagesForConversation(
+            conversationId,
+            limit || loadLimit,
+            0
+          );
+          
+          console.log(`After API sync: Retrieved ${messages.length} messages for conversation ${conversationId}`);
+          
+        } catch (apiError) {
+          console.error('Failed to load messages from API:', apiError);
+          console.error('API Error details:', {
+            message: apiError.message,
+            status: apiError.response?.status,
+            data: apiError.response?.data
+          });
+          // Continue with empty messages from database
+        }
+      }
+      
+      // Update store with loaded messages (already in correct order)
+      setMessagesAction(conversationId, messages);
+      
+      // Clear any previous errors since messages loaded successfully
+      setError(null);
+      
+      console.log(`Loaded ${messages.length} messages for conversation ${conversationId}`);
+      
+      // If still no messages, try to get the last message from conversation data
+      if (messages.length === 0) {
+        console.log('No messages found, checking if conversation has lastMessage data');
+        // This will be handled by the chat screen fallback
+      }
       
     } catch (error) {
       console.error('Failed to load messages:', error);
-      setError(error instanceof Error ? error.message : 'Failed to load messages');
+      // Only set error if we don't have any messages loaded
+      if (messages.length === 0) {
+        setError(error instanceof Error ? error.message : 'Failed to load messages');
+      } else {
+        console.log('Error occurred but messages are already loaded, not setting error state');
+      }
     } finally {
       setLoading(false);
     }
-  }, [conversationId, loadLimit, loadMessagesAction, setLoading, setError]);
+  }, [conversationId, loadLimit, setMessagesAction, setLoading, setError]);
   
   // Send message function
   const sendMessage = useCallback((content: string, type: 'text' | 'image' = 'text', mediaUrl?: string) => {
@@ -204,10 +331,12 @@ export const useMessages = (options: UseMessagesOptions): UseMessagesReturn => {
     };
     
     // Send via store first (optimistic update)
+    console.log('useMessages: Adding optimistic message to store:', tempId);
     sendMessageAction(messageData);
+    console.log('useMessages: Store action completed, sending socket event:', tempId);
     
-    // Then send via socket
-    socketSendMessage(conversationId, content.trim(), type, mediaUrl);
+    // Then send via socket with the same tempId
+    socketSendMessage(conversationId, content.trim(), type, mediaUrl, tempId);
   }, [conversationId, currentUser, socketSendMessage, sendMessageAction]);
   
   // Load more messages

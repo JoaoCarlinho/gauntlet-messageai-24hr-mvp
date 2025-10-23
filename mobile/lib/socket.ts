@@ -30,17 +30,18 @@ class SocketManager {
   };
   private statusListeners: ((status: ConnectionStatus) => void)[] = [];
   private eventListeners: Map<string, Function[]> = new Map();
+  private logoutTriggered: boolean = false;
 
   constructor(config: Partial<SocketConfig> = {}) {
     this.config = {
       url: process.env.EXPO_PUBLIC_API_URL || 'https://gauntlet-messageai-24hr-mvp-production.up.railway.app',
       transports: ['polling', 'websocket'],
-      timeout: 20000,
+      timeout: 30000, // Increased timeout for better reliability
       reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-      maxReconnectionAttempts: 10,
+      reconnectionAttempts: 10, // Increased attempts
+      reconnectionDelay: 2000, // Start with 2 seconds
+      reconnectionDelayMax: 10000, // Max 10 seconds
+      maxReconnectionAttempts: 15, // More attempts for better reliability
       ...config,
     };
   }
@@ -57,7 +58,7 @@ class SocketManager {
     try {
       this.updateConnectionStatus({ connecting: true, error: null });
 
-      // Get authentication token
+      // Get authentication token and check if it's valid
       const token = await tokenManager.getAccessToken();
       if (!token) {
         console.log('No authentication token available, skipping socket connection');
@@ -69,7 +70,36 @@ class SocketManager {
         return;
       }
 
+      // Check if token is expired and refresh if needed
+      const isExpired = this.isTokenExpired(token);
+      if (isExpired) {
+        console.log('Access token is expired, attempting to refresh before socket connection');
+        try {
+          await this.refreshTokenBeforeConnect();
+        } catch (refreshError) {
+          console.error('Failed to refresh token before socket connection:', refreshError);
+          this.updateConnectionStatus({
+            connecting: false,
+            connected: false,
+            error: 'Authentication failed - please login again',
+          });
+          return;
+        }
+      }
+
       console.log('Connecting to socket server:', this.config.url);
+
+      // Get fresh token after potential refresh
+      const freshToken = await tokenManager.getAccessToken();
+      if (!freshToken) {
+        console.log('No fresh token available after refresh, skipping socket connection');
+        this.updateConnectionStatus({
+          connecting: false,
+          connected: false,
+          error: 'Authentication failed - please login again',
+        });
+        return;
+      }
 
       // Create socket connection with authentication
       this.socket = io(this.config.url, {
@@ -80,7 +110,7 @@ class SocketManager {
         reconnectionDelay: this.config.reconnectionDelay,
         reconnectionDelayMax: this.config.reconnectionDelayMax,
         auth: {
-          token,
+          token: freshToken,
         },
       });
 
@@ -95,6 +125,44 @@ class SocketManager {
       });
       throw error;
     }
+  }
+
+  /**
+   * Check if a JWT token is expired
+   */
+  private isTokenExpired(token: string): boolean {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const currentTime = Math.floor(Date.now() / 1000);
+      const isExpired = payload.exp < currentTime;
+      
+      if (isExpired) {
+        console.log(`Token expired at ${new Date(payload.exp * 1000).toISOString()}, current time: ${new Date().toISOString()}`);
+      }
+      
+      return isExpired;
+    } catch (error) {
+      console.warn('Error checking token expiration:', error);
+      return true; // Assume expired if we can't parse
+    }
+  }
+
+  /**
+   * Refresh token before connecting to socket
+   */
+  private async refreshTokenBeforeConnect(): Promise<void> {
+    const refreshToken = await tokenManager.getRefreshToken();
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
+    }
+
+    // Import authAPI dynamically to avoid circular dependencies
+    const { authAPI } = await import('./api');
+    const tokens = await authAPI.refreshToken();
+    
+    // Update tokens in storage
+    await tokenManager.setTokens(tokens.accessToken, tokens.refreshToken);
+    console.log('Token refreshed successfully before socket connection');
   }
 
   /**
@@ -143,6 +211,7 @@ class SocketManager {
     // Connection events
     this.socket.on('connect', () => {
       console.log('Socket connected:', this.socket?.id);
+      this.logoutTriggered = false; // Reset logout flag on successful connection
       this.updateConnectionStatus({
         connected: true,
         connecting: false,
@@ -153,28 +222,54 @@ class SocketManager {
 
     this.socket.on('disconnect', (reason) => {
       console.log('Socket disconnected:', reason);
+      
+      // Handle different disconnect reasons
+      let errorMessage = null;
+      if (reason === 'io server disconnect') {
+        errorMessage = 'Server disconnected';
+      } else if (reason === 'transport close') {
+        errorMessage = 'Connection lost - attempting to reconnect';
+        console.log('Transport closed, socket will attempt to reconnect automatically');
+      } else if (reason === 'ping timeout') {
+        errorMessage = 'Connection timeout - attempting to reconnect';
+      }
+      
       this.updateConnectionStatus({
         connected: false,
         connecting: false,
-        error: reason === 'io server disconnect' ? 'Server disconnected' : null,
+        error: errorMessage,
       });
     });
 
-    this.socket.on('connect_error', (error) => {
+    this.socket.on('connect_error', async (error) => {
       console.error('Socket connection error:', error);
       
       // Handle authentication errors specifically
       if (error.message?.includes('Authentication token required') || 
-          error.message?.includes('Invalid authentication token')) {
-        console.log('Socket authentication failed, triggering logout');
+          error.message?.includes('Invalid authentication token') ||
+          error.message?.includes('jwt expired') ||
+          error.message?.includes('TokenExpiredError')) {
+        console.log('Socket authentication failed due to token issue, attempting token refresh');
         
-        // Trigger global logout event using React Native event system
         try {
-          // Use DeviceEventEmitter for React Native
-          const { DeviceEventEmitter } = require('react-native');
-          DeviceEventEmitter.emit('auth:logout', { reason: 'Socket authentication failed' });
-        } catch (eventError) {
-          console.warn('Could not emit auth:logout event:', eventError);
+          // Try to refresh token and reconnect instead of immediately logging out
+          await this.reconnectWithFreshToken();
+          console.log('Socket reconnected successfully after token refresh');
+          return; // If successful, don't update status to error
+        } catch (refreshError) {
+          console.error('Token refresh failed, triggering logout:', refreshError);
+          
+          // Only trigger logout if refresh fails and we haven't already triggered it
+          if (!this.logoutTriggered) {
+            this.logoutTriggered = true;
+            try {
+              // Use DeviceEventEmitter for React Native
+              const { DeviceEventEmitter } = require('react-native');
+              DeviceEventEmitter.emit('auth:logout', { reason: 'Socket authentication failed after token refresh attempt' });
+            } catch (eventError) {
+              console.warn('Could not emit auth:logout event:', eventError);
+            }
+          }
         }
       }
       
@@ -188,6 +283,7 @@ class SocketManager {
     // Reconnection events
     this.socket.on('reconnect', (attemptNumber) => {
       console.log('Socket reconnected after', attemptNumber, 'attempts');
+      this.logoutTriggered = false; // Reset logout flag on successful reconnection
       this.updateConnectionStatus({
         connected: true,
         connecting: false,
@@ -202,6 +298,7 @@ class SocketManager {
         connected: false,
         connecting: true,
         reconnectAttempts: attemptNumber,
+        error: `Reconnecting... (attempt ${attemptNumber})`,
       });
     });
 

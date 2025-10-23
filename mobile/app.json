@@ -19,13 +19,7 @@
       "expo-router",
       "expo-secure-store",
       "expo-sqlite",
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/notification-icon.png",
-          "color": "#ffffff"
-        }
-      ]
+      "expo-dev-client"
     ],
     "ios": {
       "bundleIdentifier": "com.joaocarlinho.messageai",
@@ -39,7 +33,8 @@
       }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
     }
   }
 }

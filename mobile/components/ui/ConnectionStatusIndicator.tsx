@@ -104,6 +104,7 @@ export const ConnectionStatusIndicator: React.FC<ConnectionStatusIndicatorProps>
         },
         style,
       ]}
+      pointerEvents="none"
     >
       <Text style={styles.icon}>{getStatusIcon()}</Text>
       <Text style={styles.text}>{getStatusText()}</Text>

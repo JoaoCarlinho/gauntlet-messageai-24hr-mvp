@@ -1,5 +1,36 @@
-import * as SecureStore from 'expo-secure-store';
 import { User } from '../types';
+import { Platform } from 'react-native';
+
+// Platform-specific storage imports
+let platformStorage: any;
+
+if (Platform.OS === 'web') {
+  try {
+    const { webStorageFallback } = require('./web-storage-fallback');
+    platformStorage = webStorageFallback;
+  } catch (error) {
+    console.error('Failed to load web storage fallback:', error);
+    // Fallback to a mock storage if web storage fails
+    platformStorage = {
+      getItemAsync: async () => null,
+      setItemAsync: async () => {},
+      deleteItemAsync: async () => {},
+    };
+  }
+} else {
+  try {
+    const { mobileStorage } = require('./mobile-storage');
+    platformStorage = mobileStorage;
+  } catch (error) {
+    console.error('Failed to load mobile storage:', error);
+    // Fallback to a mock storage if mobile storage fails
+    platformStorage = {
+      getItemAsync: async () => null,
+      setItemAsync: async () => {},
+      deleteItemAsync: async () => {},
+    };
+  }
+}
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -16,7 +47,7 @@ export const TokenStorage = {
    */
   async saveAccessToken(token: string): Promise<void> {
     try {
-      await SecureStore.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, token);
+      await platformStorage.setItemAsync(STORAGE_KEYS.ACCESS_TOKEN, token);
     } catch (error) {
       console.error('Failed to save access token:', error);
       throw new Error('Failed to save access token');
@@ -28,7 +59,7 @@ export const TokenStorage = {
    */
   async getAccessToken(): Promise<string | null> {
     try {
-      return await SecureStore.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
+      return await platformStorage.getItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
     } catch (error) {
       console.error('Failed to get access token:', error);
       return null;
@@ -40,7 +71,7 @@ export const TokenStorage = {
    */
   async saveRefreshToken(token: string): Promise<void> {
     try {
-      await SecureStore.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, token);
+      await platformStorage.setItemAsync(STORAGE_KEYS.REFRESH_TOKEN, token);
     } catch (error) {
       console.error('Failed to save refresh token:', error);
       throw new Error('Failed to save refresh token');
@@ -52,7 +83,7 @@ export const TokenStorage = {
    */
   async getRefreshToken(): Promise<string | null> {
     try {
-      return await SecureStore.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+      return await platformStorage.getItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
     } catch (error) {
       console.error('Failed to get refresh token:', error);
       return null;
@@ -64,7 +95,7 @@ export const TokenStorage = {
    */
   async deleteAccessToken(): Promise<void> {
     try {
-      await SecureStore.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
+      await platformStorage.deleteItemAsync(STORAGE_KEYS.ACCESS_TOKEN);
     } catch (error) {
       console.error('Failed to delete access token:', error);
     }
@@ -75,7 +106,7 @@ export const TokenStorage = {
    */
   async deleteRefreshToken(): Promise<void> {
     try {
-      await SecureStore.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
+      await platformStorage.deleteItemAsync(STORAGE_KEYS.REFRESH_TOKEN);
     } catch (error) {
       console.error('Failed to delete refresh token:', error);
     }
@@ -118,7 +149,7 @@ export const UserStorage = {
   async saveUserData(user: User): Promise<void> {
     try {
       const userJson = JSON.stringify(user);
-      await SecureStore.setItemAsync(STORAGE_KEYS.USER_DATA, userJson);
+      await platformStorage.setItemAsync(STORAGE_KEYS.USER_DATA, userJson);
     } catch (error) {
       console.error('Failed to save user data:', error);
       throw new Error('Failed to save user data');
@@ -130,7 +161,7 @@ export const UserStorage = {
    */
   async getUserData(): Promise<User | null> {
     try {
-      const userJson = await SecureStore.getItemAsync(STORAGE_KEYS.USER_DATA);
+      const userJson = await platformStorage.getItemAsync(STORAGE_KEYS.USER_DATA);
       if (!userJson) {
         return null;
       }
@@ -146,7 +177,7 @@ export const UserStorage = {
    */
   async deleteUserData(): Promise<void> {
     try {
-      await SecureStore.deleteItemAsync(STORAGE_KEYS.USER_DATA);
+      await platformStorage.deleteItemAsync(STORAGE_KEYS.USER_DATA);
     } catch (error) {
       console.error('Failed to delete user data:', error);
     }
@@ -178,7 +209,7 @@ export const Storage = {
    */
   async save(key: string, value: string): Promise<void> {
     try {
-      await SecureStore.setItemAsync(key, value);
+      await platformStorage.setItemAsync(key, value);
     } catch (error) {
       console.error(`Failed to save data for key ${key}:`, error);
       throw new Error(`Failed to save data for key ${key}`);
@@ -190,7 +221,7 @@ export const Storage = {
    */
   async get(key: string): Promise<string | null> {
     try {
-      return await SecureStore.getItemAsync(key);
+      return await platformStorage.getItemAsync(key);
     } catch (error) {
       console.error(`Failed to get data for key ${key}:`, error);
       return null;
@@ -202,7 +233,7 @@ export const Storage = {
    */
   async delete(key: string): Promise<void> {
     try {
-      await SecureStore.deleteItemAsync(key);
+      await platformStorage.deleteItemAsync(key);
     } catch (error) {
       console.error(`Failed to delete data for key ${key}:`, error);
     }
@@ -213,7 +244,7 @@ export const Storage = {
    */
   async exists(key: string): Promise<boolean> {
     try {
-      const value = await SecureStore.getItemAsync(key);
+      const value = await platformStorage.getItemAsync(key);
       return value !== null;
     } catch (error) {
       console.error(`Failed to check existence for key ${key}:`, error);

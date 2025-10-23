@@ -260,6 +260,17 @@ export class DatabaseQueries {
 
   async insertMessage(message: Message): Promise<void> {
     try {
+      // Helper function to safely convert to ISO string
+      const toISOString = (date: Date | string): string => {
+        if (date instanceof Date) {
+          return date.toISOString();
+        }
+        if (typeof date === 'string') {
+          return new Date(date).toISOString();
+        }
+        throw new Error(`Invalid date format: ${typeof date}`);
+      };
+
       this.db.runSync(
         `INSERT OR REPLACE INTO messages 
          (id, conversation_id, sender_id, content, type, media_url, status, 
@@ -273,8 +284,8 @@ export class DatabaseQueries {
           message.type,
           message.mediaUrl || null,
           message.status,
-          message.createdAt.toISOString(),
-          message.updatedAt.toISOString(),
+          toISOString(message.createdAt),
+          toISOString(message.updatedAt),
           message.tempId || null,
           message.syncStatus || 'synced',
         ]
@@ -302,10 +313,17 @@ export class DatabaseQueries {
   ): Promise<Message[]> {
     try {
       const results = this.db.getAllSync(
-        'SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
+        `SELECT m.*, u.display_name as sender_display_name, u.avatar_url as sender_avatar_url
+         FROM messages m
+         LEFT JOIN users u ON m.sender_id = u.id
+         WHERE m.conversation_id = ? 
+         ORDER BY m.created_at ASC 
+         LIMIT ? OFFSET ?`,
         [conversationId, limit, offset]
       );
-      return results.map(this.mapMessageFromDb);
+      const messages = results.map((result) => this.mapMessageWithSenderFromDb(result));
+      console.log(`Database: Retrieved ${messages.length} messages for conversation ${conversationId}`);
+      return messages;
     } catch (error) {
       console.error('Error getting messages for conversation:', error);
       throw error;
@@ -473,7 +491,7 @@ export class DatabaseQueries {
       displayName: dbUser.display_name,
       avatarUrl: dbUser.avatar_url,
       lastSeen: new Date(dbUser.last_seen),
-      isOnline: Boolean(dbUser.is_online),
+      isOnline: !!dbUser.is_online,
       createdAt: new Date(dbUser.created_at),
       updatedAt: new Date(dbUser.updated_at),
     };
@@ -512,6 +530,34 @@ export class DatabaseQueries {
       updatedAt: new Date(dbMessage.updated_at),
       tempId: dbMessage.temp_id,
       syncStatus: dbMessage.sync_status,
+      // Note: sender information will be populated separately if needed
+    };
+  }
+
+  private mapMessageWithSenderFromDb(dbMessage: any): Message {
+    return {
+      id: dbMessage.id,
+      conversationId: dbMessage.conversation_id,
+      senderId: dbMessage.sender_id,
+      content: dbMessage.content,
+      type: dbMessage.type,
+      mediaUrl: dbMessage.media_url,
+      status: dbMessage.status,
+      createdAt: new Date(dbMessage.created_at),
+      updatedAt: new Date(dbMessage.updated_at),
+      tempId: dbMessage.temp_id,
+      syncStatus: dbMessage.sync_status,
+      sender: dbMessage.sender_display_name ? {
+        id: dbMessage.sender_id,
+        email: '', // Not available in this query
+        phoneNumber: undefined,
+        displayName: dbMessage.sender_display_name,
+        avatarUrl: dbMessage.sender_avatar_url,
+        lastSeen: new Date(),
+        isOnline: false,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } : undefined,
     };
   }
 
