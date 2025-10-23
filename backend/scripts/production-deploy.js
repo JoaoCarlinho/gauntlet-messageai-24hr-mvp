@@ -148,8 +148,18 @@ async function executeBuild() {
     });
     
     // Verify build artifacts exist
-    const distIndexExists = fs.existsSync(path.join(__dirname, '../dist/index.js'));
+    const distIndexPath = path.join(__dirname, '../dist/index.js');
+    const distIndexExists = fs.existsSync(distIndexPath);
     if (!distIndexExists) {
+      console.log(`❌ Expected file not found: ${distIndexPath}`);
+      console.log('📁 Checking dist directory contents...');
+      const distDir = path.join(__dirname, '../dist');
+      if (fs.existsSync(distDir)) {
+        const files = fs.readdirSync(distDir);
+        console.log('📋 Files in dist directory:', files);
+      } else {
+        console.log('❌ dist directory does not exist');
+      }
       throw new Error('Build completed but dist/index.js not found');
     }
     
@@ -193,15 +203,28 @@ async function startApplication() {
     // Check if main application file exists
     const appFile = path.join(__dirname, '../dist/index.js');
     if (!fs.existsSync(appFile)) {
+      console.log(`❌ Application file not found: ${appFile}`);
+      console.log('📁 Checking dist directory contents...');
+      const distDir = path.join(__dirname, '../dist');
+      if (fs.existsSync(distDir)) {
+        const files = fs.readdirSync(distDir);
+        console.log('📋 Files in dist directory:', files);
+      } else {
+        console.log('❌ dist directory does not exist');
+      }
       throw new Error('Application file not found in dist/');
     }
     
     console.log('📱 Application file found, starting server...');
-    console.log('⚠️  Note: Application will start in background for health check');
     
-    // For health check purposes, we'll just verify the file exists
-    // The actual application startup will be handled by Railway
-    console.log('✅ Application ready to start');
+    // Start the application and keep it running
+    console.log('🚀 Starting application server...');
+    
+    // Import and start the application
+    const appPath = path.join(__dirname, '../dist/index.js');
+    require(appPath);
+    
+    console.log('✅ Application started successfully');
     
   } catch (error) {
     console.error('❌ Application startup failed:', error.message);
