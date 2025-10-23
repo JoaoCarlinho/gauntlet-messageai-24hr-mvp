@@ -140,21 +140,20 @@ async function executeBuild() {
   console.log('🔨 Executing build process...');
   
   try {
-    // Check if build is needed
-    const distExists = fs.existsSync(path.join(__dirname, '../dist'));
-    const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
+    // Always build in production to ensure fresh artifacts
+    console.log('📦 Building TypeScript and generating Prisma client...');
+    execSync('npm run build', { 
+      stdio: 'inherit',
+      cwd: path.join(__dirname, '..')
+    });
     
-    if (!distExists) {
-      console.log('📦 Building TypeScript and generating Prisma client...');
-      execSync('npm run build', { 
-        stdio: 'inherit',
-        cwd: path.join(__dirname, '..')
-      });
-    } else {
-      console.log('📦 Build artifacts exist, skipping build...');
+    // Verify build artifacts exist
+    const distIndexExists = fs.existsSync(path.join(__dirname, '../dist/index.js'));
+    if (!distIndexExists) {
+      throw new Error('Build completed but dist/index.js not found');
     }
     
-    console.log('✅ Build process completed');
+    console.log('✅ Build process completed and verified');
     
   } catch (error) {
     console.error('❌ Build process failed:', error.message);
