@@ -163,27 +163,27 @@ async function executeBuild() {
 }
 
 async function executeCleanSlateReset() {
-  console.log('🧹 Executing clean slate database reset...');
+  console.log('🧹 Executing post-redeploy database setup...');
   
   try {
-    // Check if clean slate script exists
-    const cleanSlateScript = path.join(__dirname, 'clean-slate-reset.js');
-    if (!fs.existsSync(cleanSlateScript)) {
-      throw new Error('Clean slate reset script not found');
+    // Check if post-redeploy script exists
+    const postRedeployScript = path.join(__dirname, 'post-redeploy-setup.js');
+    if (!fs.existsSync(postRedeployScript)) {
+      throw new Error('Post-redeploy setup script not found');
     }
     
-    // Execute clean slate reset
-    execSync('node scripts/clean-slate-reset.js', {
+    // Execute post-redeploy setup
+    execSync('node scripts/post-redeploy-setup.js', {
       stdio: 'inherit',
       cwd: path.join(__dirname, '..'),
       env: { ...process.env, NODE_ENV: 'production' }
     });
     
-    console.log('✅ Clean slate reset completed');
+    console.log('✅ Post-redeploy setup completed');
     
   } catch (error) {
-    console.error('❌ Clean slate reset failed:', error.message);
-    throw new Error(`Database reset failed: ${error.message}`);
+    console.error('❌ Post-redeploy setup failed:', error.message);
+    throw new Error(`Database setup failed: ${error.message}`);
   }
 }
 
