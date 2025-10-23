@@ -48,7 +48,7 @@ export default function NewGroupScreen() {
     }
 
     // Check minimum query length
-    if (query.trim().length < 2) {
+    if (query.trim().length < 3) {
       setUsers([]);
       setSearchError(null);
       return;
@@ -298,14 +298,14 @@ export default function NewGroupScreen() {
                   style={styles.searchResultsList}
                   showsVerticalScrollIndicator={false}
                 />
-              ) : searchQuery.trim().length >= 2 ? (
+              ) : searchQuery.trim().length >= 3 ? (
                 <View style={styles.noResultsContainer}>
                   <Text style={styles.noResultsText}>No users found</Text>
                   <Text style={styles.noResultsSubtext}>Try searching with a different name or email</Text>
                 </View>
               ) : (
                 <View style={styles.minimumLengthContainer}>
-                  <Text style={styles.minimumLengthText}>Type at least 2 characters to search</Text>
+                  <Text style={styles.minimumLengthText}>Type at least 3 characters to search</Text>
                 </View>
               )}
             </View>

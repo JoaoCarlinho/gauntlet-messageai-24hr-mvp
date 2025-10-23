@@ -20,8 +20,8 @@ export const validateProfileUpdate = [
 export const validateUserSearch = [
   body('query')
     .trim()
-    .isLength({ min: 2, max: 100 })
-    .withMessage('Search query must be between 2 and 100 characters')
+    .isLength({ min: 3, max: 100 })
+    .withMessage('Search query must be between 3 and 100 characters')
 ];
 
 /**
@@ -240,10 +240,10 @@ export const searchUsersEndpoint = async (req: Request, res: Response) => {
       });
     }
 
-    if (query.trim().length < 2) {
+    if (query.trim().length < 3) {
       return res.status(400).json({
         error: 'Search query too short',
-        message: 'Search query must be at least 2 characters long'
+        message: 'Search query must be at least 3 characters long'
       });
     }
 
