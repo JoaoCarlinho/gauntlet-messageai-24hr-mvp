@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { View, Text, ActivityIndicator, StyleSheet, AppState, AppStateStatus } from 'react-native';
 import * as SQLite from 'expo-sqlite';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuth } from '../hooks/useAuth';
 import { migrateDatabase } from '../db/schema';
 import { createDatabaseQueries } from '../db/queries';
@@ -229,36 +230,38 @@ export default function RootLayout() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <Stack screenOptions={{ headerShown: false }}>
-        {/* Always define all screens - conditional rendering handled by screen components */}
-        <Stack.Screen 
-          name="(auth)"
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen 
-          name="(tabs)"
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen 
-          name="chat/[id]"
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen 
-          name="group/new"
-          options={{ headerShown: false }}
-        />
-      </Stack>
-      
-      {/* Connection Status Banner - only show for authenticated users */}
-      {isAuthenticated && (
-        <View style={styles.statusContainer}>
-          <ConnectionStatus />
-        </View>
-      )}
-      
-      <StatusBar style="auto" />
-    </QueryClientProvider>
+    <SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <Stack screenOptions={{ headerShown: false }}>
+          {/* Always define all screens - conditional rendering handled by screen components */}
+          <Stack.Screen 
+            name="(auth)"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="(tabs)"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="chat/[id]"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen 
+            name="group/new"
+            options={{ headerShown: false }}
+          />
+        </Stack>
+        
+        {/* Connection Status Banner - only show for authenticated users */}
+        {isAuthenticated && (
+          <View style={styles.statusContainer}>
+            <ConnectionStatus />
+          </View>
+        )}
+        
+        <StatusBar style="auto" />
+      </QueryClientProvider>
+    </SafeAreaProvider>
   );
 }
 
