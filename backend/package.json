@@ -5,8 +5,7 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "nodemon src/index.ts",
-    "build": "tsc && npx prisma generate && npm run post-build",
-    "post-build": "node -e \"const fs=require('fs'); if(fs.existsSync('dist/src/index.js')){fs.renameSync('dist/src/index.js','dist/index.js'); console.log('Moved dist/src/index.js to dist/index.js');}\"",
+    "build": "tsc && npx prisma generate",
     "start": "node dist/index.js",
     "start:prod": "npm run migrate && node dist/index.js",
     "deploy:prod": "node dist/scripts/deploy.js && node dist/index.js",
