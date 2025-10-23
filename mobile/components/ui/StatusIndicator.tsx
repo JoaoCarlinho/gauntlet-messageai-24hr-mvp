@@ -33,19 +33,31 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({
       return 'Offline';
     }
 
-    const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - lastSeen.getTime()) / (1000 * 60));
+    try {
+      const now = new Date();
+      const lastSeenDate = new Date(lastSeen);
+      
+      // Check if lastSeen is a valid date
+      if (isNaN(lastSeenDate.getTime())) {
+        return 'Offline';
+      }
+      
+      const diffInMinutes = Math.floor((now.getTime() - lastSeenDate.getTime()) / (1000 * 60));
 
-    if (diffInMinutes < 1) {
-      return 'Just now';
-    } else if (diffInMinutes < 60) {
-      return `${diffInMinutes}m ago`;
-    } else if (diffInMinutes < 1440) { // 24 hours
-      const hours = Math.floor(diffInMinutes / 60);
-      return `${hours}h ago`;
-    } else {
-      const days = Math.floor(diffInMinutes / 1440);
-      return `${days}d ago`;
+      if (diffInMinutes < 1) {
+        return 'Just now';
+      } else if (diffInMinutes < 60) {
+        return `${diffInMinutes}m ago`;
+      } else if (diffInMinutes < 1440) { // 24 hours
+        const hours = Math.floor(diffInMinutes / 60);
+        return `${hours}h ago`;
+      } else {
+        const days = Math.floor(diffInMinutes / 1440);
+        return `${days}d ago`;
+      }
+    } catch (error) {
+      console.warn('Error calculating status text:', error);
+      return 'Offline';
     }
   };
 
@@ -58,15 +70,27 @@ const StatusIndicator: React.FC<StatusIndicatorProps> = ({
       return '#8E8E93'; // Gray
     }
 
-    const now = new Date();
-    const diffInMinutes = Math.floor((now.getTime() - lastSeen.getTime()) / (1000 * 60));
+    try {
+      const now = new Date();
+      const lastSeenDate = new Date(lastSeen);
+      
+      // Check if lastSeen is a valid date
+      if (isNaN(lastSeenDate.getTime())) {
+        return '#8E8E93'; // Gray
+      }
+      
+      const diffInMinutes = Math.floor((now.getTime() - lastSeenDate.getTime()) / (1000 * 60));
 
-    if (diffInMinutes < 5) {
-      return '#FF9500'; // Orange (recently active)
-    } else if (diffInMinutes < 60) {
-      return '#FFCC00'; // Yellow (active within hour)
-    } else {
-      return '#8E8E93'; // Gray (offline)
+      if (diffInMinutes < 5) {
+        return '#FF9500'; // Orange (recently active)
+      } else if (diffInMinutes < 60) {
+        return '#FFCC00'; // Yellow (active within hour)
+      } else {
+        return '#8E8E93'; // Gray (offline)
+      }
+    } catch (error) {
+      console.warn('Error calculating status color:', error);
+      return '#8E8E93'; // Gray
     }
   };
 

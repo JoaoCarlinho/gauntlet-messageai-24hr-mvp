@@ -186,7 +186,7 @@ const ChatItem: React.FC<ChatItemProps> = ({
               <View style={styles.presenceContainer}>
                 <StatusIndicator
                   isOnline={isOnline}
-                  lastSeen={lastSeen}
+                  lastSeen={lastSeen || undefined}
                   size={8}
                 />
                 {!isOnline && lastSeen && (
