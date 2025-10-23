@@ -33,11 +33,12 @@ const ChatItem: React.FC<ChatItemProps> = ({
   // Get conversation display name
   const getDisplayName = (): string => {
     if (type === 'group') {
-      return name || 'Group Chat';
+      return String(name || 'Group Chat');
     }
     
     const otherUser = getOtherUser();
-    return otherUser?.displayName || 'Unknown User';
+    const displayName = otherUser?.displayName;
+    return String(displayName || 'Unknown User');
   };
 
   // Get conversation avatar
@@ -70,17 +71,24 @@ const ChatItem: React.FC<ChatItemProps> = ({
   };
 
   // Get last seen for direct conversations using real-time presence
-  const getLastSeen = () => {
+  const getLastSeen = (): Date | undefined => {
     if (type === 'direct') {
       const otherUser = getOtherUser();
       if (otherUser?.id) {
         // Get real-time presence data
         const presenceStatus = getUserStatus(otherUser.id);
-        if (presenceStatus) {
-          return presenceStatus.lastSeen;
+        if (presenceStatus && presenceStatus.lastSeen) {
+          // Ensure we return a proper Date object
+          return presenceStatus.lastSeen instanceof Date 
+            ? presenceStatus.lastSeen 
+            : new Date(presenceStatus.lastSeen);
         }
         // Fallback to static data
-        return otherUser.lastSeen;
+        if (otherUser.lastSeen) {
+          return otherUser.lastSeen instanceof Date 
+            ? otherUser.lastSeen 
+            : new Date(otherUser.lastSeen);
+        }
       }
     }
     return undefined;
@@ -115,13 +123,15 @@ const ChatItem: React.FC<ChatItemProps> = ({
     if (messageType === 'image') {
       return '📷 Photo';
     } else if (messageType === 'system') {
-      return content;
+      return String(content || '');
     } else {
       // For group chats, show sender name
       if (type === 'group' && sender) {
-        return `${sender.displayName}: ${content}`;
+        const senderName = String(sender.displayName || 'Unknown');
+        const messageContent = String(content || '');
+        return `${senderName}: ${messageContent}`;
       }
-      return content;
+      return String(content || '');
     }
   };
 
@@ -138,7 +148,14 @@ const ChatItem: React.FC<ChatItemProps> = ({
   const isOnline = getOnlineStatus();
   const lastSeen = getLastSeen();
   const lastMessagePreview = truncateMessage(getLastMessagePreview());
-  const timestamp = lastMessage ? formatTimestamp(new Date(lastMessage.createdAt)) : '';
+  const timestamp = lastMessage ? (() => {
+    try {
+      return formatTimestamp(new Date(lastMessage.createdAt));
+    } catch (error) {
+      console.warn('Error formatting timestamp:', error);
+      return '';
+    }
+  })() : '';
 
   return (
     <TouchableOpacity
@@ -156,7 +173,7 @@ const ChatItem: React.FC<ChatItemProps> = ({
         {type === 'group' && (
           <View style={styles.groupIndicator}>
             <Text style={styles.groupIndicatorText}>
-              {members.length}
+              {String(members?.length || 0)}
             </Text>
           </View>
         )}
@@ -167,11 +184,13 @@ const ChatItem: React.FC<ChatItemProps> = ({
           <Text style={styles.nameText} numberOfLines={1}>
             {displayName}
           </Text>
-          <View style={styles.timestampContainer}>
-            <Text style={styles.timestampText}>
-              {timestamp}
-            </Text>
-          </View>
+          {timestamp && (
+            <View style={styles.timestampContainer}>
+              <Text style={styles.timestampText}>
+                {timestamp}
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.messageRow}>
@@ -191,7 +210,21 @@ const ChatItem: React.FC<ChatItemProps> = ({
                 />
                 {!isOnline && lastSeen && (
                   <Text style={styles.lastSeenText}>
-                    {formatLastSeen(lastSeen) || 'Offline'}
+                    {(() => {
+                      try {
+                        if (lastSeen instanceof Date) {
+                          const formatted = formatLastSeen(lastSeen);
+                          return formatted || 'Offline';
+                        } else if (typeof lastSeen === 'string' || typeof lastSeen === 'number') {
+                          const formatted = formatLastSeen(new Date(lastSeen));
+                          return formatted || 'Offline';
+                        }
+                        return 'Offline';
+                      } catch (error) {
+                        console.warn('Error formatting last seen:', error);
+                        return 'Offline';
+                      }
+                    })()}
                   </Text>
                 )}
               </View>
@@ -200,7 +233,11 @@ const ChatItem: React.FC<ChatItemProps> = ({
             {unreadCount && unreadCount > 0 && (
               <View style={styles.unreadBadge}>
                 <Text style={styles.unreadText}>
-                  {unreadCount > 99 ? '99+' : unreadCount}
+                  {(() => {
+                    const count = Number(unreadCount);
+                    if (isNaN(count) || count <= 0) return '0';
+                    return count > 99 ? '99+' : String(count);
+                  })()}
                 </Text>
               </View>
             )}

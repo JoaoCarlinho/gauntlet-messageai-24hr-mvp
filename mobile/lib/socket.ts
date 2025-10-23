@@ -168,11 +168,13 @@ class SocketManager {
           error.message?.includes('Invalid authentication token')) {
         console.log('Socket authentication failed, triggering logout');
         
-        // Trigger global logout event
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('auth:logout', { 
-            detail: { reason: 'Socket authentication failed' } 
-          }));
+        // Trigger global logout event using React Native event system
+        try {
+          // Use DeviceEventEmitter for React Native
+          const { DeviceEventEmitter } = require('react-native');
+          DeviceEventEmitter.emit('auth:logout', { reason: 'Socket authentication failed' });
+        } catch (eventError) {
+          console.warn('Could not emit auth:logout event:', eventError);
         }
       }
       

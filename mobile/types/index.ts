@@ -290,7 +290,7 @@ export interface SocketEvents {
   // Presence
   user_online: (data: { userId: string; lastSeen: Date }) => void;
   user_offline: (data: { userId: string; lastSeen: Date }) => void;
-  heartbeat: () => void;
+  heartbeat: (data: { timestamp: number; conversationId?: string }) => void;
 
   // Read receipts
   mark_read: (data: MarkReadData) => void;

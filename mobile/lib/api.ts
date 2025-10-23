@@ -167,11 +167,12 @@ apiClient.interceptors.response.use(
           await tokenManager.clearTokens();
           await tokenManager.clearUserData();
           
-          // Trigger global logout event
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('auth:logout', { 
-              detail: { reason: 'No refresh token available' } 
-            }));
+          // Trigger global logout event using React Native event system
+          try {
+            const { DeviceEventEmitter } = require('react-native');
+            DeviceEventEmitter.emit('auth:logout', { reason: 'No refresh token available' });
+          } catch (eventError) {
+            console.warn('Could not emit auth:logout event:', eventError);
           }
           
           throw new Error('No refresh token available');
@@ -205,11 +206,12 @@ apiClient.interceptors.response.use(
         await tokenManager.clearTokens();
         await tokenManager.clearUserData();
         
-        // Trigger global logout event
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('auth:logout', { 
-            detail: { reason: 'Token refresh failed' } 
-          }));
+        // Trigger global logout event using React Native event system
+        try {
+          const { DeviceEventEmitter } = require('react-native');
+          DeviceEventEmitter.emit('auth:logout', { reason: 'Token refresh failed' });
+        } catch (eventError) {
+          console.warn('Could not emit auth:logout event:', eventError);
         }
         
         // For push token endpoints, don't throw error as they're not critical

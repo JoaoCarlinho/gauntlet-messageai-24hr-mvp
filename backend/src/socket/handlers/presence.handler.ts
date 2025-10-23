@@ -170,14 +170,16 @@ export const handleTypingStop = async (socket: Socket, data: TypingStopData): Pr
 /**
  * Handle heartbeat event - User sends heartbeat to maintain connection
  */
-export const handleHeartbeat = async (socket: Socket, data: HeartbeatData): Promise<void> => {
+export const handleHeartbeat = async (socket: Socket, data: HeartbeatData | null): Promise<void> => {
   if (!socket.user) {
     socket.emit('error', { message: 'User not authenticated' });
     return;
   }
 
   try {
-    const { timestamp, conversationId } = data;
+    // Handle case where data might be null or undefined
+    const timestamp = data?.timestamp || Date.now();
+    const conversationId = data?.conversationId;
     const userId = socket.user.id;
 
     // Update user's last seen timestamp

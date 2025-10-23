@@ -44,7 +44,7 @@ export const usePresence = (): UsePresenceReturn => {
   }, [onlineUsers, lastSeen]);
 
   // Socket event handlers for presence updates
-  const handleUserOnline = useCallback((data: { userId: string; lastSeen: Date }) => {
+  const handleUserOnline = useCallback((data: { userId: string; lastSeen: Date | string }) => {
     console.log('User came online:', data);
     setOnlineUsers(prev => ({
       ...prev,
@@ -52,11 +52,11 @@ export const usePresence = (): UsePresenceReturn => {
     }));
     setLastSeen(prev => ({
       ...prev,
-      [data.userId]: new Date(data.lastSeen),
+      [data.userId]: data.lastSeen instanceof Date ? data.lastSeen : new Date(data.lastSeen),
     }));
   }, []);
 
-  const handleUserOffline = useCallback((data: { userId: string; lastSeen: Date }) => {
+  const handleUserOffline = useCallback((data: { userId: string; lastSeen: Date | string }) => {
     console.log('User went offline:', data);
     setOnlineUsers(prev => ({
       ...prev,
@@ -64,7 +64,7 @@ export const usePresence = (): UsePresenceReturn => {
     }));
     setLastSeen(prev => ({
       ...prev,
-      [data.userId]: new Date(data.lastSeen),
+      [data.userId]: data.lastSeen instanceof Date ? data.lastSeen : new Date(data.lastSeen),
     }));
   }, []);
 
@@ -73,9 +73,15 @@ export const usePresence = (): UsePresenceReturn => {
     onPresence: (event) => {
       // Handle presence updates from the socket
       if (event.isOnline) {
-        handleUserOnline({ userId: event.userId, lastSeen: new Date(event.lastSeen) });
+        handleUserOnline({ 
+          userId: event.userId, 
+          lastSeen: event.lastSeen instanceof Date ? event.lastSeen : new Date(event.lastSeen) 
+        });
       } else {
-        handleUserOffline({ userId: event.userId, lastSeen: new Date(event.lastSeen) });
+        handleUserOffline({ 
+          userId: event.userId, 
+          lastSeen: event.lastSeen instanceof Date ? event.lastSeen : new Date(event.lastSeen) 
+        });
       }
     },
   });
@@ -83,26 +89,43 @@ export const usePresence = (): UsePresenceReturn => {
   // Listen for user_online and user_offline events
   useEffect(() => {
     // Set up direct event listeners for presence events
-    const handleOnlineEvent = (data: { userId: string; lastSeen: Date }) => {
+    const handleOnlineEvent = (data: { userId: string; lastSeen: Date | string }) => {
       handleUserOnline(data);
     };
 
-    const handleOfflineEvent = (data: { userId: string; lastSeen: Date }) => {
+    const handleOfflineEvent = (data: { userId: string; lastSeen: Date | string }) => {
       handleUserOffline(data);
     };
 
-    // Add event listeners using socket manager only if socket is initialized
-    if (socketManager && socketManager.connected) {
-      socketManager.on('user_online', handleOnlineEvent);
-      socketManager.on('user_offline', handleOfflineEvent);
-    } else {
-      console.warn('Cannot add listener - socket not initialized: user_online');
-      console.warn('Cannot add listener - socket not initialized: user_offline');
+    // Function to add listeners when socket is ready
+    const addListeners = () => {
+      if (socketManager && socketManager.isConnected()) {
+        socketManager.on('user_online', handleOnlineEvent);
+        socketManager.on('user_offline', handleOfflineEvent);
+        return true;
+      }
+      return false;
+    };
+
+    // Try to add listeners immediately
+    if (!addListeners()) {
+      // If socket not ready, wait for connection and try again
+      const checkConnection = () => {
+        if (addListeners()) {
+          console.log('Socket listeners added successfully');
+        } else {
+          // Retry after a short delay
+          setTimeout(checkConnection, 1000);
+        }
+      };
+      
+      // Start checking for connection
+      setTimeout(checkConnection, 100);
     }
 
     // Cleanup function
     return () => {
-      if (socketManager && socketManager.connected) {
+      if (socketManager && socketManager.isConnected()) {
         socketManager.off('user_online', handleOnlineEvent);
         socketManager.off('user_offline', handleOfflineEvent);
       }
@@ -173,10 +196,15 @@ export const usePresence = (): UsePresenceReturn => {
   }, []);
 
   // Utility function to format last seen timestamp
-  const formatLastSeen = useCallback((lastSeen: Date): string => {
+  const formatLastSeen = useCallback((lastSeen: Date | string): string => {
     try {
+      // Ensure we have a valid input
+      if (!lastSeen) {
+        return 'Offline';
+      }
+
       const now = new Date();
-      const lastSeenDate = new Date(lastSeen);
+      const lastSeenDate = lastSeen instanceof Date ? lastSeen : new Date(lastSeen);
       
       // Check if lastSeen is a valid date
       if (isNaN(lastSeenDate.getTime())) {
@@ -184,6 +212,11 @@ export const usePresence = (): UsePresenceReturn => {
       }
       
       const diffInSeconds = Math.floor((now.getTime() - lastSeenDate.getTime()) / 1000);
+      
+      // Handle future dates (shouldn't happen but just in case)
+      if (diffInSeconds < 0) {
+        return 'Just now';
+      }
       
       if (diffInSeconds < 60) {
         return 'Just now';
@@ -211,7 +244,10 @@ export const usePresence = (): UsePresenceReturn => {
 
     const heartbeatInterval = setInterval(() => {
       // Send heartbeat to maintain online status
-      socketManager.emit('heartbeat');
+      socketManager.emit('heartbeat', {
+        timestamp: Date.now(),
+        conversationId: undefined // Optional conversation context
+      });
     }, 30000); // Send heartbeat every 30 seconds
 
     return () => {
