@@ -24,7 +24,7 @@ async function deploy() {
     }
     catch (error) {
         console.error('❌ Deployment failed:', error);
-        metrics.errors.push(error);
+        metrics.errors.push(error instanceof Error ? error : new Error(String(error)));
         reportMetrics();
         process.exit(1);
     }
