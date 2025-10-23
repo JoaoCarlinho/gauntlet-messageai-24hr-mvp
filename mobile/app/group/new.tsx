@@ -237,116 +237,110 @@ export default function NewGroupScreen() {
         </View>
 
         {/* Content */}
-        <ScrollView 
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.content}>
-            <View style={styles.groupNameSection}>
-              <Text style={styles.sectionTitle}>Group Name</Text>
-              <TextInput
-                style={styles.groupNameInput}
-                value={groupName}
-                onChangeText={setGroupName}
-                placeholder="Enter group name"
-                placeholderTextColor="#8E8E93"
-                maxLength={50}
-                accessibilityLabel="Group name input"
-                accessibilityHint="Enter a name for your group"
-              />
+        <View style={styles.content}>
+          <View style={styles.groupNameSection}>
+            <Text style={styles.sectionTitle}>Group Name</Text>
+            <TextInput
+              style={styles.groupNameInput}
+              value={groupName}
+              onChangeText={setGroupName}
+              placeholder="Enter group name"
+              placeholderTextColor="#8E8E93"
+              maxLength={50}
+              accessibilityLabel="Group name input"
+              accessibilityHint="Enter a name for your group"
+            />
+          </View>
+
+          <View style={styles.contactsSection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>
+                Add Members ({selectedUsers.length})
+              </Text>
             </View>
 
-            <View style={styles.contactsSection}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>
-                  Add Members ({selectedUsers.length})
+            {/* Selected Users */}
+            {selectedUsers.length > 0 && (
+              <View style={styles.selectedUsersSection}>
+                <FlatList
+                  data={selectedUsers}
+                  renderItem={renderSelectedUser}
+                  keyExtractor={(item) => item.id}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.selectedUsersList}
+                />
+              </View>
+            )}
+
+            {/* Search Input */}
+            <View style={styles.searchSection}>
+              <View style={styles.searchInputContainer}>
+                <Ionicons name="search" size={20} color="#8E8E93" style={styles.searchIcon} />
+                <TextInput
+                  style={styles.searchInput}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholder="Search users by name or email"
+                  placeholderTextColor="#8E8E93"
+                  accessibilityLabel="Search users"
+                  accessibilityHint="Type to search for users to add to your group"
+                />
+                {isSearching && (
+                  <ActivityIndicator size="small" color="#007AFF" style={styles.searchLoader} />
+                )}
+              </View>
+            </View>
+
+            {/* Search Results */}
+            {searchQuery.trim() && (
+              <View style={styles.searchResultsSection}>
+                {searchError ? (
+                  <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>{searchError}</Text>
+                  </View>
+                ) : isSearching ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color="#007AFF" />
+                    <Text style={styles.loadingText}>Searching users...</Text>
+                  </View>
+                ) : users.length > 0 ? (
+                  <FlatList
+                    data={users}
+                    renderItem={renderUser}
+                    keyExtractor={(item) => item.id}
+                    style={styles.searchResultsList}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                    nestedScrollEnabled={true}
+                  />
+                ) : searchQuery.trim().length >= 3 ? (
+                  <View style={styles.noResultsContainer}>
+                    <Text style={styles.noResultsText}>No users found</Text>
+                    <Text style={styles.noResultsSubtext}>Try searching with a different name or email</Text>
+                  </View>
+                ) : (
+                  <View style={styles.minimumLengthContainer}>
+                    <Text style={styles.minimumLengthText}>Type at least 3 characters to search</Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Instructions */}
+            {!searchQuery.trim() && (
+              <View style={styles.instructionsContainer}>
+                <Ionicons name="search" size={48} color="#C7C7CC" />
+                <Text style={styles.instructionsText}>
+                  Search for users to add to your group
+                </Text>
+                <Text style={styles.instructionsSubtext}>
+                  Type a name or email address to find users
                 </Text>
               </View>
-
-              {/* Selected Users */}
-              {selectedUsers.length > 0 && (
-                <View style={styles.selectedUsersSection}>
-                  <FlatList
-                    data={selectedUsers}
-                    renderItem={renderSelectedUser}
-                    keyExtractor={(item) => item.id}
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.selectedUsersList}
-                  />
-                </View>
-              )}
-
-              {/* Search Input */}
-              <View style={styles.searchSection}>
-                <View style={styles.searchInputContainer}>
-                  <Ionicons name="search" size={20} color="#8E8E93" style={styles.searchIcon} />
-                  <TextInput
-                    style={styles.searchInput}
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    placeholder="Search users by name or email"
-                    placeholderTextColor="#8E8E93"
-                    accessibilityLabel="Search users"
-                    accessibilityHint="Type to search for users to add to your group"
-                  />
-                  {isSearching && (
-                    <ActivityIndicator size="small" color="#007AFF" style={styles.searchLoader} />
-                  )}
-                </View>
-              </View>
-
-              {/* Search Results */}
-              {searchQuery.trim() && (
-                <View style={styles.searchResultsSection}>
-                  {searchError ? (
-                    <View style={styles.errorContainer}>
-                      <Text style={styles.errorText}>{searchError}</Text>
-                    </View>
-                  ) : isSearching ? (
-                    <View style={styles.loadingContainer}>
-                      <ActivityIndicator size="small" color="#007AFF" />
-                      <Text style={styles.loadingText}>Searching users...</Text>
-                    </View>
-                  ) : users.length > 0 ? (
-                    <FlatList
-                      data={users}
-                      renderItem={renderUser}
-                      keyExtractor={(item) => item.id}
-                      style={styles.searchResultsList}
-                      showsVerticalScrollIndicator={false}
-                      keyboardShouldPersistTaps="handled"
-                    />
-                  ) : searchQuery.trim().length >= 3 ? (
-                    <View style={styles.noResultsContainer}>
-                      <Text style={styles.noResultsText}>No users found</Text>
-                      <Text style={styles.noResultsSubtext}>Try searching with a different name or email</Text>
-                    </View>
-                  ) : (
-                    <View style={styles.minimumLengthContainer}>
-                      <Text style={styles.minimumLengthText}>Type at least 3 characters to search</Text>
-                    </View>
-                  )}
-                </View>
-              )}
-
-              {/* Instructions */}
-              {!searchQuery.trim() && (
-                <View style={styles.instructionsContainer}>
-                  <Ionicons name="search" size={48} color="#C7C7CC" />
-                  <Text style={styles.instructionsText}>
-                    Search for users to add to your group
-                  </Text>
-                  <Text style={styles.instructionsSubtext}>
-                    Type a name or email address to find users
-                  </Text>
-                </View>
-              )}
-            </View>
+            )}
           </View>
-        </ScrollView>
+        </View>
 
         {/* Sticky Bottom Create Button */}
         <View style={[styles.bottomButtonContainer, { paddingBottom: insets.bottom + 16 }]}>
@@ -412,12 +406,6 @@ const styles = StyleSheet.create({
   },
   headerSpacer: {
     width: 44,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
   },
   content: {
     flex: 1,
