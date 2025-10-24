@@ -1,11 +1,11 @@
 import { Server as HTTPServer } from 'http';
-import { Server as SocketIOServer, Socket } from 'socket.io';
+import { Server as SocketIOServer } from 'socket.io';
 import { createSocketServer, setSocketServer } from '../config/socket';
 import { roomManager, ROOM_TYPES } from './room-manager';
-import * as messageService from '../services/message.service';
 import * as conversationService from '../services/conversation.service';
 import { setupMessageHandlers } from './handlers/message.handler';
 import { setupPresenceHandlers } from './handlers/presence.handler';
+import { initializeLeadHandlers } from './handlers/leads.handler';
 
 // Extend Socket interface to include user property
 declare module 'socket.io' {
@@ -88,6 +88,9 @@ const setupSocketEventHandlers = (io: SocketIOServer): void => {
 
     // Set up presence handlers (includes typing indicators, heartbeat, presence updates)
     setupPresenceHandlers(socket);
+
+    // Set up lead handlers (real-time lead notifications)
+    initializeLeadHandlers(io, socket);
 
     // Handle conversation updates
     socket.on('conversation-updated', async (data: { conversationId: string }) => {
