@@ -1,6 +1,5 @@
 import { SQSClient, SendMessageCommand, SendMessageBatchCommand } from '@aws-sdk/client-sqs';
-import { WebhookLog } from '@prisma/client';
-import { prisma } from '../config/database';
+import prisma from '../config/database';
 import { createSQSInstance } from '../config/aws';
 
 /**
@@ -11,7 +10,7 @@ import { createSQSInstance } from '../config/aws';
 interface NormalizedLeadData {
   platform: string;
   leadId: string;
-  email: string;
+  email: string | undefined;
   phone?: string;
   firstName?: string;
   lastName?: string;
@@ -209,20 +208,24 @@ class WebhookService {
   /**
    * Log webhook attempt for audit trail
    */
-  async logWebhook(platform: string, eventType: string, payload: any): Promise<WebhookLog> {
+  async logWebhook(platform: string, eventType: string, payload: any): Promise<any> {
     try {
-      const webhookLog = await prisma.webhookLog.create({
-        data: {
-          platform,
-          eventType,
-          payload: JSON.stringify(payload),
-          status: 'received',
-          timestamp: new Date()
-        }
-      });
-
-      console.log(`Webhook logged: ${platform} - ${eventType} - ID: ${webhookLog.id}`);
-      return webhookLog;
+      // For now, just log to console since WebhookLog table doesn't exist yet
+      // This will be implemented when the database schema is extended
+      console.log(`Webhook logged: ${platform} - ${eventType} - Payload: ${JSON.stringify(payload)}`);
+      
+      // TODO: Implement database logging when WebhookLog table is created
+      // const webhookLog = await prisma.webhookLog.create({
+      //   data: {
+      //     platform,
+      //     eventType,
+      //     payload: JSON.stringify(payload),
+      //     status: 'received',
+      //     timestamp: new Date()
+      //   }
+      // });
+      
+      return { platform, eventType, timestamp: new Date() };
     } catch (error) {
       console.error('Error logging webhook:', error);
       throw error;
@@ -273,14 +276,19 @@ class WebhookService {
    */
   async checkLeadExists(leadId: string, platform: string): Promise<boolean> {
     try {
-      const existingLead = await prisma.lead.findFirst({
-        where: {
-          externalId: leadId,
-          source: platform
-        }
-      });
-
-      return !!existingLead;
+      // For now, return false since Lead table doesn't exist yet
+      // This will be implemented when the database schema is extended
+      console.log(`Checking if lead exists: ${leadId} from ${platform}`);
+      
+      // TODO: Implement database check when Lead table is created
+      // const existingLead = await prisma.lead.findFirst({
+      //   where: {
+      //     externalId: leadId,
+      //     source: platform
+      //   }
+      // });
+      
+      return false; // Always return false for now
     } catch (error) {
       console.error('Error checking if lead exists:', error);
       return false;
