@@ -326,9 +326,9 @@ OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 - [x] Create new app: Type = Business
 - [x] Add Products: Marketing API, Webhooks
 - [x] Get App ID and App Secret
-- [ ] Set up webhook subscriptions for Lead Ads
+- [ ] Set up webhook subscriptions for Lead Ads (requires backend endpoint)
 - [ ] Generate System User Access Token
-- [ ] Note webhook verification token
+- [x] Note webhook verification token
 
 **✅ COMPLETED RESOURCES**:
 - Facebook App: Created and configured
@@ -339,15 +339,21 @@ OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 **⚠️ REMAINING TASKS**:
 - Webhook subscriptions for Lead Ads need to be configured
 - System User Access Token needs to be generated
-- Webhook verification token needs to be set up
+- Webhook verification token: Generated and configured
+- Backend webhook endpoint needs to be created (will be implemented in Phase 2)
 
 **Environment Variables**:
 ```
 FACEBOOK_APP_ID=****************
 FACEBOOK_APP_SECRET=****************
 FACEBOOK_ACCESS_TOKEN=****************
-FACEBOOK_WEBHOOK_VERIFY_TOKEN=<needs-to-be-configured>
+FACEBOOK_WEBHOOK_VERIFY_TOKEN=****************
 ```
+
+**📝 WEBHOOK URL FORMAT**:
+- Webhook URL will be: `https://your-backend-domain.com/api/v1/webhooks/facebook`
+- This endpoint will be created in Phase 2 (PR #6: Webhook Receiver Infrastructure)
+- Facebook will send POST requests to this URL when leads are generated
 
 ##### LinkedIn
 **Your Actions**:
@@ -355,7 +361,7 @@ FACEBOOK_WEBHOOK_VERIFY_TOKEN=<needs-to-be-configured>
 - [ ] Create new app
 - [ ] Request Marketing API access
 - [ ] Add OAuth 2.0 scopes: `r_ads`, `r_liteprofile`, `w_member_social`
-- [ ] Set up Lead Gen Forms webhook
+- [ ] Set up Lead Gen Forms webhook (requires backend endpoint)
 - [ ] Note client ID and secret
 
 **Environment Variables**:
@@ -365,12 +371,16 @@ LINKEDIN_CLIENT_SECRET=<client-secret>
 LINKEDIN_ACCESS_TOKEN=<token>
 ```
 
+**📝 WEBHOOK URL FORMAT**:
+- Webhook URL will be: `https://your-backend-domain.com/api/v1/webhooks/linkedin`
+- This endpoint will be created in Phase 2 (PR #6: Webhook Receiver Infrastructure)
+
 ##### TikTok
 **Your Actions**:
 - [ ] Go to https://ads.tiktok.com/marketing_api/docs
 - [ ] Apply for API access
 - [ ] Create app and get credentials
-- [ ] Set up Lead Generation webhook
+- [ ] Set up Lead Generation webhook (requires backend endpoint)
 
 **Environment Variables**:
 ```
@@ -378,6 +388,10 @@ TIKTOK_APP_ID=<app-id>
 TIKTOK_APP_SECRET=<app-secret>
 TIKTOK_ACCESS_TOKEN=<token>
 ```
+
+**📝 WEBHOOK URL FORMAT**:
+- Webhook URL will be: `https://your-backend-domain.com/api/v1/webhooks/tiktok`
+- This endpoint will be created in Phase 2 (PR #6: Webhook Receiver Infrastructure)
 
 ##### X (Twitter)
 **Your Actions**:
@@ -393,6 +407,10 @@ X_API_SECRET=<api-secret>
 X_ACCESS_TOKEN=<token>
 ```
 
+**📝 WEBHOOK URL FORMAT**:
+- Webhook URL will be: `https://your-backend-domain.com/api/v1/webhooks/x`
+- This endpoint will be created in Phase 2 (PR #6: Webhook Receiver Infrastructure)
+
 ---
 
 #### Task 0.5: Existing Platform Verification
@@ -403,6 +421,110 @@ X_ACCESS_TOKEN=<token>
 - [ ] Verify AWS S3 bucket for media exists
 - [ ] Verify Expo account is active
 - [ ] Test mobile app connects to backend
+
+### PR #6: Webhook Receiver Infrastructure
+
+#### Task 6.1: Create Webhook Verification Middleware
+**Description**: Verify webhook signatures from social platforms  
+**Git Actions**:
+```bash
+git checkout main && git pull
+git checkout -b feature/webhook-infrastructure
+```
+
+**Files Created**:
+- `backend/src/middleware/webhookVerification.ts`
+
+**Implementation Steps**:
+- [x] `verifyFacebookSignature(req, secret)` - Validate FB webhook
+- [x] `verifyLinkedInSignature(req, secret)` - Validate LinkedIn webhook
+- [x] `verifyTikTokSignature(req, secret)` - Validate TikTok webhook
+- [x] Return 401 if signature invalid
+- [x] Log all webhook attempts for security
+
+---
+
+#### Task 6.2: Create Webhook Service
+**Description**: Process and normalize webhook payloads  
+**Files Created**:
+- `backend/src/services/webhooks.service.ts`
+
+**Implementation Steps**:
+- [x] `processFacebookLeadWebhook(payload)` - Parse FB lead data
+- [x] `processLinkedInLeadWebhook(payload)` - Parse LinkedIn lead
+- [x] `processTikTokLeadWebhook(payload)` - Parse TikTok lead
+- [x] `normalizeLeadData(rawData, platform)` - Standardize format
+- [x] `logWebhook(platform, eventType, payload)` - Audit trail
+- [x] `queueLeadProcessing(leadData)` - Send to SQS for async processing
+- [x] Deduplication logic (check if lead already exists)
+
+---
+
+#### Task 6.3: Create Webhook Controller
+**Description**: Webhook endpoint handlers  
+**Files Created**:
+- `backend/src/controllers/webhooks.controller.ts`
+
+**Implementation Steps**:
+- [x] POST `/api/v1/webhooks/facebook` - Receive FB webhooks
+- [x] GET `/api/v1/webhooks/facebook` - Verification endpoint
+- [x] POST `/api/v1/webhooks/linkedin` - Receive LinkedIn webhooks
+- [x] POST `/api/v1/webhooks/tiktok` - Receive TikTok webhooks
+- [x] POST `/api/v1/webhooks/x` - Receive X webhooks
+- [x] Respond with 200 OK immediately
+- [x] Process async via SQS
+
+---
+
+#### Task 6.4: Create Webhook Routes
+**Files Created**:
+- `backend/src/routes/webhooks.routes.ts`
+
+**Files Modified**:
+- `backend/src/index.ts`
+
+**Implementation Steps**:
+- [x] Define webhook routes (PUBLIC, no auth)
+- [x] Add webhook verification middleware
+- [x] Use raw body parser for signature verification
+- [x] Mount under `/api/v1/webhooks`
+
+---
+
+#### Task 6.5: Configure SQS Queue Client
+**Description**: Send webhook payloads to SQS for processing  
+**Files Modified**:
+- `backend/src/config/aws.ts`
+
+**Implementation Steps**:
+- [x] Configure SQS client with credentials
+- [x] `sendMessageToQueue(queueUrl, messageBody)` - Send to SQS
+- [x] `sendBatchMessages(queueUrl, messages[])` - Batch send
+- [x] Handle errors and retry logic
+
+---
+
+#### Task 6.6: Test Webhook Receiving
+**Your Actions**:
+- [ ] Use ngrok to expose local backend: `ngrok http 3000`
+- [ ] Configure Facebook webhook URL to ngrok
+- [ ] Trigger test lead form submission
+- [ ] Verify webhook received and logged
+- [ ] Verify message sent to SQS
+- [ ] Check SQS console for message
+
+---
+
+#### Task 6.7: Commit and Create PR #6
+**Git Actions**:
+```bash
+git add .
+git commit -m "feat: Add webhook receiver infrastructure with SQS queueing"
+git push origin feature/webhook-infrastructure
+```
+**Your Actions**:
+- [ ] Create PR #6: "Webhook Infrastructure"
+- [ ] Merge to main
 
 ---
 
@@ -900,109 +1022,6 @@ git push origin feature/campaign-management
 
 ## Phase 2: Webhook Infrastructure & Lead Management
 
-### PR #6: Webhook Receiver Infrastructure
-
-#### Task 6.1: Create Webhook Verification Middleware
-**Description**: Verify webhook signatures from social platforms  
-**Git Actions**:
-```bash
-git checkout main && git pull
-git checkout -b feature/webhook-infrastructure
-```
-
-**Files Created**:
-- `backend/src/middleware/webhookVerification.ts`
-
-**Implementation Steps**:
-- [ ] `verifyFacebookSignature(req, secret)` - Validate FB webhook
-- [ ] `verifyLinkedInSignature(req, secret)` - Validate LinkedIn webhook
-- [ ] `verifyTikTokSignature(req, secret)` - Validate TikTok webhook
-- [ ] Return 401 if signature invalid
-- [ ] Log all webhook attempts for security
-
----
-
-#### Task 6.2: Create Webhook Service
-**Description**: Process and normalize webhook payloads  
-**Files Created**:
-- `backend/src/services/webhooks.service.ts`
-
-**Implementation Steps**:
-- [ ] `processFacebookLeadWebhook(payload)` - Parse FB lead data
-- [ ] `processLinkedInLeadWebhook(payload)` - Parse LinkedIn lead
-- [ ] `processTikTokLeadWebhook(payload)` - Parse TikTok lead
-- [ ] `normalizeLeadData(rawData, platform)` - Standardize format
-- [ ] `logWebhook(platform, eventType, payload)` - Audit trail
-- [ ] `queueLeadProcessing(leadData)` - Send to SQS for async processing
-- [ ] Deduplication logic (check if lead already exists)
-
----
-
-#### Task 6.3: Create Webhook Controller
-**Description**: Webhook endpoint handlers  
-**Files Created**:
-- `backend/src/controllers/webhooks.controller.ts`
-
-**Implementation Steps**:
-- [ ] POST `/api/v1/webhooks/facebook` - Receive FB webhooks
-- [ ] GET `/api/v1/webhooks/facebook` - Verification endpoint
-- [ ] POST `/api/v1/webhooks/linkedin` - Receive LinkedIn webhooks
-- [ ] POST `/api/v1/webhooks/tiktok` - Receive TikTok webhooks
-- [ ] POST `/api/v1/webhooks/x` - Receive X webhooks
-- [ ] Respond with 200 OK immediately
-- [ ] Process async via SQS
-
----
-
-#### Task 6.4: Create Webhook Routes
-**Files Created**:
-- `backend/src/routes/webhooks.routes.ts`
-
-**Files Modified**:
-- `backend/src/index.ts`
-
-**Implementation Steps**:
-- [ ] Define webhook routes (PUBLIC, no auth)
-- [ ] Add webhook verification middleware
-- [ ] Use raw body parser for signature verification
-- [ ] Mount under `/api/v1/webhooks`
-
----
-
-#### Task 6.5: Configure SQS Queue Client
-**Description**: Send webhook payloads to SQS for processing  
-**Files Modified**:
-- `backend/src/config/aws.ts`
-
-**Implementation Steps**:
-- [ ] Configure SQS client with credentials
-- [ ] `sendMessageToQueue(queueUrl, messageBody)` - Send to SQS
-- [ ] `sendBatchMessages(queueUrl, messages[])` - Batch send
-- [ ] Handle errors and retry logic
-
----
-
-#### Task 6.6: Test Webhook Receiving
-**Your Actions**:
-- [ ] Use ngrok to expose local backend: `ngrok http 3000`
-- [ ] Configure Facebook webhook URL to ngrok
-- [ ] Trigger test lead form submission
-- [ ] Verify webhook received and logged
-- [ ] Verify message sent to SQS
-- [ ] Check SQS console for message
-
----
-
-#### Task 6.7: Commit and Create PR #6
-**Git Actions**:
-```bash
-git add .
-git commit -m "feat: Add webhook receiver infrastructure with SQS queueing"
-git push origin feature/webhook-infrastructure
-```
-**Your Actions**:
-- [ ] Create PR #6: "Webhook Infrastructure"
-- [ ] Merge to main
 
 ---
 
