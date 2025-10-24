@@ -8,6 +8,7 @@ import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/users.routes';
 import conversationRoutes from './routes/conversations.routes';
 import messageRoutes from './routes/messages.routes';
+import webhookRoutes from './routes/webhooks.routes';
 import { initializeSocketServer } from './socket';
 import logger from './utils/logger';
 
@@ -167,6 +168,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/conversations', conversationRoutes);
 app.use('/api/v1/conversations', messageRoutes);
+app.use('/api/v1/webhooks', webhookRoutes);
 
 // API info endpoint
 app.get('/api/v1', (req, res) => {
