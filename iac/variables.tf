@@ -22,3 +22,16 @@ variable "railway_api_key" {
   sensitive   = true
   default     = ""
 }
+
+variable "database_url" {
+  description = "Database connection URL for Lambda functions"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "api_url" {
+  description = "API URL for Lambda functions to call back to"
+  type        = string
+  default     = ""
+}
