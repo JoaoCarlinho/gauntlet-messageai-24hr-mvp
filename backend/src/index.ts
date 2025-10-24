@@ -9,6 +9,7 @@ import userRoutes from './routes/users.routes';
 import conversationRoutes from './routes/conversations.routes';
 import messageRoutes from './routes/messages.routes';
 import webhookRoutes from './routes/webhooks.routes';
+import policiesRoutes from './routes/policies.routes';
 import { initializeSocketServer } from './socket';
 import logger from './utils/logger';
 
@@ -169,6 +170,7 @@ app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/conversations', conversationRoutes);
 app.use('/api/v1/conversations', messageRoutes);
 app.use('/api/v1/webhooks', webhookRoutes);
+app.use('/api/v1/policies', policiesRoutes);
 
 // API info endpoint
 app.get('/api/v1', (req, res) => {
@@ -188,6 +190,7 @@ app.get('/api/v1', (req, res) => {
       users: '/api/v1/users',
       conversations: '/api/v1/conversations',
       messages: '/api/v1/conversations/:id/messages',
+      policies: '/api/v1/policies',
       register: 'POST /api/v1/auth/register',
       login: 'POST /api/v1/auth/login',
       refresh: 'POST /api/v1/auth/refresh',
@@ -202,7 +205,10 @@ app.get('/api/v1', (req, res) => {
       getConversation: 'GET /api/v1/conversations/:id',
       getMessages: 'GET /api/v1/conversations/:id/messages',
       createMessage: 'POST /api/v1/conversations/:id/messages',
-      uploadMessageMedia: 'POST /api/v1/conversations/:id/messages/upload'
+      uploadMessageMedia: 'POST /api/v1/conversations/:id/messages/upload',
+      privacyPolicy: 'GET /api/v1/policies/privacy',
+      termsOfService: 'GET /api/v1/policies/terms',
+      acceptableUsePolicy: 'GET /api/v1/policies/acceptable-use'
     },
     websocket: {
       url: `ws://localhost:${PORT}`,
