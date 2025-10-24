@@ -55,13 +55,17 @@ async function cleanSlateReset() {
     // Step 4: Drop and recreate the public schema
     console.log('🗑️  Dropping and recreating public schema...');
     try {
-      await prisma.$executeRaw`
-        DROP SCHEMA public CASCADE;
-        CREATE SCHEMA public;
-        GRANT ALL ON SCHEMA public TO public;
-        GRANT ALL ON SCHEMA public TO postgres;
-        GRANT ALL ON SCHEMA public TO public;
-      `;
+      // Drop schema
+      await prisma.$executeRaw`DROP SCHEMA public CASCADE;`;
+      console.log('✅ Public schema dropped');
+      
+      // Create schema
+      await prisma.$executeRaw`CREATE SCHEMA public;`;
+      console.log('✅ Public schema created');
+      
+      // Grant permissions
+      await prisma.$executeRaw`GRANT ALL ON SCHEMA public TO public;`;
+      await prisma.$executeRaw`GRANT ALL ON SCHEMA public TO postgres;`;
       console.log('✅ Public schema recreated successfully');
     } catch (error) {
       console.error('❌ Schema recreation failed:', error.message);
