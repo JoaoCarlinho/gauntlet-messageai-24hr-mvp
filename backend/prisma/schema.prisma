@@ -25,6 +25,12 @@ model User {
   sentMessages     Message[]
   conversations    ConversationMember[]
   readReceipts     ReadReceipt[]
+  
+  // Sales Funnel Relations
+  teamMemberships   TeamMember[]
+  aiConversations   AIAgentConversation[]
+  leadActivities    LeadActivity[]
+  assignedLeads     Lead[]
 }
 
 model Conversation {
@@ -85,4 +91,251 @@ model ReadReceipt {
   @@unique([messageId, userId])
   @@index([messageId])
   @@index([userId])
+}
+
+// ===== SALES FUNNEL MODELS =====
+
+model Team {
+  id          String   @id @default(uuid())
+  name        String
+  slug        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime? // Soft delete
+
+  members     TeamMember[]
+  products    Product[]
+  campaigns   Campaign[]
+  leads       Lead[]
+  webhookLogs WebhookLog[]
+
+  @@index([slug])
+  @@index([deletedAt])
+}
+
+model TeamMember {
+  id        String   @id @default(uuid())
+  teamId    String
+  userId    String
+  role      String   // "admin", "member", "viewer"
+  joinedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  team      Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@index([teamId])
+  @@index([userId])
+}
+
+model Product {
+  id          String   @id @default(uuid())
+  teamId      String
+  name        String
+  description String
+  features    Json     // Array of feature objects
+  pricing     Json     // Pricing structure object
+  usps        Json     // Unique selling propositions array
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  team        Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  icps        ICP[]
+  campaigns   Campaign[]
+
+  @@index([teamId])
+  @@index([name])
+}
+
+model ICP {
+  id              String   @id @default(uuid())
+  productId       String
+  name            String
+  demographics    Json     // Age, location, job titles, etc.
+  firmographics   Json     // Company size, industry, revenue, etc.
+  psychographics  Json     // Pain points, goals, motivations, etc.
+  behaviors       Json     // Buying triggers, decision process, etc.
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  product         Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  campaigns       Campaign[]
+
+  @@index([productId])
+  @@index([name])
+}
+
+model Campaign {
+  id              String   @id @default(uuid())
+  teamId          String
+  productId       String
+  icpId           String?
+  name            String
+  description     String?
+  platforms       String[] // ["facebook", "linkedin", "tiktok", "x"]
+  budget          Float
+  startDate       DateTime
+  endDate         DateTime?
+  status          String   @default("draft") // "draft", "active", "paused", "completed"
+  targetingStrategy Json   // Platform-specific targeting
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  team            Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  product         Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  icp             ICP? @relation(fields: [icpId], references: [id], onDelete: SetNull)
+  adCreatives     AdCreative[]
+  leads           Lead[]
+  metrics         CampaignMetric[]
+
+  @@index([teamId])
+  @@index([productId])
+  @@index([status])
+  @@index([startDate])
+}
+
+model AdCreative {
+  id          String   @id @default(uuid())
+  campaignId  String
+  platform    String   // "facebook", "linkedin", "tiktok", "x"
+  type        String   // "image", "video", "carousel", "text"
+  headline    String
+  body        String
+  cta         String   // Call to action
+  mediaUrl    String?
+  metadata    Json?    // Platform-specific data
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([campaignId])
+  @@index([platform])
+}
+
+model Lead {
+  id                String   @id @default(uuid())
+  teamId            String
+  campaignId        String?
+  assignedUserId    String?
+  email             String?
+  phone             String?
+  firstName         String?
+  lastName          String?
+  company           String?
+  jobTitle          String?
+  source            String   // "facebook", "linkedin", "tiktok", "x", "manual"
+  status            String   @default("new") // "new", "contacted", "qualified", "proposal", "closed_won", "closed_lost"
+  qualificationScore Int?    // 0-100
+  rawData           Json?    // Original webhook payload
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  team              Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  campaign          Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  assignedUser      User? @relation(fields: [assignedUserId], references: [id], onDelete: SetNull)
+  activities        LeadActivity[]
+  discoverySessions DiscoverySession[]
+
+  @@index([teamId])
+  @@index([campaignId])
+  @@index([assignedUserId])
+  @@index([status])
+  @@index([source])
+  @@index([createdAt])
+}
+
+model DiscoverySession {
+  id          String   @id @default(uuid())
+  leadId      String
+  transcript  Json     // Conversation transcript
+  summary     String?  // AI-generated summary
+  score       Int?     // Qualification score
+  status      String   @default("active") // "active", "completed", "abandoned"
+  startedAt   DateTime @default(now())
+  completedAt DateTime?
+
+  lead        Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([status])
+}
+
+model LeadActivity {
+  id          String   @id @default(uuid())
+  leadId      String
+  userId      String
+  type        String   // "call", "email", "meeting", "note", "status_change"
+  description String
+  metadata    Json?    // Additional activity data
+  createdAt   DateTime @default(now())
+
+  lead        Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model CampaignMetric {
+  id          String   @id @default(uuid())
+  campaignId  String
+  date        DateTime
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+  conversions Int      @default(0)
+  spend       Float    @default(0)
+  ctr         Float    @default(0) // Click-through rate
+  cpc         Float    @default(0) // Cost per click
+  cpa         Float    @default(0) // Cost per acquisition
+  roas        Float    @default(0) // Return on ad spend
+  metadata    Json?    // Platform-specific metrics
+  createdAt   DateTime @default(now())
+
+  campaign    Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, date])
+  @@index([campaignId])
+  @@index([date])
+}
+
+model AIAgentConversation {
+  id          String   @id @default(uuid())
+  userId      String
+  teamId      String
+  agentType   String   // "product_definer", "campaign_advisor", "content_generator", "discovery_bot", "performance_analyzer"
+  contextId   String?  // Related product/campaign/lead ID
+  status      String   @default("active") // "active", "completed", "archived"
+  messages    Json     // Conversation messages array
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([teamId])
+  @@index([agentType])
+  @@index([status])
+}
+
+model WebhookLog {
+  id          String   @id @default(uuid())
+  teamId      String
+  platform    String   // "facebook", "linkedin", "tiktok", "x"
+  eventType   String   // "lead", "conversion", "click", etc.
+  payload     Json     // Raw webhook payload
+  processed   Boolean  @default(false)
+  error       String?
+  createdAt   DateTime @default(now())
+
+  team        Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@index([teamId])
+  @@index([platform])
+  @@index([eventType])
+  @@index([processed])
+  @@index([createdAt])
 }
