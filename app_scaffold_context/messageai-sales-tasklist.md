@@ -1863,39 +1863,39 @@ git checkout -b feature/mobile-ai-agents
 **Implementation Steps**:
 
 **API Client Functions** (`aiAgentsAPI.ts`):
-* [ ] **Product Definer API**
-  - [ ] `startProductDefinerConversation()` - POST /ai/product-definer/start
-  - [ ] `sendProductDefinerMessage()` - POST /ai/product-definer/message (returns EventSource for SSE)
-  - [ ] `completeProductDefinerConversation()` - POST /ai/product-definer/complete
-  - [ ] `getProductDefinerStatus()` - GET /ai/product-definer/status/:id
+* [x] **Product Definer API**
+  - [x] `startProductDefinerConversation()` - POST /ai/product-definer/start
+  - [x] `sendProductDefinerMessage()` - POST /ai/product-definer/message (returns EventSource for SSE)
+  - [x] `completeProductDefinerConversation()` - POST /ai/product-definer/complete
+  - [x] `getProductDefinerStatus()` - GET /ai/product-definer/status/:id
 
-* [ ] **Campaign Advisor API**
-  - [ ] `startCampaignAdvisorConversation(productId, icpId)` - POST /ai/campaign-advisor/start
-  - [ ] `sendCampaignAdvisorMessage()` - POST /ai/campaign-advisor/message (SSE)
-  - [ ] `completeCampaignAdvisorConversation()` - POST /ai/campaign-advisor/complete
-  - [ ] `getCampaignAdvisorStatus()` - GET /ai/campaign-advisor/status/:id
+* [x] **Campaign Advisor API**
+  - [x] `startCampaignAdvisorConversation(productId, icpId)` - POST /ai/campaign-advisor/start
+  - [x] `sendCampaignAdvisorMessage()` - POST /ai/campaign-advisor/message (SSE)
+  - [x] `completeCampaignAdvisorConversation()` - POST /ai/campaign-advisor/complete
+  - [x] `getCampaignAdvisorStatus()` - GET /ai/campaign-advisor/status/:id
 
-* [ ] **Content Generator API**
-  - [ ] `generateAdCopy(productId, platform, variations, saveToLibrary)` - POST /ai/content-generator/ad-copy
-  - [ ] `generateSocialPosts(productId, platform, count, saveToLibrary)` - POST /ai/content-generator/social-posts
-  - [ ] `generateLandingPage(productId, saveToLibrary)` - POST /ai/content-generator/landing-page
-  - [ ] `generateImagePrompts(productId, concept, count, saveToLibrary)` - POST /ai/content-generator/image-prompts
-  - [ ] `regenerateContent(contentId, instruction, saveToLibrary)` - POST /ai/content-generator/regenerate
+* [x] **Content Generator API**
+  - [x] `generateAdCopy(productId, platform, variations, saveToLibrary)` - POST /ai/content-generator/ad-copy
+  - [x] `generateSocialPosts(productId, platform, count, saveToLibrary)` - POST /ai/content-generator/social-posts
+  - [x] `generateLandingPage(productId, saveToLibrary)` - POST /ai/content-generator/landing-page
+  - [x] `generateImagePrompts(productId, concept, count, saveToLibrary)` - POST /ai/content-generator/image-prompts
+  - [x] `regenerateContent(contentId, instruction, saveToLibrary)` - POST /ai/content-generator/regenerate
 
-* [ ] **Performance Analyzer API**
-  - [ ] `analyzeCampaignPerformance(campaignId, timeRange)` - POST /ai/performance-analyzer/analyze
-  - [ ] `getOptimizationRecommendations(campaignId)` - POST /ai/performance-analyzer/optimize
-  - [ ] `compareMultipleCampaigns(campaignIds)` - POST /ai/performance-analyzer/compare
-  - [ ] `getExecutiveSummary(timeRange)` - POST /ai/performance-analyzer/summary
+* [x] **Performance Analyzer API**
+  - [x] `analyzeCampaignPerformance(campaignId, timeRange)` - POST /ai/performance-analyzer/analyze
+  - [x] `getOptimizationRecommendations(campaignId)` - POST /ai/performance-analyzer/optimize
+  - [x] `compareMultipleCampaigns(campaignIds)` - POST /ai/performance-analyzer/compare
+  - [x] `getExecutiveSummary(timeRange)` - POST /ai/performance-analyzer/summary
 
 **TypeScript Types** (`types/aiAgents.ts`):
-* [ ] Define conversation types: `AgentConversation`, `ConversationStatus`, `AgentType`
-* [ ] Define message types: `AgentMessage`, `MessageRole`, `MessageMetadata`
-* [ ] Define Product Definer types: `ProductData`, `ICPData`, `ProductDefinerSummary`
-* [ ] Define Campaign Advisor types: `CampaignData`, `CampaignStrategy`, `CampaignAdvisorSummary`
-* [ ] Define Content Generator types: `AdCopyResult`, `SocialPostsResult`, `LandingPageResult`, `ImagePromptsResult`, `ContentType`, `Platform`
-* [ ] Define Performance Analyzer types: `PerformanceAnalysis`, `OptimizationRecommendations`, `CampaignComparison`, `ExecutiveSummary`, `TimeRange`, `PerformanceMetrics`, `Benchmark`
-* [ ] Define SSE types: `SSEEvent`, `SSEMessageData`, `SSEErrorData`
+* [x] Define conversation types: `AgentConversation`, `ConversationStatus`, `AgentType`
+* [x] Define message types: `AgentMessage`, `MessageRole`, `MessageMetadata`
+* [x] Define Product Definer types: `ProductData`, `ICPData`, `ProductDefinerSummary`
+* [x] Define Campaign Advisor types: `CampaignData`, `CampaignStrategy`, `CampaignAdvisorSummary`
+* [x] Define Content Generator types: `AdCopyResult`, `SocialPostsResult`, `LandingPageResult`, `ImagePromptsResult`, `ContentType`, `Platform`
+* [x] Define Performance Analyzer types: `PerformanceAnalysis`, `OptimizationRecommendations`, `CampaignComparison`, `ExecutiveSummary`, `TimeRange`, `PerformanceMetrics`, `Benchmark`
+* [x] Define SSE types: `SSEEvent`, `SSEMessageData`, `SSEErrorData`
 
 ---
 
@@ -1913,83 +1913,83 @@ git checkout -b feature/mobile-ai-agents
 **Implementation Steps**:
 
 **Product Definer Store** (`productDefiner.ts`):
-* [ ] **State**:
-  - [ ] `conversations: Record<string, AgentConversation>` - Active conversations
-  - [ ] `messages: Record<string, AgentMessage[]>` - Messages by conversation ID
-  - [ ] `currentConversationId: string | null` - Selected conversation
-  - [ ] `isStreaming: boolean` - SSE streaming status
-  - [ ] `streamingMessage: string` - Accumulating streamed text
-  - [ ] `isLoading: boolean` - API loading state
-  - [ ] `error: string | null` - Error message
+* [x] **State**:
+  - [x] `conversations: Record<string, AgentConversation>` - Active conversations
+  - [x] `messages: Record<string, AgentMessage[]>` - Messages by conversation ID
+  - [x] `currentConversationId: string | null` - Selected conversation
+  - [x] `isStreaming: boolean` - SSE streaming status
+  - [x] `streamingMessage: string` - Accumulating streamed text
+  - [x] `isLoading: boolean` - API loading state
+  - [x] `error: string | null` - Error message
 
-* [ ] **Actions**:
-  - [ ] `startConversation()` - Create new conversation
-  - [ ] `sendMessage(conversationId, message)` - Send message and handle SSE stream
-  - [ ] `appendStreamChunk(chunk)` - Accumulate SSE chunks
-  - [ ] `completeStream()` - Finalize streamed message
-  - [ ] `completeConversation(conversationId)` - Mark conversation complete
-  - [ ] `loadConversationStatus(conversationId)` - Fetch status
-  - [ ] `clearError()` - Reset error state
-  - [ ] `resetConversation()` - Clear current conversation
+* [x] **Actions**:
+  - [x] `startConversation()` - Create new conversation
+  - [x] `sendMessage(conversationId, message)` - Send message and handle SSE stream
+  - [x] `appendStreamChunk(chunk)` - Accumulate SSE chunks
+  - [x] `completeStream()` - Finalize streamed message
+  - [x] `completeConversation(conversationId)` - Mark conversation complete
+  - [x] `loadConversationStatus(conversationId)` - Fetch status
+  - [x] `clearError()` - Reset error state
+  - [x] `resetConversation()` - Clear current conversation
 
-* [ ] **Listeners**:
-  - [ ] `startConversation` → Call API, update state
-  - [ ] `sendMessage` → Open SSE connection, stream chunks, save final message
-  - [ ] `completeConversation` → Call API, get summary (productId, icpId)
+* [x] **Listeners**:
+  - [x] `startConversation` → Call API, update state
+  - [x] `sendMessage` → Open SSE connection, stream chunks, save final message
+  - [x] `completeConversation` → Call API, get summary (productId, icpId)
 
-* [ ] **Selectors**:
-  - [ ] `getCurrentConversation()` - Get active conversation
-  - [ ] `getMessagesForConversation(id)` - Get conversation messages
-  - [ ] `isConversationComplete()` - Check if conversation finished
-  - [ ] `hasSavedProduct()` - Check if product was created
+* [x] **Selectors**:
+  - [x] `getCurrentConversation()` - Get active conversation
+  - [x] `getMessagesForConversation(id)` - Get conversation messages
+  - [x] `isConversationComplete()` - Check if conversation finished
+  - [x] `hasSavedProduct()` - Check if product was created
 
 **Campaign Advisor Store** (`campaignAdvisor.ts`):
-* [ ] **State**: Same structure as Product Definer + `productId`, `icpId`
-* [ ] **Actions**: `startConversation(productId, icpId)`, `sendMessage()`, `completeConversation()`
-* [ ] **Listeners**: Handle SSE streaming, save campaignId on completion
-* [ ] **Selectors**: `getCampaignId()`, `hasCreatedCampaign()`
+* [x] **State**: Same structure as Product Definer + `productId`, `icpId`
+* [x] **Actions**: `startConversation(productId, icpId)`, `sendMessage()`, `completeConversation()`
+* [x] **Listeners**: Handle SSE streaming, save campaignId on completion
+* [x] **Selectors**: `getCampaignId()`, `hasCreatedCampaign()`
 
 **Content Generator Store** (`contentGenerator.ts`):
-* [ ] **State**:
-  - [ ] `generatedContent: Record<string, any>` - Generated content by type
-  - [ ] `isGenerating: boolean` - Generation in progress
-  - [ ] `selectedPlatform: Platform | null` - Target platform
-  - [ ] `savedContentIds: string[]` - Saved content IDs
-  - [ ] `error: string | null`
+* [x] **State**:
+  - [x] `generatedContent: Record<string, any>` - Generated content by type
+  - [x] `isGenerating: boolean` - Generation in progress
+  - [x] `selectedPlatform: Platform | null` - Target platform
+  - [x] `savedContentIds: string[]` - Saved content IDs
+  - [x] `error: string | null`
 
-* [ ] **Actions**:
-  - [ ] `generateAdCopy(productId, platform, variations, saveToLibrary)`
-  - [ ] `generateSocialPosts(productId, platform, count, saveToLibrary)`
-  - [ ] `generateLandingPage(productId, saveToLibrary)`
-  - [ ] `generateImagePrompts(productId, concept, count, saveToLibrary)`
-  - [ ] `regenerateContent(contentId, instruction, saveToLibrary)`
-  - [ ] `clearGeneratedContent()`
+* [x] **Actions**:
+  - [x] `generateAdCopy(productId, platform, variations, saveToLibrary)`
+  - [x] `generateSocialPosts(productId, platform, count, saveToLibrary)`
+  - [x] `generateLandingPage(productId, saveToLibrary)`
+  - [x] `generateImagePrompts(productId, concept, count, saveToLibrary)`
+  - [x] `regenerateContent(contentId, instruction, saveToLibrary)`
+  - [x] `clearGeneratedContent()`
 
-* [ ] **Listeners**: Call respective APIs, store results
-* [ ] **Selectors**: `getContentByType()`, `hasGeneratedContent()`, `getSavedContentIds()`
+* [x] **Listeners**: Call respective APIs, store results
+* [x] **Selectors**: `getContentByType()`, `hasGeneratedContent()`, `getSavedContentIds()`
 
 **Performance Analyzer Store** (`performanceAnalyzer.ts`):
-* [ ] **State**:
-  - [ ] `analysis: PerformanceAnalysis | null` - Campaign analysis
-  - [ ] `recommendations: OptimizationRecommendations | null` - Optimization tips
-  - [ ] `comparison: CampaignComparison | null` - Multi-campaign comparison
-  - [ ] `executiveSummary: ExecutiveSummary | null` - Team summary
-  - [ ] `selectedCampaignId: string | null`
-  - [ ] `selectedTimeRange: TimeRange | null`
-  - [ ] `isAnalyzing: boolean`
-  - [ ] `error: string | null`
+* [x] **State**:
+  - [x] `analysis: PerformanceAnalysis | null` - Campaign analysis
+  - [x] `recommendations: OptimizationRecommendations | null` - Optimization tips
+  - [x] `comparison: CampaignComparison | null` - Multi-campaign comparison
+  - [x] `executiveSummary: ExecutiveSummary | null` - Team summary
+  - [x] `selectedCampaignId: string | null`
+  - [x] `selectedTimeRange: TimeRange | null`
+  - [x] `isAnalyzing: boolean`
+  - [x] `error: string | null`
 
-* [ ] **Actions**:
-  - [ ] `analyzeCampaign(campaignId, timeRange)`
-  - [ ] `getRecommendations(campaignId)`
-  - [ ] `compareCampaigns(campaignIds)`
-  - [ ] `getExecutiveSummary(timeRange)`
-  - [ ] `setSelectedCampaign(campaignId)`
-  - [ ] `setTimeRange(timeRange)`
-  - [ ] `clearAnalysis()`
+* [x] **Actions**:
+  - [x] `analyzeCampaign(campaignId, timeRange)`
+  - [x] `getRecommendations(campaignId)`
+  - [x] `compareCampaigns(campaignIds)`
+  - [x] `getExecutiveSummary(timeRange)`
+  - [x] `setSelectedCampaign(campaignId)`
+  - [x] `setTimeRange(timeRange)`
+  - [x] `clearAnalysis()`
 
-* [ ] **Listeners**: Call APIs, store results with error handling
-* [ ] **Selectors**: `getCurrentAnalysis()`, `getRedFlags()`, `getBestPerformers()`, `getWorstPerformers()`
+* [x] **Listeners**: Call APIs, store results with error handling
+* [x] **Selectors**: `getCurrentAnalysis()`, `getRedFlags()`, `getBestPerformers()`, `getWorstPerformers()`
 
 ---
 
@@ -2001,17 +2001,17 @@ git checkout -b feature/mobile-ai-agents
 * `mobile/hooks/useSSEStream.ts` - SSE streaming hook
 
 **Implementation Steps**:
-* [ ] Create `useSSEStream()` hook with:
-  - [ ] `startStream(url, options)` - Initiate SSE connection
-  - [ ] `stopStream()` - Close connection
-  - [ ] `isStreaming` - Connection status
-  - [ ] `streamedText` - Accumulated text chunks
-  - [ ] `error` - Connection error
-  - [ ] Event handlers: `onMessage`, `onError`, `onComplete`
-* [ ] Handle EventSource API for SSE
-* [ ] Parse SSE event format: `event: message\ndata: {...}\n\n`
-* [ ] Handle errors and reconnection
-* [ ] Auto-cleanup on unmount
+* [x] Create `useSSEStream()` hook with:
+  - [x] `startStream(url, options)` - Initiate SSE connection
+  - [x] `stopStream()` - Close connection
+  - [x] `isStreaming` - Connection status
+  - [x] `streamedText` - Accumulated text chunks
+  - [x] `error` - Connection error
+  - [x] Event handlers: `onMessage`, `onError`, `onComplete`
+* [x] Handle EventSource API for SSE
+* [x] Parse SSE event format: `event: message\ndata: {...}\n\n`
+* [x] Handle errors and reconnection
+* [x] Auto-cleanup on unmount
 
 ---
 
@@ -2028,25 +2028,25 @@ git checkout -b feature/mobile-ai-agents
 **Implementation Steps**:
 
 **useProductDefiner Hook**:
-* [ ] Export methods:
-  - [ ] `startConversation()` - Create new session
-  - [ ] `sendMessage(message)` - Send with SSE streaming
-  - [ ] `completeConversation()` - Finalize and get productId/icpId
-  - [ ] `loadStatus(conversationId)` - Check status
-* [ ] Return state: `conversation`, `messages`, `isStreaming`, `streamingMessage`, `isLoading`, `error`, `summary`
-* [ ] Integrate with Kea store + useSSEStream hook
+* [x] Export methods:
+  - [x] `startConversation()` - Create new session
+  - [x] `sendMessage(message)` - Send with SSE streaming
+  - [x] `completeConversation()` - Finalize and get productId/icpId
+  - [x] `loadStatus(conversationId)` - Check status
+* [x] Return state: `conversation`, `messages`, `isStreaming`, `streamingMessage`, `isLoading`, `error`, `summary`
+* [x] Integrate with Kea store + useSSEStream hook
 
 **useCampaignAdvisor Hook**:
-* [ ] Export methods: `startConversation(productId, icpId)`, `sendMessage()`, `completeConversation()`
-* [ ] Return state: `conversation`, `messages`, `isStreaming`, `campaignId`, `isLoading`, `error`
+* [x] Export methods: `startConversation(productId, icpId)`, `sendMessage()`, `completeConversation()`
+* [x] Return state: `conversation`, `messages`, `isStreaming`, `campaignId`, `isLoading`, `error`
 
 **useContentGenerator Hook**:
-* [ ] Export methods: `generateAdCopy()`, `generateSocialPosts()`, `generateLandingPage()`, `generateImagePrompts()`, `regenerateContent()`
-* [ ] Return state: `generatedContent`, `isGenerating`, `savedContentIds`, `error`
+* [x] Export methods: `generateAdCopy()`, `generateSocialPosts()`, `generateLandingPage()`, `generateImagePrompts()`, `regenerateContent()`
+* [x] Return state: `generatedContent`, `isGenerating`, `savedContentIds`, `error`
 
 **usePerformanceAnalyzer Hook**:
-* [ ] Export methods: `analyzeCampaign()`, `getRecommendations()`, `compareCampaigns()`, `getExecutiveSummary()`
-* [ ] Return state: `analysis`, `recommendations`, `comparison`, `executiveSummary`, `isAnalyzing`, `error`
+* [x] Export methods: `analyzeCampaign()`, `getRecommendations()`, `compareCampaigns()`, `getExecutiveSummary()`
+* [x] Return state: `analysis`, `recommendations`, `comparison`, `executiveSummary`, `isAnalyzing`, `error`
 
 ---
 
@@ -2064,62 +2064,62 @@ git checkout -b feature/mobile-ai-agents
 **Implementation Steps**:
 
 **Layout** (`_layout.tsx`):
-* [ ] Create Stack navigator for AI agent screens
-* [ ] Add header with back button
-* [ ] Common styling for agent screens
+* [x] Create Stack navigator for AI agent screens
+* [x] Add header with back button
+* [x] Common styling for agent screens
 
 **Product Definer Screen** (`product-definer.tsx`):
-* [ ] Use `useProductDefiner()` hook
-* [ ] Display conversation messages (user + assistant)
-* [ ] Show streaming indicator when AI is responding
-* [ ] Input area for user messages
-* [ ] "Start New Conversation" button
-* [ ] "Complete & Save Product" button
-* [ ] Show success modal with productId/icpId on completion
-* [ ] Handle errors gracefully
+* [x] Use `useProductDefiner()` hook
+* [x] Display conversation messages (user + assistant)
+* [x] Show streaming indicator when AI is responding
+* [x] Input area for user messages
+* [x] "Start New Conversation" button
+* [x] "Complete & Save Product" button
+* [x] Show success modal with productId/icpId on completion
+* [x] Handle errors gracefully
 
 **Campaign Advisor Screen** (`campaign-advisor.tsx`):
-* [ ] Accept productId + icpId as route params or from context
-* [ ] Use `useCampaignAdvisor()` hook
-* [ ] Similar chat UI as Product Definer
-* [ ] Show campaign details on completion (budget, platforms, dates)
-* [ ] "View Campaign" button → Navigate to campaign details
+* [x] Accept productId + icpId as route params or from context
+* [x] Use `useCampaignAdvisor()` hook
+* [x] Similar chat UI as Product Definer
+* [x] Show campaign details on completion (budget, platforms, dates)
+* [x] "View Campaign" button → Navigate to campaign details
 
 **Content Generator Screen** (`content-generator.tsx`):
-* [ ] Use `useContentGenerator()` hook
-* [ ] **Tab-based UI** with 4 tabs:
-  - [ ] Ad Copy tab - Form: select platform, variations count, generate button
-  - [ ] Social Posts tab - Form: platform, count, generate
-  - [ ] Landing Page tab - Generate button (no options)
-  - [ ] Image Prompts tab - Form: concept input, count, generate
-* [ ] Display generated content in readable format
-* [ ] "Save to Library" toggle
-* [ ] "Regenerate" button with instruction input
-* [ ] Copy to clipboard functionality
-* [ ] Show character limits per platform
+* [x] Use `useContentGenerator()` hook
+* [x] **Tab-based UI** with 4 tabs:
+  - [x] Ad Copy tab - Form: select platform, variations count, generate button
+  - [x] Social Posts tab - Form: platform, count, generate
+  - [x] Landing Page tab - Generate button (no options)
+  - [x] Image Prompts tab - Form: concept input, count, generate
+* [x] Display generated content in readable format
+* [x] "Save to Library" toggle
+* [x] "Regenerate" button with instruction input
+* [x] Copy to clipboard functionality
+* [x] Show character limits per platform
 
 **Performance Analyzer Screen** (`performance-analyzer.tsx`):
-* [ ] Use `usePerformanceAnalyzer()` hook
-* [ ] **4 Sections** (scrollable):
+* [x] Use `usePerformanceAnalyzer()` hook
+* [x] **4 Sections** (scrollable):
   1. **Campaign Analysis**:
-     - [ ] Campaign selector dropdown
-     - [ ] Time range picker (last 7/30/90 days, custom)
-     - [ ] "Analyze" button
-     - [ ] Display: KPIs (CTR, CPC, CPA, ROAS), trends, insights, benchmarks
+     - [x] Campaign selector dropdown
+     - [x] Time range picker (last 7/30/90 days, custom)
+     - [x] "Analyze" button
+     - [x] Display: KPIs (CTR, CPC, CPA, ROAS), trends, insights, benchmarks
   2. **Optimization Recommendations**:
-     - [ ] Campaign selector
-     - [ ] "Get Recommendations" button
-     - [ ] Display: Red flags list, prioritized recommendations with impact/effort
+     - [x] Campaign selector
+     - [x] "Get Recommendations" button
+     - [x] Display: Red flags list, prioritized recommendations with impact/effort
   3. **Campaign Comparison**:
-     - [ ] Multi-select for 2-5 campaigns
-     - [ ] "Compare" button
-     - [ ] Display: Comparison table, rankings, insights
+     - [x] Multi-select for 2-5 campaigns
+     - [x] "Compare" button
+     - [x] Display: Comparison table, rankings, insights
   4. **Executive Summary**:
-     - [ ] Time range picker
-     - [ ] "Generate Summary" button
-     - [ ] Display: Team-wide KPIs, key takeaways
-* [ ] Charts for metrics visualization (optional - use react-native-chart-kit)
-* [ ] Export summary functionality
+     - [x] Time range picker
+     - [x] "Generate Summary" button
+     - [x] Display: Team-wide KPIs, key takeaways
+* [x] Charts for metrics visualization (optional - use react-native-chart-kit)
+* [x] Export summary functionality
 
 ---
 
@@ -2140,38 +2140,38 @@ git checkout -b feature/mobile-ai-agents
 **Implementation Steps**:
 
 **StreamingMessage Component**:
-* [ ] Props: `text`, `isStreaming`, `onComplete`
-* [ ] Animated typing effect (cursor blinking)
-* [ ] Markdown rendering for formatted text
-* [ ] Auto-scroll to bottom as text streams
+* [x] Props: `text`, `isStreaming`, `onComplete`
+* [x] Animated typing effect (cursor blinking)
+* [x] Markdown rendering for formatted text
+* [x] Auto-scroll to bottom as text streams
 
 **MessageBubble Component**:
-* [ ] Props: `message`, `role` (user | assistant), `timestamp`, `metadata`
-* [ ] Different styling for user vs AI messages
-* [ ] Show timestamp on tap
-* [ ] Support for tool call indicators (e.g., "Saved product: ProductName")
+* [x] Props: `message`, `role` (user | assistant), `timestamp`, `metadata`
+* [x] Different styling for user vs AI messages
+* [x] Show timestamp on tap
+* [x] Support for tool call indicators (e.g., "Saved product: ProductName")
 
 **AgentTypingIndicator Component**:
-* [ ] Animated dots or "AI is typing..." text
-* [ ] Show agent icon/avatar
-* [ ] Pulsing animation
+* [x] Animated dots or "AI is typing..." text
+* [x] Show agent icon/avatar
+* [x] Pulsing animation
 
 **PlatformSelector Component**:
-* [ ] Props: `selectedPlatform`, `onSelect`, `platforms` array
-* [ ] Dropdown or radio buttons for platforms
-* [ ] Show platform icons (Facebook, LinkedIn, Instagram, TikTok, X, Google)
+* [x] Props: `selectedPlatform`, `onSelect`, `platforms` array
+* [x] Dropdown or radio buttons for platforms
+* [x] Show platform icons (Facebook, LinkedIn, Instagram, TikTok, X, Google)
 
 **MetricsCard Component**:
-* [ ] Props: `label`, `value`, `unit`, `trend`, `benchmark`
-* [ ] Display metric with label (e.g., "CTR: 2.5%")
-* [ ] Show trend indicator (↑ +15% vs last period)
-* [ ] Color-coded: green (good), yellow (average), red (below benchmark)
+* [x] Props: `label`, `value`, `unit`, `trend`, `benchmark`
+* [x] Display metric with label (e.g., "CTR: 2.5%")
+* [x] Show trend indicator (↑ +15% vs last period)
+* [x] Color-coded: green (good), yellow (average), red (below benchmark)
 
 **RecommendationCard Component**:
-* [ ] Props: `recommendation` (title, description, priority, impact, effort)
-* [ ] Priority badge (High, Medium, Low)
-* [ ] Impact/effort indicators
-* [ ] Expandable details section
+* [x] Props: `recommendation` (title, description, priority, impact, effort)
+* [x] Priority badge (High, Medium, Low)
+* [x] Impact/effort indicators
+* [x] Expandable details section
 
 ---
 
@@ -2183,16 +2183,16 @@ git checkout -b feature/mobile-ai-agents
 * `mobile/app/(tabs)/_layout.tsx` - Add AI Agents tab
 
 **Implementation Steps**:
-* [ ] Add "AI Agents" tab to bottom tabs (icon: sparkles/robot)
-* [ ] Create `mobile/app/(tabs)/ai-agents.tsx` - AI Agents home screen
-* [ ] Display 5 agent cards:
-  - [ ] Product Definer card → Navigate to product-definer screen
-  - [ ] Campaign Advisor card → Navigate to campaign-advisor screen
-  - [ ] Content Generator card → Navigate to content-generator screen
-  - [ ] Performance Analyzer card → Navigate to performance-analyzer screen
-  - [ ] Discovery Bot card → Info only (public-facing, not user-initiated)
-* [ ] Each card shows: Icon, name, description, "Start" button
-* [ ] Show recent conversations list below cards
+* [x] Add "AI Agents" tab to bottom tabs (icon: sparkles/robot)
+* [x] Create `mobile/app/(tabs)/ai-agents.tsx` - AI Agents home screen
+* [x] Display 5 agent cards:
+  - [x] Product Definer card → Navigate to product-definer screen
+  - [x] Campaign Advisor card → Navigate to campaign-advisor screen
+  - [x] Content Generator card → Navigate to content-generator screen
+  - [x] Performance Analyzer card → Navigate to performance-analyzer screen
+  - [x] Discovery Bot card → Info only (public-facing, not user-initiated)
+* [x] Each card shows: Icon, name, description, "Start" button
+* [x] Show recent conversations list below cards
 
 ---
 
@@ -2204,24 +2204,24 @@ git checkout -b feature/mobile-ai-agents
 * `mobile/app/(tabs)/leads.tsx` - Add Discovery Bot integration
 
 **Implementation Steps**:
-* [ ] Create `mobile/hooks/useLeads.ts` hook
-* [ ] Fetch leads from `/api/v1/leads` endpoint
-* [ ] Display lead list with:
-  - [ ] Lead name, email, company
-  - [ ] Lead score/status badge (hot, warm, cold, qualified, unqualified)
-  - [ ] Source indicator
-  - [ ] Tap → Navigate to lead details
-* [ ] Lead details screen:
-  - [ ] Lead contact info
-  - [ ] Discovery session summary (from Discovery Bot)
-  - [ ] Lead activities timeline
-  - [ ] "Claim Lead" button (if unclaimed)
-  - [ ] "Add Activity" button
-  - [ ] "Update Status" dropdown
-* [ ] Real-time lead updates via Socket.io:
-  - [ ] Listen for `new_lead` event
-  - [ ] Show notification banner
-  - [ ] Update leads list automatically
+* [x] Create `mobile/hooks/useLeads.ts` hook
+* [x] Fetch leads from `/api/v1/leads` endpoint
+* [x] Display lead list with:
+  - [x] Lead name, email, company
+  - [x] Lead score/status badge (hot, warm, cold, qualified, unqualified)
+  - [x] Source indicator
+  - [x] Tap → Navigate to lead details
+* [x] Lead details screen:
+  - [x] Lead contact info
+  - [x] Discovery session summary (from Discovery Bot)
+  - [x] Lead activities timeline
+  - [x] "Claim Lead" button (if unclaimed)
+  - [x] "Add Activity" button
+  - [x] "Update Status" dropdown
+* [x] Real-time lead updates via Socket.io:
+  - [x] Listen for `new_lead` event
+  - [x] Show notification banner
+  - [x] Update leads list automatically
 
 ---
 
@@ -2233,21 +2233,21 @@ git checkout -b feature/mobile-ai-agents
 * `mobile/app/(tabs)/campaigns.tsx` - Add AI agent integrations
 
 **Implementation Steps**:
-* [ ] Create `mobile/hooks/useCampaigns.ts` hook
-* [ ] Fetch campaigns from `/api/v1/campaigns` endpoint
-* [ ] Display campaign list with:
-  - [ ] Campaign name, status, platforms
-  - [ ] Budget, dates, metrics preview
-  - [ ] Tap → Navigate to campaign details
-* [ ] Campaign details screen:
-  - [ ] Campaign info (name, description, budget, dates, platforms)
-  - [ ] Quick metrics (impressions, clicks, conversions, spend)
-  - [ ] "Analyze Performance" button → Open Performance Analyzer with this campaign
-  - [ ] "Get Recommendations" button → Open Performance Analyzer recommendations
-  - [ ] "Edit Campaign" button
-  - [ ] Ad Creatives list
-  - [ ] Leads generated from this campaign
-* [ ] "Create Campaign" button → Navigate to Campaign Advisor
+* [x] Create `mobile/hooks/useCampaigns.ts` hook
+* [x] Fetch campaigns from `/api/v1/campaigns` endpoint
+* [x] Display campaign list with:
+  - [x] Campaign name, status, platforms
+  - [x] Budget, dates, metrics preview
+  - [x] Tap → Navigate to campaign details
+* [x] Campaign details screen:
+  - [x] Campaign info (name, description, budget, dates, platforms)
+  - [x] Quick metrics (impressions, clicks, conversions, spend)
+  - [x] "Analyze Performance" button → Open Performance Analyzer with this campaign
+  - [x] "Get Recommendations" button → Open Performance Analyzer recommendations
+  - [x] "Edit Campaign" button
+  - [x] Ad Creatives list
+  - [x] Leads generated from this campaign
+* [x] "Create Campaign" button → Navigate to Campaign Advisor
 
 ---
 
@@ -2259,20 +2259,20 @@ git checkout -b feature/mobile-ai-agents
 * `mobile/lib/socket.ts` - Add AI agent events
 
 **Implementation Steps**:
-* [ ] **Events to Listen**:
-  - [ ] `new_lead` - New lead from Discovery Bot
-  - [ ] `lead_qualified` - Lead reached qualification threshold
-  - [ ] `campaign_created` - Campaign created by Campaign Advisor
-  - [ ] `content_generated` - Content ready from Content Generator
-  - [ ] `analysis_complete` - Performance analysis finished
-* [ ] **Event Handlers**:
-  - [ ] `onNewLead(lead)` - Update leads store, show notification
-  - [ ] `onLeadQualified(lead)` - Update lead status, notify user
-  - [ ] `onCampaignCreated(campaign)` - Update campaigns store, show success
-  - [ ] `onContentGenerated(content)` - Update content store, notify completion
-  - [ ] `onAnalysisComplete(analysis)` - Update analyzer store, show results
-* [ ] Integrate handlers with Kea stores
-* [ ] Show in-app notifications for events
+* [x] **Events to Listen**:
+  - [x] `new_lead` - New lead from Discovery Bot
+  - [x] `lead_qualified` - Lead reached qualification threshold
+  - [x] `campaign_created` - Campaign created by Campaign Advisor
+  - [x] `content_generated` - Content ready from Content Generator
+  - [x] `analysis_complete` - Performance analysis finished
+* [x] **Event Handlers**:
+  - [x] `onNewLead(lead)` - Update leads store, show notification
+  - [x] `onLeadQualified(lead)` - Update lead status, notify user
+  - [x] `onCampaignCreated(campaign)` - Update campaigns store, show success
+  - [x] `onContentGenerated(content)` - Update content store, notify completion
+  - [x] `onAnalysisComplete(analysis)` - Update analyzer store, show results
+* [x] Integrate handlers with Kea stores
+* [x] Show in-app notifications for events
 
 ---
 
@@ -2291,23 +2291,23 @@ git checkout -b feature/mobile-ai-agents
 **Implementation Steps**:
 
 **Products List Screen**:
-* [ ] Fetch products from `/api/v1/products`
-* [ ] Display product cards (name, description, pricing, USPs)
-* [ ] "Create with AI" button → Navigate to Product Definer
-* [ ] Tap product → Navigate to product details
+* [x] Fetch products from `/api/v1/products`
+* [x] Display product cards (name, description, pricing, USPs)
+* [x] "Create with AI" button → Navigate to Product Definer
+* [x] Tap product → Navigate to product details
 
 **Product Details Screen**:
-* [ ] Display full product info
-* [ ] Edit product form
-* [ ] Delete product button
-* [ ] "Create Campaign" button → Navigate to Campaign Advisor with this product
-* [ ] "Generate Content" button → Navigate to Content Generator with this product
-* [ ] Associated ICPs list
+* [x] Display full product info
+* [x] Edit product form
+* [x] Delete product button
+* [x] "Create Campaign" button → Navigate to Campaign Advisor with this product
+* [x] "Generate Content" button → Navigate to Content Generator with this product
+* [x] Associated ICPs list
 
 **ICPs Management**:
-* [ ] Similar structure to products
-* [ ] Display ICP demographics, pain points, preferred channels
-* [ ] Link ICPs to products
+* [x] Similar structure to products
+* [x] Display ICP demographics, pain points, preferred channels
+* [x] Link ICPs to products
 
 ---
 
@@ -2320,17 +2320,17 @@ git checkout -b feature/mobile-ai-agents
 * `mobile/hooks/useContentLibrary.ts` - Content library hook
 
 **Implementation Steps**:
-* [ ] Fetch content from `/api/v1/content-library` endpoint (needs to be created in backend)
-* [ ] Filter by content type (ad_copy, social_post, landing_page, image_prompt)
-* [ ] Filter by platform
-* [ ] Filter by product/campaign
-* [ ] Display content cards with preview
-* [ ] Tap → Full content view with:
-  - [ ] Full text/content
-  - [ ] Copy to clipboard button
-  - [ ] "Regenerate" button → Open Content Generator regeneration
-  - [ ] Share button
-  - [ ] Delete button
+* [x] Fetch content from `/api/v1/content-library` endpoint (needs to be created in backend)
+* [x] Filter by content type (ad_copy, social_post, landing_page, image_prompt)
+* [x] Filter by platform
+* [x] Filter by product/campaign
+* [x] Display content cards with preview
+* [x] Tap → Full content view with:
+  - [x] Full text/content
+  - [x] Copy to clipboard button
+  - [x] "Regenerate" button → Open Content Generator regeneration
+  - [x] Share button
+  - [x] Delete button
 
 ---
 
@@ -2339,20 +2339,20 @@ git checkout -b feature/mobile-ai-agents
 **Description**: Comprehensive error handling for AI agent interactions
 
 **Implementation Steps**:
-* [ ] Create `mobile/components/ai/ErrorBoundary.tsx` for AI screens
-* [ ] Create `mobile/components/ai/LoadingState.tsx` - Skeleton loaders
-* [ ] Handle API errors:
-  - [ ] 401 Unauthorized → Redirect to login
-  - [ ] 429 Rate Limit → Show rate limit message (100 req/hr)
-  - [ ] 500 Server Error → Show retry button
-  - [ ] Network error → Show offline message
-* [ ] Handle SSE errors:
-  - [ ] Connection failure → Retry logic
-  - [ ] Stream timeout → Show timeout message
-  - [ ] Parse errors → Fallback to plain text
-* [ ] Show loading indicators during API calls
-* [ ] Show "AI is thinking..." during streaming
-* [ ] Empty states for no data scenarios
+* [x] Create `mobile/components/ai/ErrorBoundary.tsx` for AI screens
+* [x] Create `mobile/components/ai/LoadingState.tsx` - Skeleton loaders
+* [x] Handle API errors:
+  - [x] 401 Unauthorized → Redirect to login
+  - [x] 429 Rate Limit → Show rate limit message (100 req/hr)
+  - [x] 500 Server Error → Show retry button
+  - [x] Network error → Show offline message
+* [x] Handle SSE errors:
+  - [x] Connection failure → Retry logic
+  - [x] Stream timeout → Show timeout message
+  - [x] Parse errors → Fallback to plain text
+* [x] Show loading indicators during API calls
+* [x] Show "AI is thinking..." during streaming
+* [x] Empty states for no data scenarios
 
 ---
 
