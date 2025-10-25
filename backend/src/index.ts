@@ -15,6 +15,7 @@ import teamsRoutes from './routes/teams.routes';
 import productsRoutes from './routes/products.routes';
 import icpsRoutes from './routes/icps.routes';
 import campaignsRoutes from './routes/campaigns.routes';
+import aiAgentsRoutes from './routes/aiAgents.routes';
 import { initializeSocketServer } from './socket';
 import logger from './utils/logger';
 
@@ -181,6 +182,7 @@ app.use('/api/v1/teams', teamsRoutes);
 app.use('/api/v1/products', productsRoutes);
 app.use('/api/v1/icps', icpsRoutes);
 app.use('/api/v1/campaigns', campaignsRoutes);
+app.use('/api/v1/ai', aiAgentsRoutes);
 
 // API info endpoint
 app.get('/api/v1', (req, res) => {
