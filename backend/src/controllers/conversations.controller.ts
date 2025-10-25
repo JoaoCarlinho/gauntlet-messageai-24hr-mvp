@@ -3,18 +3,7 @@ import { body, param, query, validationResult } from 'express-validator';
 import * as conversationService from '../services/conversation.service';
 import { CreateDirectConversationData, CreateGroupConversationData } from '../services/conversation.service';
 
-// Extend Express Request interface to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        email: string;
-        displayName: string;
-      };
-    }
-  }
-}
+// Note: Request.user interface is defined in middleware/auth.ts
 
 /**
  * Validation rules for creating a direct conversation

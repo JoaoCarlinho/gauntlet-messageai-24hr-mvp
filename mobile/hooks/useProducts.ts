@@ -6,9 +6,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+import api from '../lib/api';
 
 export interface Product {
   id: string;
@@ -47,13 +45,9 @@ export const useProducts = (): UseProductsReturn => {
       setIsLoading(true);
       setError(null);
 
-      const response = await axios.get<Product[]>(`${API_BASE_URL}/api/v1/products`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const products = await api.products.getProducts();
 
-      setProducts(response.data);
+      setProducts(products);
     } catch (err: any) {
       console.error('Error fetching products:', err);
       setError(err.message || 'Failed to fetch products');
@@ -73,7 +67,7 @@ export const useProducts = (): UseProductsReturn => {
   // Delete product
   const deleteProduct = useCallback(async (productId: string) => {
     try {
-      await axios.delete(`${API_BASE_URL}/api/v1/products/${productId}`);
+      await api.products.deleteProduct(productId);
 
       // Update local state
       setProducts((prev) => prev.filter((p) => p.id !== productId));

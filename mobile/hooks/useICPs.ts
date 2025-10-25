@@ -6,9 +6,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+import api from '../lib/api';
 
 export interface ICP {
   id: string;
@@ -57,13 +55,9 @@ export const useICPs = (): UseICPsReturn => {
       setIsLoading(true);
       setError(null);
 
-      const response = await axios.get<ICP[]>(`${API_BASE_URL}/api/v1/icps`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const icps = await api.icps.getICPs();
 
-      setICPs(response.data);
+      setICPs(icps);
     } catch (err: any) {
       console.error('Error fetching ICPs:', err);
       setError(err.message || 'Failed to fetch ICPs');
@@ -91,7 +85,7 @@ export const useICPs = (): UseICPsReturn => {
   // Delete ICP
   const deleteICP = useCallback(async (icpId: string) => {
     try {
-      await axios.delete(`${API_BASE_URL}/api/v1/icps/${icpId}`);
+      await api.icps.deleteICP(icpId);
 
       // Update local state
       setICPs((prev) => prev.filter((icp) => icp.id !== icpId));

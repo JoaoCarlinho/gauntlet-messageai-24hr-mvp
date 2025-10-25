@@ -435,4 +435,54 @@ export interface StoredUser {
   avatarUrl?: string;
 }
 
+// Team Types
+export interface Team {
+  id: string;
+  name: string;
+  slug: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface TeamMember {
+  id: string;
+  teamId: string;
+  userId: string;
+  role: 'admin' | 'member' | 'viewer';
+  joinedAt: Date;
+}
+
+// Lead Types
+export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'unqualified' | 'converted';
+export type LeadScore = 'hot' | 'warm' | 'cold';
+
+export interface Lead {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  company?: string;
+  jobTitle?: string;
+  status: LeadStatus;
+  score: LeadScore;
+  source: string;
+  discoverySessionId?: string;
+  discoverySessionSummary?: string;
+  assignedTo?: string;
+  claimedBy?: string;
+  claimedAt?: Date;
+  activities?: LeadActivity[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface LeadActivity {
+  id: string;
+  leadId: string;
+  type: 'note' | 'email' | 'call' | 'meeting' | 'status_change';
+  description: string;
+  userId: string;
+  createdAt: Date;
+}
+
 // All types are exported individually above

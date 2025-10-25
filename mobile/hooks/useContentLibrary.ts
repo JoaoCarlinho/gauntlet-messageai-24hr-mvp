@@ -6,9 +6,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+import api from '../lib/api';
 
 export type ContentType = 'ad_copy' | 'social_post' | 'landing_page' | 'image_prompt';
 export type Platform = 'facebook' | 'instagram' | 'linkedin' | 'tiktok' | 'x' | 'google';
@@ -54,8 +52,8 @@ export default function useContentLibrary() {
     setError(null);
 
     try {
-      const response = await axios.get<ContentItem[]>(`${API_BASE_URL}/api/v1/content-library`);
-      const items = response.data.map((item: any) => ({
+      const contentData = await api.contentLibrary.getContent();
+      const items = contentData.map((item: any) => ({
         ...item,
         createdAt: new Date(item.createdAt),
         updatedAt: new Date(item.updatedAt),
@@ -116,7 +114,7 @@ export default function useContentLibrary() {
   const deleteContent = useCallback(
     async (id: string): Promise<void> => {
       try {
-        await axios.delete(`${API_BASE_URL}/api/v1/content-library/${id}`);
+        await api.contentLibrary.deleteContent(id);
         setContent((prev) => prev.filter((item) => item.id !== id));
         setFilteredContent((prev) => prev.filter((item) => item.id !== id));
       } catch (err: any) {
