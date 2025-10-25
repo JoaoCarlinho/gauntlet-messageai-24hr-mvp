@@ -65,7 +65,38 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     }
 
     // Get the user's primary team (first team they joined)
-    const primaryTeamId = user.teamMemberships[0]?.teamId;
+    let primaryTeamId = user.teamMemberships[0]?.teamId;
+
+    // If user has no team, auto-create one for them
+    if (!primaryTeamId) {
+      try {
+        console.log(`User ${user.email} has no team, creating default team...`);
+        const slug = `${user.displayName.toLowerCase().replace(/\s+/g, '-')}-${user.id.substring(0, 8)}`;
+        const teamName = `${user.displayName}'s Team`;
+
+        const newTeam = await prisma.team.create({
+          data: {
+            name: teamName,
+            slug: slug,
+            description: 'Default team',
+          },
+        });
+
+        await prisma.teamMember.create({
+          data: {
+            teamId: newTeam.id,
+            userId: user.id,
+            role: 'admin',
+          },
+        });
+
+        primaryTeamId = newTeam.id;
+        console.log(`Created team ${teamName} (${newTeam.id}) for user ${user.email}`);
+      } catch (teamError) {
+        console.error('Error creating default team:', teamError);
+        // Continue without team - controllers will handle missing teamId
+      }
+    }
 
     // Add user to request object
     req.user = {
@@ -138,7 +169,38 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
     });
 
     if (user) {
-      const primaryTeamId = user.teamMemberships[0]?.teamId;
+      let primaryTeamId = user.teamMemberships[0]?.teamId;
+
+      // If user has no team, auto-create one for them
+      if (!primaryTeamId) {
+        try {
+          console.log(`User ${user.email} has no team, creating default team...`);
+          const slug = `${user.displayName.toLowerCase().replace(/\s+/g, '-')}-${user.id.substring(0, 8)}`;
+          const teamName = `${user.displayName}'s Team`;
+
+          const newTeam = await prisma.team.create({
+            data: {
+              name: teamName,
+              slug: slug,
+              description: 'Default team',
+            },
+          });
+
+          await prisma.teamMember.create({
+            data: {
+              teamId: newTeam.id,
+              userId: user.id,
+              role: 'admin',
+            },
+          });
+
+          primaryTeamId = newTeam.id;
+          console.log(`Created team ${teamName} (${newTeam.id}) for user ${user.email}`);
+        } catch (teamError) {
+          console.error('Error creating default team:', teamError);
+          // Continue without team
+        }
+      }
 
       req.user = {
         id: user.id,
