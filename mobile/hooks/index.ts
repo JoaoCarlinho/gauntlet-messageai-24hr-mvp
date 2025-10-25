@@ -27,3 +27,7 @@ export { useLeads } from './useLeads';
 export { default as useLeadsHook } from './useLeads';
 export { useCampaigns } from './useCampaigns';
 export { default as useCampaignsHook } from './useCampaigns';
+export { useProducts } from './useProducts';
+export { default as useProductsHook } from './useProducts';
+export { useICPs } from './useICPs';
+export { default as useICPsHook } from './useICPs';
