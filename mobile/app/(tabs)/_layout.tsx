@@ -44,6 +44,16 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="ai-agents"
+        options={{
+          title: 'AI Agents',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="sparkles-outline" size={size} color={color} />
+          ),
+          headerTitle: 'AI Agents',
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
