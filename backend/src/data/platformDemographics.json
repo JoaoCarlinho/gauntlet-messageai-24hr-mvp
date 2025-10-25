@@ -1,0 +1,587 @@
+{
+  "platforms": {
+    "facebook": {
+      "name": "Facebook",
+      "audienceSize": "2.96 billion monthly active users",
+      "demographics": {
+        "ageGroups": {
+          "18-24": 18.3,
+          "25-34": 30.8,
+          "35-44": 19.6,
+          "45-54": 14.2,
+          "55-64": 10.1,
+          "65+": 7.0
+        },
+        "gender": {
+          "male": 56.6,
+          "female": 43.4
+        },
+        "topLocations": ["India", "United States", "Indonesia", "Brazil", "Mexico"]
+      },
+      "interests": [
+        "Shopping",
+        "Entertainment",
+        "News",
+        "Sports",
+        "Technology",
+        "Travel",
+        "Food & Dining",
+        "Fashion",
+        "Health & Wellness",
+        "Business"
+      ],
+      "behaviors": [
+        "Online shoppers",
+        "Frequent travelers",
+        "Small business owners",
+        "Parents",
+        "Event attendees",
+        "Mobile device users"
+      ],
+      "adFormats": [
+        "Image ads",
+        "Video ads",
+        "Carousel ads",
+        "Collection ads",
+        "Lead ads",
+        "Dynamic ads",
+        "Stories ads",
+        "Messenger ads"
+      ],
+      "strengths": [
+        "Massive audience reach",
+        "Detailed targeting options",
+        "Strong retargeting capabilities",
+        "Multiple ad formats",
+        "Good for both B2C and B2B"
+      ],
+      "bestFor": [
+        "Brand awareness",
+        "Lead generation",
+        "E-commerce",
+        "Local businesses",
+        "Community building"
+      ]
+    },
+    "linkedin": {
+      "name": "LinkedIn",
+      "audienceSize": "930 million members",
+      "demographics": {
+        "ageGroups": {
+          "18-24": 20.4,
+          "25-34": 59.1,
+          "35-54": 17.7,
+          "55+": 2.8
+        },
+        "gender": {
+          "male": 57.2,
+          "female": 42.8
+        },
+        "topLocations": ["United States", "India", "China", "Brazil", "United Kingdom"]
+      },
+      "firmographics": {
+        "companySizes": [
+          "Self-employed (1)",
+          "2-10 employees",
+          "11-50 employees",
+          "51-200 employees",
+          "201-500 employees",
+          "501-1000 employees",
+          "1001-5000 employees",
+          "5001-10000 employees",
+          "10001+ employees"
+        ],
+        "industries": [
+          "Technology",
+          "Financial Services",
+          "Healthcare",
+          "Manufacturing",
+          "Retail",
+          "Education",
+          "Consulting",
+          "Marketing & Advertising",
+          "Real Estate",
+          "Professional Services"
+        ],
+        "seniority": [
+          "Entry level",
+          "Associate",
+          "Mid-Senior level",
+          "Director",
+          "Executive (VP, SVP, C-level)"
+        ],
+        "jobFunctions": [
+          "Engineering",
+          "Sales",
+          "Marketing",
+          "Operations",
+          "Human Resources",
+          "Finance",
+          "Information Technology",
+          "Business Development",
+          "Product Management",
+          "Customer Service"
+        ]
+      },
+      "jobTitles": [
+        "Software Engineer",
+        "Sales Manager",
+        "Marketing Manager",
+        "CEO",
+        "CTO",
+        "Product Manager",
+        "Business Analyst",
+        "Consultant",
+        "Account Executive",
+        "Director"
+      ],
+      "adFormats": [
+        "Sponsored Content",
+        "Sponsored Messaging",
+        "Text Ads",
+        "Dynamic Ads",
+        "Lead Gen Forms",
+        "Carousel ads",
+        "Video ads",
+        "Event ads"
+      ],
+      "strengths": [
+        "Professional B2B targeting",
+        "High-quality leads",
+        "Decision maker access",
+        "Industry and company targeting",
+        "Job title and seniority filters"
+      ],
+      "bestFor": [
+        "B2B lead generation",
+        "Professional services",
+        "Enterprise sales",
+        "Recruitment",
+        "Thought leadership"
+      ]
+    },
+    "instagram": {
+      "name": "Instagram",
+      "audienceSize": "2 billion monthly active users",
+      "demographics": {
+        "ageGroups": {
+          "18-24": 30.1,
+          "25-34": 31.5,
+          "35-44": 16.1,
+          "45-54": 10.8,
+          "55-64": 6.3,
+          "65+": 5.2
+        },
+        "gender": {
+          "male": 50.7,
+          "female": 49.3
+        },
+        "topLocations": ["India", "United States", "Brazil", "Indonesia", "Turkey"]
+      },
+      "interests": [
+        "Fashion",
+        "Beauty",
+        "Travel",
+        "Food",
+        "Fitness",
+        "Photography",
+        "Art & Design",
+        "Lifestyle",
+        "Music",
+        "Entertainment"
+      ],
+      "behaviors": [
+        "Visual content consumers",
+        "Brand followers",
+        "Influencer followers",
+        "Online shoppers",
+        "Story viewers",
+        "Reel watchers"
+      ],
+      "contentTypes": [
+        "Photos",
+        "Videos",
+        "Stories",
+        "Reels",
+        "IGTV",
+        "Live streams",
+        "Carousel posts",
+        "Shopping posts"
+      ],
+      "adFormats": [
+        "Photo ads",
+        "Video ads",
+        "Stories ads",
+        "Reels ads",
+        "Carousel ads",
+        "Collection ads",
+        "Explore ads",
+        "Shopping ads"
+      ],
+      "strengths": [
+        "High engagement rates",
+        "Visual storytelling",
+        "Influencer partnerships",
+        "Shopping integration",
+        "Young audience reach"
+      ],
+      "bestFor": [
+        "E-commerce",
+        "Fashion & beauty brands",
+        "Lifestyle products",
+        "Visual brands",
+        "Influencer marketing"
+      ]
+    },
+    "x": {
+      "name": "X (Twitter)",
+      "audienceSize": "550 million monthly active users",
+      "demographics": {
+        "ageGroups": {
+          "18-24": 17.1,
+          "25-34": 38.5,
+          "35-49": 20.7,
+          "50+": 23.7
+        },
+        "gender": {
+          "male": 61.5,
+          "female": 38.5
+        },
+        "topLocations": ["United States", "Japan", "India", "Brazil", "United Kingdom"]
+      },
+      "interests": [
+        "News & Politics",
+        "Technology",
+        "Sports",
+        "Entertainment",
+        "Business",
+        "Marketing",
+        "Science",
+        "Gaming",
+        "Culture",
+        "Social Issues"
+      ],
+      "topics": [
+        "Breaking news",
+        "Industry trends",
+        "Product launches",
+        "Customer service",
+        "Thought leadership",
+        "Live events",
+        "Conversations",
+        "Viral content"
+      ],
+      "behaviors": [
+        "News consumers",
+        "Opinion leaders",
+        "Real-time engagement",
+        "Thread readers",
+        "Link clickers",
+        "Retweeters"
+      ],
+      "adFormats": [
+        "Promoted Tweets",
+        "Promoted Accounts",
+        "Promoted Trends",
+        "Video ads",
+        "Carousel ads",
+        "Moment ads",
+        "Conversation ads"
+      ],
+      "strengths": [
+        "Real-time engagement",
+        "Trending topics",
+        "News and updates",
+        "Thought leadership",
+        "Customer service"
+      ],
+      "bestFor": [
+        "Brand awareness",
+        "Customer engagement",
+        "Thought leadership",
+        "Event promotion",
+        "News and updates"
+      ]
+    },
+    "tiktok": {
+      "name": "TikTok",
+      "audienceSize": "1.7 billion monthly active users",
+      "demographics": {
+        "ageGroups": {
+          "13-17": 25.0,
+          "18-24": 39.0,
+          "25-34": 20.3,
+          "35-44": 9.3,
+          "45-54": 4.5,
+          "55+": 1.9
+        },
+        "gender": {
+          "male": 46.0,
+          "female": 54.0
+        },
+        "topLocations": ["United States", "Indonesia", "Brazil", "Mexico", "Russia"]
+      },
+      "interests": [
+        "Entertainment",
+        "Dance",
+        "Comedy",
+        "Music",
+        "DIY & Crafts",
+        "Fashion",
+        "Food",
+        "Beauty",
+        "Gaming",
+        "Education"
+      ],
+      "contentTypes": [
+        "Short-form video (15-60s)",
+        "Long-form video (up to 10 min)",
+        "Live streams",
+        "Duets",
+        "Stitches",
+        "Trends & Challenges",
+        "Educational content",
+        "Entertainment"
+      ],
+      "behaviors": [
+        "Short video consumers",
+        "Trend participants",
+        "Creator followers",
+        "Sound users",
+        "For You Page scrollers",
+        "High engagement"
+      ],
+      "adFormats": [
+        "In-Feed ads",
+        "TopView ads",
+        "Brand Takeover",
+        "Branded Hashtag Challenge",
+        "Branded Effects",
+        "Spark ads",
+        "Collection ads",
+        "Shopping ads"
+      ],
+      "strengths": [
+        "Viral potential",
+        "High engagement rates",
+        "Young audience",
+        "Creative formats",
+        "Trend-driven"
+      ],
+      "bestFor": [
+        "Brand awareness",
+        "Youth marketing",
+        "Viral campaigns",
+        "Creative brands",
+        "Influencer partnerships"
+      ]
+    }
+  },
+  "industryBenchmarks": {
+    "saas": {
+      "facebook": {
+        "avgCPL": 60,
+        "avgCTR": 1.2,
+        "avgCPC": 3.5,
+        "avgConversionRate": 2.5
+      },
+      "linkedin": {
+        "avgCPL": 120,
+        "avgCTR": 0.9,
+        "avgCPC": 8.5,
+        "avgConversionRate": 3.2
+      },
+      "instagram": {
+        "avgCPL": 55,
+        "avgCTR": 1.5,
+        "avgCPC": 2.8,
+        "avgConversionRate": 2.1
+      },
+      "x": {
+        "avgCPL": 45,
+        "avgCTR": 1.0,
+        "avgCPC": 3.2,
+        "avgConversionRate": 1.8
+      },
+      "tiktok": {
+        "avgCPL": 35,
+        "avgCTR": 2.5,
+        "avgCPC": 1.8,
+        "avgConversionRate": 2.8
+      }
+    },
+    "ecommerce": {
+      "facebook": {
+        "avgCPL": 25,
+        "avgCTR": 2.1,
+        "avgCPC": 1.2,
+        "avgConversionRate": 4.5
+      },
+      "linkedin": {
+        "avgCPL": 85,
+        "avgCTR": 0.7,
+        "avgCPC": 6.5,
+        "avgConversionRate": 2.1
+      },
+      "instagram": {
+        "avgCPL": 22,
+        "avgCTR": 2.8,
+        "avgCPC": 1.0,
+        "avgConversionRate": 5.2
+      },
+      "x": {
+        "avgCPL": 30,
+        "avgCTR": 1.5,
+        "avgCPC": 1.8,
+        "avgConversionRate": 3.5
+      },
+      "tiktok": {
+        "avgCPL": 18,
+        "avgCTR": 3.5,
+        "avgCPC": 0.8,
+        "avgConversionRate": 6.1
+      }
+    },
+    "b2b_services": {
+      "facebook": {
+        "avgCPL": 75,
+        "avgCTR": 1.0,
+        "avgCPC": 4.2,
+        "avgConversionRate": 2.2
+      },
+      "linkedin": {
+        "avgCPL": 150,
+        "avgCTR": 0.8,
+        "avgCPC": 10.5,
+        "avgConversionRate": 3.8
+      },
+      "instagram": {
+        "avgCPL": 65,
+        "avgCTR": 1.2,
+        "avgCPC": 3.5,
+        "avgConversionRate": 1.9
+      },
+      "x": {
+        "avgCPL": 55,
+        "avgCTR": 0.9,
+        "avgCPC": 3.8,
+        "avgConversionRate": 2.0
+      },
+      "tiktok": {
+        "avgCPL": 50,
+        "avgCTR": 1.8,
+        "avgCPC": 2.2,
+        "avgConversionRate": 2.3
+      }
+    },
+    "healthcare": {
+      "facebook": {
+        "avgCPL": 95,
+        "avgCTR": 0.9,
+        "avgCPC": 5.5,
+        "avgConversionRate": 2.8
+      },
+      "linkedin": {
+        "avgCPL": 180,
+        "avgCTR": 0.7,
+        "avgCPC": 12.0,
+        "avgConversionRate": 3.5
+      },
+      "instagram": {
+        "avgCPL": 85,
+        "avgCTR": 1.1,
+        "avgCPC": 4.8,
+        "avgConversionRate": 2.5
+      },
+      "x": {
+        "avgCPL": 70,
+        "avgCTR": 0.8,
+        "avgCPC": 4.5,
+        "avgConversionRate": 2.2
+      },
+      "tiktok": {
+        "avgCPL": 60,
+        "avgCTR": 1.6,
+        "avgCPC": 2.8,
+        "avgConversionRate": 2.7
+      }
+    },
+    "education": {
+      "facebook": {
+        "avgCPL": 40,
+        "avgCTR": 1.5,
+        "avgCPC": 2.5,
+        "avgConversionRate": 3.5
+      },
+      "linkedin": {
+        "avgCPL": 100,
+        "avgCTR": 0.9,
+        "avgCPC": 7.5,
+        "avgConversionRate": 3.0
+      },
+      "instagram": {
+        "avgCPL": 35,
+        "avgCTR": 1.8,
+        "avgCPC": 2.0,
+        "avgConversionRate": 3.8
+      },
+      "x": {
+        "avgCPL": 38,
+        "avgCTR": 1.2,
+        "avgCPC": 2.8,
+        "avgConversionRate": 3.2
+      },
+      "tiktok": {
+        "avgCPL": 28,
+        "avgCTR": 2.8,
+        "avgCPC": 1.5,
+        "avgConversionRate": 4.5
+      }
+    },
+    "financial_services": {
+      "facebook": {
+        "avgCPL": 110,
+        "avgCTR": 0.8,
+        "avgCPC": 6.5,
+        "avgConversionRate": 2.5
+      },
+      "linkedin": {
+        "avgCPL": 200,
+        "avgCTR": 0.7,
+        "avgCPC": 14.0,
+        "avgConversionRate": 3.5
+      },
+      "instagram": {
+        "avgCPL": 95,
+        "avgCTR": 1.0,
+        "avgCPC": 5.5,
+        "avgConversionRate": 2.2
+      },
+      "x": {
+        "avgCPL": 85,
+        "avgCTR": 0.9,
+        "avgCPC": 5.0,
+        "avgConversionRate": 2.3
+      },
+      "tiktok": {
+        "avgCPL": 75,
+        "avgCTR": 1.5,
+        "avgCPC": 3.5,
+        "avgConversionRate": 2.6
+      }
+    }
+  },
+  "minimumBudgets": {
+    "facebook": 500,
+    "linkedin": 1000,
+    "instagram": 500,
+    "x": 500,
+    "tiktok": 500
+  },
+  "notes": {
+    "dataSource": "Industry averages based on 2024 marketing benchmarks",
+    "currency": "USD",
+    "updateFrequency": "Quarterly",
+    "disclaimer": "Actual performance may vary based on targeting, creative quality, and market conditions"
+  }
+}

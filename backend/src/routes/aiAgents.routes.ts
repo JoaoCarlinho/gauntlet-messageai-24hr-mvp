@@ -31,8 +31,28 @@ router.get(
   aiAgentsController.getProductDefinerStatus
 );
 
+// Campaign Advisor Agent Routes
+router.post(
+  '/campaign-advisor/start',
+  aiAgentsController.startCampaignAdvisorConversation
+);
+
+router.post(
+  '/campaign-advisor/message',
+  aiAgentsController.sendCampaignAdvisorMessage
+);
+
+router.post(
+  '/campaign-advisor/complete',
+  aiAgentsController.completeCampaignAdvisorConversation
+);
+
+router.get(
+  '/campaign-advisor/status/:conversationId',
+  aiAgentsController.getCampaignAdvisorStatus
+);
+
 // Future agent routes will be added here:
-// - Campaign Advisor routes
 // - Content Generator routes
 // - Discovery Bot routes
 // - Performance Analyzer routes
