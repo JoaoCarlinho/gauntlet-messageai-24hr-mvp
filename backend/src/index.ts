@@ -11,6 +11,7 @@ import messageRoutes from './routes/messages.routes';
 import webhookRoutes from './routes/webhooks.routes';
 import policiesRoutes from './routes/policies.routes';
 import leadsRoutes from './routes/leads.routes';
+import teamsRoutes from './routes/teams.routes';
 import { initializeSocketServer } from './socket';
 import logger from './utils/logger';
 
@@ -173,6 +174,7 @@ app.use('/api/v1/conversations', messageRoutes);
 app.use('/api/v1/webhooks', webhookRoutes);
 app.use('/api/v1/policies', policiesRoutes);
 app.use('/api/v1/leads', leadsRoutes);
+app.use('/api/v1/teams', teamsRoutes);
 
 // API info endpoint
 app.get('/api/v1', (req, res) => {

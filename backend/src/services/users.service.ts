@@ -11,6 +11,15 @@ export interface UserProfile {
   isOnline: boolean;
   createdAt: Date;
   updatedAt: Date;
+  teamMemberships?: Array<{
+    id: string;
+    role: string;
+    team: {
+      id: string;
+      name: string;
+      slug: string;
+    };
+  }>;
 }
 
 export interface UpdateProfileData {
@@ -65,7 +74,20 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
         lastSeen: true,
         isOnline: true,
         createdAt: true,
-        updatedAt: true
+        updatedAt: true,
+        teamMemberships: {
+          select: {
+            id: true,
+            role: true,
+            team: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
+          },
+        },
       }
     });
 
@@ -81,7 +103,8 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
       lastSeen: user.lastSeen,
       isOnline: user.isOnline,
       createdAt: user.createdAt,
-      updatedAt: user.updatedAt
+      updatedAt: user.updatedAt,
+      teamMemberships: user.teamMemberships,
     };
   } catch (error) {
     console.error('Error getting user profile:', error);
