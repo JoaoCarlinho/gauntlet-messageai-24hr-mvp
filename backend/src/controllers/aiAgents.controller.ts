@@ -3,6 +3,7 @@ import * as productDefinerService from '../services/aiAgents/productDefiner.serv
 import * as campaignAdvisorService from '../services/aiAgents/campaignAdvisor.service';
 import * as contentGeneratorService from '../services/aiAgents/contentGenerator.service';
 import * as contentLibraryService from '../services/contentLibrary.service';
+import * as discoveryBotService from '../services/aiAgents/discoveryBot.service';
 import { streamToSSE } from '../utils/streaming';
 
 /**
@@ -765,6 +766,178 @@ export const regenerateContent = async (
     console.error('Error regenerating content:', error);
     res.status(500).json({
       error: 'Failed to regenerate content',
+    });
+  }
+};
+
+/**
+ * PUBLIC ENDPOINTS - Discovery Bot (NO AUTH REQUIRED)
+ */
+
+/**
+ * Start a discovery session (PUBLIC - NO AUTH)
+ *
+ * POST /api/v1/public/discovery/start
+ *
+ * @param req.body.productId - Product ID
+ * @param req.body.teamId - Team ID
+ * @param req.body.name - Prospect's name
+ * @param req.body.email - Prospect's email
+ * @param req.body.phone - Prospect's phone
+ * @param req.body.company - Prospect's company
+ * @param req.body.jobTitle - Prospect's job title
+ * @param req.body.source - Lead source (e.g., "website", "landing_page")
+ * @returns Session ID
+ */
+export const startPublicDiscoverySession = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { productId, teamId, name, email, phone, company, jobTitle, source = 'website' } = req.body;
+
+    if (!productId || !teamId) {
+      res.status(400).json({
+        error: 'productId and teamId are required',
+      });
+      return;
+    }
+
+    // Parse name into first and last name
+    const nameParts = name ? name.split(' ') : [];
+    const firstName = nameParts[0] || undefined;
+    const lastName = nameParts.slice(1).join(' ') || undefined;
+
+    // Create discovery session
+    const sessionId = await discoveryBotService.startDiscoverySession(
+      productId,
+      teamId,
+      {
+        email,
+        phone,
+        firstName,
+        lastName,
+        company,
+        jobTitle,
+        source,
+      }
+    );
+
+    res.status(201).json({
+      sessionId,
+      message: 'Discovery session started. How can I help you today?',
+    });
+  } catch (error) {
+    console.error('Error starting public discovery session:', error);
+    res.status(500).json({
+      error: 'Failed to start discovery session',
+    });
+  }
+};
+
+/**
+ * Send a message in discovery session (PUBLIC - NO AUTH)
+ *
+ * POST /api/v1/public/discovery/message
+ *
+ * Streams AI response using Server-Sent Events (SSE)
+ *
+ * @param req.body.sessionId - Discovery session ID
+ * @param req.body.message - User's message
+ * @returns SSE stream with AI response
+ */
+export const sendPublicDiscoveryMessage = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { sessionId, message } = req.body;
+
+    if (!sessionId || !message) {
+      res.status(400).json({
+        error: 'sessionId and message are required',
+      });
+      return;
+    }
+
+    // Initialize SSE connection
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+
+    // Send initial connection message
+    res.write(': SSE connection established\n\n');
+    res.flushHeaders();
+
+    // Process message and get streaming result
+    const result = await discoveryBotService.processMessage(
+      sessionId,
+      message
+    );
+
+    // Stream AI response to client using SSE
+    await streamToSSE(result, res);
+  } catch (error) {
+    console.error('Error sending public discovery message:', error);
+
+    // Send error event if SSE not yet ended
+    if (!res.writableEnded) {
+      res.write(
+        `event: error\ndata: ${JSON.stringify({
+          error: 'Failed to process message',
+        })}\n\n`
+      );
+      res.end();
+    }
+  }
+};
+
+/**
+ * Complete a discovery session (PUBLIC - NO AUTH)
+ *
+ * POST /api/v1/public/discovery/complete
+ *
+ * Finalizes the discovery session, generates summary and score,
+ * and notifies the sales team.
+ *
+ * @param req.body.sessionId - Discovery session ID
+ * @param req.body.teamId - Team ID for authorization
+ * @returns Session summary with score and classification
+ */
+export const completePublicDiscoverySession = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { sessionId, teamId } = req.body;
+
+    if (!sessionId || !teamId) {
+      res.status(400).json({
+        error: 'sessionId and teamId are required',
+      });
+      return;
+    }
+
+    // Get session summary
+    const summary = await discoveryBotService.getSessionSummary(
+      sessionId,
+      teamId
+    );
+
+    res.status(200).json({
+      sessionId: summary.sessionId,
+      status: summary.status,
+      score: summary.score,
+      summary: summary.summary,
+      message: summary.status === 'completed'
+        ? 'Thank you! A member of our team will be in touch soon.'
+        : 'Discovery session is still in progress.',
+    });
+  } catch (error) {
+    console.error('Error completing public discovery session:', error);
+    res.status(500).json({
+      error: 'Failed to complete discovery session',
     });
   }
 };
