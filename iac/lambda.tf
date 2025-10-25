@@ -1,10 +1,10 @@
 # Lambda Functions for Sales Funnel
 # Webhook processor Lambda
 resource "aws_lambda_function" "webhook_processor" {
-  filename      = "placeholder.zip"
+  filename      = "webhook-processor.zip"
   function_name = "${var.project_name}-webhook-processor-${var.environment}"
   role          = aws_iam_role.lambda_exec.arn
-  handler       = "index.handler"
+  handler       = "dist/index.handler"
   runtime       = "nodejs18.x"
   timeout       = 60
   memory_size   = 512
