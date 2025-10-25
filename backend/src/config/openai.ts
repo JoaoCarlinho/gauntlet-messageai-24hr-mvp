@@ -1,17 +1,18 @@
 import OpenAI from 'openai';
+import { createOpenAI } from '@ai-sdk/openai';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 /**
  * OpenAI Configuration
- * Manages OpenAI API client for embeddings and completions
+ * Manages OpenAI API client for embeddings, completions, and AI SDK streaming
  */
 
 let openaiClient: OpenAI | null = null;
 
 /**
- * Initialize OpenAI client
+ * Initialize OpenAI client (for embeddings)
  */
 export const initializeOpenAI = (): OpenAI => {
   try {
@@ -37,7 +38,7 @@ export const initializeOpenAI = (): OpenAI => {
 };
 
 /**
- * Get OpenAI client instance
+ * Get OpenAI client instance (for embeddings)
  */
 export const getOpenAIClient = (): OpenAI => {
   if (!openaiClient) {
@@ -46,6 +47,49 @@ export const getOpenAIClient = (): OpenAI => {
   }
   return openaiClient;
 };
+
+/**
+ * AI SDK Provider Configuration
+ * Used for streaming chat completions with Vercel AI SDK
+ */
+export const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY || '',
+});
+
+/**
+ * AI SDK Streaming Configuration
+ */
+export const AI_CONFIG = {
+  // Default model for AI agents
+  model: 'gpt-4o-mini',
+
+  // Streaming configuration
+  streaming: {
+    enabled: true,
+  },
+
+  // Retry configuration for API failures
+  retry: {
+    maxRetries: 3,
+    initialDelayMs: 1000,
+    maxDelayMs: 10000,
+    backoffFactor: 2,
+  },
+
+  // Temperature settings for different agent types
+  temperature: {
+    precise: 0.3,      // For data analysis, calculations
+    balanced: 0.7,     // For general conversations
+    creative: 0.9,     // For content generation
+  },
+
+  // Token limits
+  maxTokens: {
+    default: 2000,
+    detailed: 4000,
+    summary: 500,
+  },
+} as const;
 
 /**
  * OpenAI model configurations
