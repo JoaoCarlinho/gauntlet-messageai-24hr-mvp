@@ -29,7 +29,7 @@ class SocketManager {
     reconnectAttempts: 0,
   };
   private statusListeners: ((status: ConnectionStatus) => void)[] = [];
-  private eventListeners: Map<string, Function[]> = new Map();
+  private eventListeners: Map<string, ((...args: any[]) => void)[]> = new Map();
   private logoutTriggered: boolean = false;
 
   constructor(config: Partial<SocketConfig> = {}) {
@@ -333,6 +333,59 @@ class SocketManager {
         error: 'Authentication failed',
       });
     });
+
+    // AI Agent Events
+    this.setupAIAgentEvents();
+  }
+
+  /**
+   * Setup AI agent-specific event handlers
+   */
+  private setupAIAgentEvents(): void {
+    if (!this.socket) return;
+
+    // New lead from Discovery Bot
+    this.socket.on('new_lead', (data: any) => {
+      console.log('New lead received:', data);
+      this.notifyAIEvent('new_lead', data);
+    });
+
+    // Lead qualified
+    this.socket.on('lead_qualified', (data: any) => {
+      console.log('Lead qualified:', data);
+      this.notifyAIEvent('lead_qualified', data);
+    });
+
+    // Campaign created by Campaign Advisor
+    this.socket.on('campaign_created', (data: any) => {
+      console.log('Campaign created:', data);
+      this.notifyAIEvent('campaign_created', data);
+    });
+
+    // Content generated
+    this.socket.on('content_generated', (data: any) => {
+      console.log('Content generated:', data);
+      this.notifyAIEvent('content_generated', data);
+    });
+
+    // Performance analysis complete
+    this.socket.on('analysis_complete', (data: any) => {
+      console.log('Analysis complete:', data);
+      this.notifyAIEvent('analysis_complete', data);
+    });
+  }
+
+  /**
+   * Notify AI event to registered listeners
+   */
+  private notifyAIEvent(eventType: string, data: any): void {
+    // Emit React Native event for cross-component communication
+    try {
+      const { DeviceEventEmitter } = require('react-native');
+      DeviceEventEmitter.emit(`ai:${eventType}`, data);
+    } catch (error) {
+      console.warn('Could not emit AI event:', error);
+    }
   }
 
   /**
@@ -351,7 +404,7 @@ class SocketManager {
   /**
    * Listen to an event from the server
    */
-  on(event: string, callback: Function): void {
+  on(event: string, callback: (...args: any[]) => void): void {
     if (!this.socket) {
       console.warn('Cannot add listener - socket not initialized:', event);
       return;
@@ -369,7 +422,7 @@ class SocketManager {
   /**
    * Remove event listener
    */
-  off(event: string, callback?: Function): void {
+  off(event: string, callback?: (...args: any[]) => void): void {
     if (!this.socket) return;
 
     if (callback) {
