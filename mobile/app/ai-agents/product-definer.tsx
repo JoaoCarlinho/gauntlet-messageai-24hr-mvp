@@ -27,6 +27,7 @@ import { AgentMessage } from '../../types/aiAgents';
 
 export default function ProductDefinerScreen() {
   const {
+    // Existing state
     currentConversation,
     currentMessages,
     isStreaming,
@@ -35,11 +36,30 @@ export default function ProductDefinerScreen() {
     error,
     summary,
     hasSavedProduct,
+    // New state for mode selection
+    initialPromptShown,
+    selectedMode,
+    existingProducts,
+    selectedProductId,
+    isLoadingProducts,
+    productsError,
+    // Existing actions
     startConversation,
     sendMessage,
     completeConversation,
     resetConversation,
     clearError,
+    // New actions
+    selectMode,
+    selectProduct,
+    proceedWithSelection,
+    resetToInitialPrompt,
+    // New selectors
+    selectedProduct,
+    hasExistingProducts,
+    shouldShowModeSelection,
+    shouldShowProductSelection,
+    isInputEnabled,
   } = useProductDefiner();
 
   // Local state
@@ -113,13 +133,12 @@ export default function ProductDefinerScreen() {
           text: 'Start New',
           style: 'destructive',
           onPress: () => {
-            resetConversation();
-            startConversation();
+            resetToInitialPrompt();
           },
         },
       ]
     );
-  }, [resetConversation, startConversation]);
+  }, [resetToInitialPrompt]);
 
   // Handle success modal close
   const handleSuccessModalClose = useCallback(() => {
@@ -180,9 +199,120 @@ export default function ProductDefinerScreen() {
     );
   }, [isStreaming, streamingMessage]);
 
+  // Render mode selection buttons
+  const renderModeSelectionButtons = () => {
+    if (!shouldShowModeSelection) return null;
+
+    return (
+      <View style={styles.modeSelectionContainer}>
+        <TouchableOpacity
+          style={styles.modeButton}
+          onPress={() => selectMode('new_product')}
+        >
+          <Ionicons name="cube-outline" size={32} color="#007AFF" />
+          <Text style={styles.modeButtonTitle}>Define New Product</Text>
+          <Text style={styles.modeButtonDescription}>
+            Create a complete product profile from scratch
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.modeButton}
+          onPress={() => selectMode('new_icp')}
+        >
+          <Ionicons name="people-outline" size={32} color="#007AFF" />
+          <Text style={styles.modeButtonTitle}>Define ICP for Existing Product</Text>
+          <Text style={styles.modeButtonDescription}>
+            Create a new customer profile for an existing product
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  // Render product selection list
+  const renderProductSelectionList = () => {
+    if (!shouldShowProductSelection) return null;
+
+    if (isLoadingProducts) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <Text style={styles.loadingText}>Loading your products...</Text>
+        </View>
+      );
+    }
+
+    if (productsError || !hasExistingProducts) {
+      return (
+        <View style={styles.noProductsContainer}>
+          <Ionicons name="alert-circle-outline" size={60} color="#FF3B30" />
+          <Text style={styles.noProductsTitle}>No Products Found</Text>
+          <Text style={styles.noProductsDescription}>
+            You don't have any products yet. Please create a product first.
+          </Text>
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={resetToInitialPrompt}
+          >
+            <Ionicons name="arrow-back-outline" size={20} color="#007AFF" />
+            <Text style={styles.secondaryButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.productSelectionContainer}>
+        <FlatList
+          data={existingProducts}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[
+                styles.productCard,
+                selectedProductId === item.id && styles.productCardSelected,
+              ]}
+              onPress={() => selectProduct(item.id)}
+            >
+              <View style={styles.productCardHeader}>
+                <Text style={styles.productCardName}>{item.name}</Text>
+                {selectedProductId === item.id && (
+                  <Ionicons name="checkmark-circle" size={24} color="#007AFF" />
+                )}
+              </View>
+              {item.description && (
+                <Text style={styles.productCardDescription} numberOfLines={2}>
+                  {item.description}
+                </Text>
+              )}
+              {item.pricing && (
+                <Text style={styles.productCardPricing}>
+                  {item.pricing.currency} ${item.pricing.amount.toLocaleString()}
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
+          contentContainerStyle={styles.productListContent}
+        />
+        <TouchableOpacity
+          style={[
+            styles.proceedButton,
+            !selectedProductId && styles.disabledButton,
+          ]}
+          onPress={proceedWithSelection}
+          disabled={!selectedProductId}
+        >
+          <Text style={styles.proceedButtonText}>Continue</Text>
+          <Ionicons name="arrow-forward-outline" size={20} color="#fff" />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   // Render empty state
   const renderEmptyState = () => {
-    if (isLoading || currentConversation) return null;
+    if (isLoading || currentConversation || initialPromptShown) return null;
 
     return (
       <View style={styles.emptyContainer}>
@@ -215,8 +345,8 @@ export default function ProductDefinerScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        {/* Messages List */}
-        {currentConversation ? (
+        {/* Messages List or Mode Selection */}
+        {currentConversation || (initialPromptShown && currentMessages.length > 0) ? (
           <>
             <FlatList
               ref={flatListRef}
@@ -229,6 +359,8 @@ export default function ProductDefinerScreen() {
                 <>
                   {renderTypingIndicator()}
                   {renderStreamingMessage()}
+                  {renderModeSelectionButtons()}
+                  {renderProductSelectionList()}
                 </>
               }
               showsVerticalScrollIndicator={false}
@@ -239,54 +371,58 @@ export default function ProductDefinerScreen() {
               }}
             />
 
-            {/* Action Buttons */}
-            <View style={styles.actionButtons}>
-              <TouchableOpacity
-                style={styles.secondaryButton}
-                onPress={handleStartNewConversation}
-                disabled={isStreaming}
-              >
-                <Ionicons name="refresh-outline" size={20} color="#007AFF" />
-                <Text style={styles.secondaryButtonText}>New</Text>
-              </TouchableOpacity>
+            {/* Action Buttons - Only show when conversation is active */}
+            {currentConversation && (
+              <View style={styles.actionButtons}>
+                <TouchableOpacity
+                  style={styles.secondaryButton}
+                  onPress={handleStartNewConversation}
+                  disabled={isStreaming}
+                >
+                  <Ionicons name="refresh-outline" size={20} color="#007AFF" />
+                  <Text style={styles.secondaryButtonText}>New</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                style={[
-                  styles.completeButton,
-                  (isStreaming || currentMessages.length < 2) && styles.disabledButton,
-                ]}
-                onPress={handleCompleteConversation}
-                disabled={isStreaming || currentMessages.length < 2}
-              >
-                <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
-                <Text style={styles.completeButtonText}>Complete & Save</Text>
-              </TouchableOpacity>
-            </View>
+                <TouchableOpacity
+                  style={[
+                    styles.completeButton,
+                    (isStreaming || currentMessages.length < 2) && styles.disabledButton,
+                  ]}
+                  onPress={handleCompleteConversation}
+                  disabled={isStreaming || currentMessages.length < 2}
+                >
+                  <Ionicons name="checkmark-circle-outline" size={20} color="#fff" />
+                  <Text style={styles.completeButtonText}>Complete & Save</Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
-            {/* Input Toolbar */}
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.input}
-                value={inputText}
-                onChangeText={setInputText}
-                placeholder="Type your message..."
-                placeholderTextColor="#999"
-                multiline
-                maxLength={1000}
-                editable={!isStreaming}
-              />
-              <TouchableOpacity
-                style={[styles.sendButton, (!inputText.trim() || isStreaming) && styles.disabledSendButton]}
-                onPress={handleSendMessage}
-                disabled={!inputText.trim() || isStreaming}
-              >
-                <Ionicons
-                  name="send"
-                  size={24}
-                  color={inputText.trim() && !isStreaming ? '#fff' : '#999'}
+            {/* Input Toolbar - Show when input should be enabled */}
+            {(isInputEnabled || currentConversation) && (
+              <View style={styles.inputContainer}>
+                <TextInput
+                  style={styles.input}
+                  value={inputText}
+                  onChangeText={setInputText}
+                  placeholder="Type your message..."
+                  placeholderTextColor="#999"
+                  multiline
+                  maxLength={1000}
+                  editable={!isStreaming && isInputEnabled}
                 />
-              </TouchableOpacity>
-            </View>
+                <TouchableOpacity
+                  style={[styles.sendButton, (!inputText.trim() || isStreaming || !isInputEnabled) && styles.disabledSendButton]}
+                  onPress={handleSendMessage}
+                  disabled={!inputText.trim() || isStreaming || !isInputEnabled}
+                >
+                  <Ionicons
+                    name="send"
+                    size={24}
+                    color={inputText.trim() && !isStreaming && isInputEnabled ? '#fff' : '#999'}
+                  />
+                </TouchableOpacity>
+              </View>
+            )}
           </>
         ) : (
           renderEmptyState()
@@ -580,5 +716,113 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  // New styles for mode selection
+  modeSelectionContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 20,
+    gap: 16,
+  },
+  modeButton: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 20,
+    borderWidth: 2,
+    borderColor: '#E5E5EA',
+    alignItems: 'center',
+    gap: 8,
+  },
+  modeButtonTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#000',
+    textAlign: 'center',
+  },
+  modeButtonDescription: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  // Product selection styles
+  productSelectionContainer: {
+    flex: 1,
+    paddingTop: 16,
+  },
+  productListContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  productCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: '#E5E5EA',
+  },
+  productCardSelected: {
+    borderColor: '#007AFF',
+    backgroundColor: '#F0F8FF',
+  },
+  productCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  productCardName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#000',
+    flex: 1,
+  },
+  productCardDescription: {
+    fontSize: 14,
+    color: '#666',
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  productCardPricing: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#34C759',
+  },
+  proceedButton: {
+    backgroundColor: '#007AFF',
+    marginHorizontal: 16,
+    marginVertical: 12,
+    paddingVertical: 14,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  proceedButtonText: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '600',
+  },
+  // No products state
+  noProductsContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  noProductsTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#000',
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  noProductsDescription: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 32,
   },
 });

@@ -35,6 +35,7 @@ export interface CreateConversationData {
   agentType: AgentType;
   contextId?: string; // productId, campaignId, leadId, etc.
   contextType?: 'product' | 'campaign' | 'lead' | 'general';
+  metadata?: Record<string, any>; // Additional conversation metadata
 }
 
 export interface AddMessageData {
@@ -60,7 +61,7 @@ export interface ConversationWithMessages extends AIAgentConversation {
 export async function createConversation(
   data: CreateConversationData
 ): Promise<AIAgentConversation> {
-  const { userId, teamId, agentType, contextId } = data;
+  const { userId, teamId, agentType, contextId, metadata } = data;
 
   const conversation = await prisma.aIAgentConversation.create({
     data: {
@@ -70,6 +71,7 @@ export async function createConversation(
       contextId,
       status: 'active',
       messages: [], // Initialize with empty message array
+      metadata: metadata || {}, // Initialize with provided metadata or empty object
     },
   });
 

@@ -90,10 +90,17 @@ export const productDefinerAPI = {
   /**
    * Start a new product definer conversation
    * POST /ai/product-definer/start
+   * @param params - Optional parameters for mode selection
+   * @param params.mode - Conversation mode: 'new_product' or 'new_icp'
+   * @param params.productId - Product ID (required if mode is 'new_icp')
    */
-  async startConversation(): Promise<StartConversationResponse> {
+  async startConversation(params?: {
+    mode?: 'new_product' | 'new_icp';
+    productId?: string;
+  }): Promise<StartConversationResponse> {
     const response = await aiAgentsClient.post<StartConversationResponse>(
-      '/ai/product-definer/start'
+      '/ai/product-definer/start',
+      params || {}
     );
     return response.data;
   },
