@@ -339,3 +339,27 @@ model WebhookLog {
   @@index([processed])
   @@index([createdAt])
 }
+
+model ContentLibrary {
+  id          String   @id @default(uuid())
+  teamId      String
+  productId   String?
+  campaignId  String?
+  contentType String   // "ad_copy", "social_post", "landing_page", "image_prompt", "email", "sms"
+  platform    String?  // "facebook", "linkedin", "instagram", "x", "tiktok", "google", "email", "sms"
+  title       String
+  content     Json     // Generated content structure
+  metadata    Json?    // Additional metadata (variations, prompts, etc.)
+  status      String   @default("draft") // "draft", "approved", "published", "archived"
+  tags        String[] @default([])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([teamId])
+  @@index([productId])
+  @@index([campaignId])
+  @@index([contentType])
+  @@index([platform])
+  @@index([status])
+  @@index([createdAt])
+}
