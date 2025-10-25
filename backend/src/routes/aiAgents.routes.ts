@@ -78,8 +78,25 @@ router.post(
   aiAgentsController.regenerateContent
 );
 
-// Future agent routes will be added here:
-// - Discovery Bot routes
-// - Performance Analyzer routes
+// Performance Analyzer Agent Routes
+router.post(
+  '/performance-analyzer/analyze',
+  aiAgentsController.analyzeCampaignPerformance
+);
+
+router.post(
+  '/performance-analyzer/optimize',
+  aiAgentsController.getOptimizationRecommendations
+);
+
+router.post(
+  '/performance-analyzer/compare',
+  aiAgentsController.compareMultipleCampaigns
+);
+
+router.post(
+  '/performance-analyzer/summary',
+  aiAgentsController.getExecutiveSummary
+);
 
 export default router;

@@ -4,6 +4,7 @@ import * as campaignAdvisorService from '../services/aiAgents/campaignAdvisor.se
 import * as contentGeneratorService from '../services/aiAgents/contentGenerator.service';
 import * as contentLibraryService from '../services/contentLibrary.service';
 import * as discoveryBotService from '../services/aiAgents/discoveryBot.service';
+import * as performanceAnalyzerService from '../services/aiAgents/performanceAnalyzer.service';
 import { streamToSSE } from '../utils/streaming';
 
 /**
@@ -938,6 +939,215 @@ export const completePublicDiscoverySession = async (
     console.error('Error completing public discovery session:', error);
     res.status(500).json({
       error: 'Failed to complete discovery session',
+    });
+  }
+};
+
+/**
+ * PERFORMANCE ANALYZER AGENT ENDPOINTS
+ */
+
+/**
+ * Analyze campaign performance
+ *
+ * POST /api/v1/ai/performance-analyzer/analyze
+ *
+ * @param req.body.campaignId - Campaign ID
+ * @param req.body.timeRange - Optional time range { start: Date, end: Date }
+ * @param req.user.teamId - Team ID from auth middleware
+ * @returns Performance analysis with KPIs, trends, and insights
+ */
+export const analyzeCampaignPerformance = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { campaignId, timeRange } = req.body;
+    const teamId = (req as any).user?.teamId;
+
+    if (!teamId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    if (!campaignId) {
+      res.status(400).json({
+        error: 'campaignId is required',
+      });
+      return;
+    }
+
+    // Validate timeRange if provided
+    if (timeRange) {
+      if (!timeRange.start || !timeRange.end) {
+        res.status(400).json({
+          error: 'timeRange must include both start and end dates',
+        });
+        return;
+      }
+    }
+
+    // Analyze campaign performance
+    const analysis = await performanceAnalyzerService.analyzeCampaignPerformance(
+      campaignId,
+      teamId,
+      timeRange
+    );
+
+    res.status(200).json(analysis);
+  } catch (error) {
+    console.error('Error analyzing campaign performance:', error);
+    res.status(500).json({
+      error: 'Failed to analyze campaign performance',
+    });
+  }
+};
+
+/**
+ * Get optimization recommendations for a campaign
+ *
+ * POST /api/v1/ai/performance-analyzer/optimize
+ *
+ * @param req.body.campaignId - Campaign ID
+ * @param req.user.teamId - Team ID from auth middleware
+ * @returns Prioritized optimization recommendations with predicted impact
+ */
+export const getOptimizationRecommendations = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { campaignId } = req.body;
+    const teamId = (req as any).user?.teamId;
+
+    if (!teamId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    if (!campaignId) {
+      res.status(400).json({
+        error: 'campaignId is required',
+      });
+      return;
+    }
+
+    // Get optimization recommendations
+    const recommendations = await performanceAnalyzerService.getOptimizationRecommendations(
+      campaignId,
+      teamId
+    );
+
+    res.status(200).json(recommendations);
+  } catch (error) {
+    console.error('Error getting optimization recommendations:', error);
+    res.status(500).json({
+      error: 'Failed to get optimization recommendations',
+    });
+  }
+};
+
+/**
+ * Compare performance across multiple campaigns
+ *
+ * POST /api/v1/ai/performance-analyzer/compare
+ *
+ * @param req.body.campaignIds - Array of campaign IDs (2-5 campaigns)
+ * @param req.user.teamId - Team ID from auth middleware
+ * @returns Comparative analysis with rankings and insights
+ */
+export const compareMultipleCampaigns = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { campaignIds } = req.body;
+    const teamId = (req as any).user?.teamId;
+
+    if (!teamId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    if (!campaignIds || !Array.isArray(campaignIds)) {
+      res.status(400).json({
+        error: 'campaignIds array is required',
+      });
+      return;
+    }
+
+    if (campaignIds.length < 2) {
+      res.status(400).json({
+        error: 'At least 2 campaigns are required for comparison',
+      });
+      return;
+    }
+
+    if (campaignIds.length > 5) {
+      res.status(400).json({
+        error: 'Maximum 5 campaigns can be compared at once',
+      });
+      return;
+    }
+
+    // Compare campaigns
+    const comparison = await performanceAnalyzerService.comparePerformance(
+      campaignIds,
+      teamId
+    );
+
+    res.status(200).json(comparison);
+  } catch (error) {
+    console.error('Error comparing campaigns:', error);
+    res.status(500).json({
+      error: 'Failed to compare campaigns',
+    });
+  }
+};
+
+/**
+ * Generate executive summary for team's campaigns
+ *
+ * POST /api/v1/ai/performance-analyzer/summary
+ *
+ * @param req.body.timeRange - Optional time range { start: Date, end: Date }
+ * @param req.user.teamId - Team ID from auth middleware
+ * @returns Executive summary with team-wide KPIs and key insights
+ */
+export const getExecutiveSummary = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { timeRange } = req.body;
+    const teamId = (req as any).user?.teamId;
+
+    if (!teamId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    // Validate timeRange if provided
+    if (timeRange) {
+      if (!timeRange.start || !timeRange.end) {
+        res.status(400).json({
+          error: 'timeRange must include both start and end dates',
+        });
+        return;
+      }
+    }
+
+    // Generate executive summary
+    const summary = await performanceAnalyzerService.generateExecutiveSummary(
+      teamId,
+      timeRange
+    );
+
+    res.status(200).json(summary);
+  } catch (error) {
+    console.error('Error generating executive summary:', error);
+    res.status(500).json({
+      error: 'Failed to generate executive summary',
     });
   }
 };

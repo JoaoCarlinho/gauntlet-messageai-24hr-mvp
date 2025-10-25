@@ -1,5 +1,4 @@
 import { streamText } from 'ai';
-import { z } from 'zod';
 import { openai, AI_CONFIG } from '../../config/openai';
 import { PRODUCT_DEFINER_SYSTEM_PROMPT, AgentType } from '../../utils/prompts';
 import * as conversationService from '../aiConversations.service';
@@ -95,7 +94,8 @@ export async function processMessage(
     messages: messages as any,
     temperature: AI_CONFIG.temperature.balanced,
     // Tools will be added in Task 10.2 when we integrate with controller
-    onFinish: async ({ text, toolCalls }) => {
+    onFinish: async (event: any) => {
+      const { text, toolCalls } = event;
       // Save assistant's response to conversation
       await conversationService.addMessage(
         conversationId,
