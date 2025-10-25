@@ -13,3 +13,13 @@ export { useNotifications } from './useNotifications';
 export { default as useNotificationsHook } from './useNotifications';
 export { useSSEStream, useSSEStreamWithFetch, createSSEUrl } from './useSSEStream';
 export { default as useSSEStreamHook } from './useSSEStream';
+
+// AI Agent Hooks
+export { useProductDefiner } from './useProductDefiner';
+export { default as useProductDefinerHook } from './useProductDefiner';
+export { useCampaignAdvisor } from './useCampaignAdvisor';
+export { default as useCampaignAdvisorHook } from './useCampaignAdvisor';
+export { useContentGenerator } from './useContentGenerator';
+export { default as useContentGeneratorHook } from './useContentGenerator';
+export { usePerformanceAnalyzer } from './usePerformanceAnalyzer';
+export { default as usePerformanceAnalyzerHook } from './usePerformanceAnalyzer';
