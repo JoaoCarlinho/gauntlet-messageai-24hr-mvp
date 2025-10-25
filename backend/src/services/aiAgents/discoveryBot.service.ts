@@ -198,6 +198,7 @@ async function searchFAQ(
  */
 function calculateQualificationScore(responses: DiscoveryResponse): {
   score: number;
+  classification: 'hot' | 'warm' | 'cold';
   breakdown: Record<string, number>;
   reasoning: string;
 } {
@@ -293,7 +294,17 @@ function calculateQualificationScore(responses: DiscoveryResponse): {
 
   const reasoning = reasons.join('; ');
 
-  return { score, breakdown, reasoning };
+  // Classify lead based on score
+  let classification: 'hot' | 'warm' | 'cold';
+  if (score >= 80) {
+    classification = 'hot';
+  } else if (score >= 60) {
+    classification = 'warm';
+  } else {
+    classification = 'cold';
+  }
+
+  return { score, classification, breakdown, reasoning };
 }
 
 /**
@@ -455,7 +466,7 @@ export async function processMessage(
         if (toolCalls && toolCalls.length > 0) {
           for (const tc of toolCalls) {
             if (tc.toolName === 'calculate_qualification_score') {
-              const { score, breakdown, reasoning } = calculateQualificationScore(responses);
+              const { score, classification, breakdown, reasoning } = calculateQualificationScore(responses);
 
               // Generate summary
               const summary = await generateDiscoverySummary(transcript, responses, score);
@@ -471,6 +482,7 @@ export async function processMessage(
                   transcript: {
                     messages,
                     responses,
+                    classification,
                     qualificationBreakdown: breakdown,
                     reasoning,
                   } as any,
