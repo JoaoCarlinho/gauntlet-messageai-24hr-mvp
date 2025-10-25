@@ -23,3 +23,5 @@ export { useContentGenerator } from './useContentGenerator';
 export { default as useContentGeneratorHook } from './useContentGenerator';
 export { usePerformanceAnalyzer } from './usePerformanceAnalyzer';
 export { default as usePerformanceAnalyzerHook } from './usePerformanceAnalyzer';
+export { useLeads } from './useLeads';
+export { default as useLeadsHook } from './useLeads';
