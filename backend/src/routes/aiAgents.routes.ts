@@ -52,8 +52,33 @@ router.get(
   aiAgentsController.getCampaignAdvisorStatus
 );
 
+// Content Generator Agent Routes
+router.post(
+  '/content-generator/ad-copy',
+  aiAgentsController.generateAdCopy
+);
+
+router.post(
+  '/content-generator/social-posts',
+  aiAgentsController.generateSocialPosts
+);
+
+router.post(
+  '/content-generator/landing-page',
+  aiAgentsController.generateLandingPage
+);
+
+router.post(
+  '/content-generator/image-prompts',
+  aiAgentsController.generateImagePrompts
+);
+
+router.post(
+  '/content-generator/regenerate',
+  aiAgentsController.regenerateContent
+);
+
 // Future agent routes will be added here:
-// - Content Generator routes
 // - Discovery Bot routes
 // - Performance Analyzer routes
 

@@ -1,6 +1,8 @@
 import { Request, Response } from 'express';
 import * as productDefinerService from '../services/aiAgents/productDefiner.service';
 import * as campaignAdvisorService from '../services/aiAgents/campaignAdvisor.service';
+import * as contentGeneratorService from '../services/aiAgents/contentGenerator.service';
+import * as contentLibraryService from '../services/contentLibrary.service';
 import { streamToSSE } from '../utils/streaming';
 
 /**
@@ -425,6 +427,344 @@ export const getCampaignAdvisorStatus = async (
     console.error('Error getting campaign advisor status:', error);
     res.status(500).json({
       error: 'Failed to get conversation status',
+    });
+  }
+};
+
+/**
+ * Generate ad copy for a specific platform
+ *
+ * POST /api/v1/ai/content-generator/ad-copy
+ *
+ * @param req.body.productId - Product ID
+ * @param req.body.platform - Target platform
+ * @param req.body.variations - Number of variations (default: 3)
+ * @param req.body.saveToLibrary - Whether to save to content library (default: false)
+ * @param req.user.teamId - Team ID from auth middleware
+ * @returns Generated ad copy variations
+ */
+export const generateAdCopy = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { productId, platform, variations = 3, saveToLibrary = false } = req.body;
+    const teamId = (req as any).user?.teamId;
+
+    if (!teamId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    if (!productId || !platform) {
+      res.status(400).json({
+        error: 'productId and platform are required',
+      });
+      return;
+    }
+
+    // Generate ad copy
+    const result = await contentGeneratorService.generateAdCopy(
+      productId,
+      teamId,
+      platform,
+      variations
+    );
+
+    // Optionally save to content library
+    let savedContent = null;
+    if (saveToLibrary) {
+      savedContent = await contentLibraryService.saveContent({
+        teamId,
+        productId,
+        contentType: 'ad_copy',
+        platform,
+        title: `${platform} Ad Copy - ${new Date().toLocaleDateString()}`,
+        content: result,
+        metadata: { variations },
+      });
+    }
+
+    res.status(200).json({
+      ...result,
+      savedContentId: savedContent?.id,
+    });
+  } catch (error) {
+    console.error('Error generating ad copy:', error);
+    res.status(500).json({
+      error: 'Failed to generate ad copy',
+    });
+  }
+};
+
+/**
+ * Generate social media posts for a specific platform
+ *
+ * POST /api/v1/ai/content-generator/social-posts
+ *
+ * @param req.body.productId - Product ID
+ * @param req.body.platform - Target platform
+ * @param req.body.count - Number of posts (default: 5)
+ * @param req.body.saveToLibrary - Whether to save to content library (default: false)
+ * @param req.user.teamId - Team ID from auth middleware
+ * @returns Generated social posts
+ */
+export const generateSocialPosts = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { productId, platform, count = 5, saveToLibrary = false } = req.body;
+    const teamId = (req as any).user?.teamId;
+
+    if (!teamId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    if (!productId || !platform) {
+      res.status(400).json({
+        error: 'productId and platform are required',
+      });
+      return;
+    }
+
+    // Generate social posts
+    const result = await contentGeneratorService.generateSocialPosts(
+      productId,
+      teamId,
+      platform,
+      count
+    );
+
+    // Optionally save to content library
+    let savedContent = null;
+    if (saveToLibrary) {
+      savedContent = await contentLibraryService.saveContent({
+        teamId,
+        productId,
+        contentType: 'social_post',
+        platform,
+        title: `${platform} Social Posts - ${new Date().toLocaleDateString()}`,
+        content: result,
+        metadata: { count },
+      });
+    }
+
+    res.status(200).json({
+      ...result,
+      savedContentId: savedContent?.id,
+    });
+  } catch (error) {
+    console.error('Error generating social posts:', error);
+    res.status(500).json({
+      error: 'Failed to generate social posts',
+    });
+  }
+};
+
+/**
+ * Generate landing page copy
+ *
+ * POST /api/v1/ai/content-generator/landing-page
+ *
+ * @param req.body.productId - Product ID
+ * @param req.body.saveToLibrary - Whether to save to content library (default: false)
+ * @param req.user.teamId - Team ID from auth middleware
+ * @returns Generated landing page sections
+ */
+export const generateLandingPage = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { productId, saveToLibrary = false } = req.body;
+    const teamId = (req as any).user?.teamId;
+
+    if (!teamId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    if (!productId) {
+      res.status(400).json({
+        error: 'productId is required',
+      });
+      return;
+    }
+
+    // Generate landing page copy
+    const result = await contentGeneratorService.generateLandingPageCopy(
+      productId,
+      teamId
+    );
+
+    // Optionally save to content library
+    let savedContent = null;
+    if (saveToLibrary) {
+      savedContent = await contentLibraryService.saveContent({
+        teamId,
+        productId,
+        contentType: 'landing_page',
+        title: `Landing Page Copy - ${new Date().toLocaleDateString()}`,
+        content: result,
+      });
+    }
+
+    res.status(200).json({
+      ...result,
+      savedContentId: savedContent?.id,
+    });
+  } catch (error) {
+    console.error('Error generating landing page:', error);
+    res.status(500).json({
+      error: 'Failed to generate landing page copy',
+    });
+  }
+};
+
+/**
+ * Generate image prompts for DALL-E
+ *
+ * POST /api/v1/ai/content-generator/image-prompts
+ *
+ * @param req.body.productId - Product ID
+ * @param req.body.concept - Visual concept
+ * @param req.body.count - Number of prompt variations (default: 3)
+ * @param req.body.saveToLibrary - Whether to save to content library (default: false)
+ * @param req.user.teamId - Team ID from auth middleware
+ * @returns Generated DALL-E prompts
+ */
+export const generateImagePrompts = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { productId, concept, count = 3, saveToLibrary = false } = req.body;
+    const teamId = (req as any).user?.teamId;
+
+    if (!teamId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    if (!productId || !concept) {
+      res.status(400).json({
+        error: 'productId and concept are required',
+      });
+      return;
+    }
+
+    // Generate image prompts
+    const result = await contentGeneratorService.generateImagePrompts(
+      productId,
+      teamId,
+      concept,
+      count
+    );
+
+    // Optionally save to content library
+    let savedContent = null;
+    if (saveToLibrary) {
+      savedContent = await contentLibraryService.saveContent({
+        teamId,
+        productId,
+        contentType: 'image_prompt',
+        title: `Image Prompts: ${concept} - ${new Date().toLocaleDateString()}`,
+        content: result,
+        metadata: { concept, count },
+      });
+    }
+
+    res.status(200).json({
+      ...result,
+      savedContentId: savedContent?.id,
+    });
+  } catch (error) {
+    console.error('Error generating image prompts:', error);
+    res.status(500).json({
+      error: 'Failed to generate image prompts',
+    });
+  }
+};
+
+/**
+ * Regenerate content with modifications
+ *
+ * POST /api/v1/ai/content-generator/regenerate
+ *
+ * @param req.body.contentId - Content ID from library
+ * @param req.body.instruction - Modification instruction
+ * @param req.body.saveToLibrary - Whether to save regenerated version (default: false)
+ * @param req.user.teamId - Team ID from auth middleware
+ * @returns Regenerated content
+ */
+export const regenerateContent = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { contentId, instruction, saveToLibrary = false } = req.body;
+    const teamId = (req as any).user?.teamId;
+
+    if (!teamId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    if (!contentId || !instruction) {
+      res.status(400).json({
+        error: 'contentId and instruction are required',
+      });
+      return;
+    }
+
+    // Get original content
+    const originalContent = await contentLibraryService.getContent(
+      contentId,
+      teamId
+    );
+
+    if (!originalContent) {
+      res.status(404).json({
+        error: 'Content not found',
+      });
+      return;
+    }
+
+    // Regenerate content
+    const result = await contentGeneratorService.regenerateContent(
+      JSON.stringify(originalContent.content),
+      instruction,
+      originalContent.contentType
+    );
+
+    // Optionally save to content library
+    let savedContent = null;
+    if (saveToLibrary) {
+      savedContent = await contentLibraryService.saveContent({
+        teamId,
+        productId: originalContent.productId || undefined,
+        campaignId: originalContent.campaignId || undefined,
+        contentType: originalContent.contentType as any,
+        platform: originalContent.platform || undefined,
+        title: `${originalContent.title} (Regenerated)`,
+        content: result,
+        metadata: {
+          originalContentId: contentId,
+          instruction,
+        },
+      });
+    }
+
+    res.status(200).json({
+      result,
+      savedContentId: savedContent?.id,
+    });
+  } catch (error) {
+    console.error('Error regenerating content:', error);
+    res.status(500).json({
+      error: 'Failed to regenerate content',
     });
   }
 };
