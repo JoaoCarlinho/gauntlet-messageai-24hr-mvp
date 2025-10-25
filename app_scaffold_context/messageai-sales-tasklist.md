@@ -1014,15 +1014,15 @@ git checkout -b feature/campaign-management
 - `backend/src/controllers/campaigns.controller.ts`
 
 **Implementation Steps**:
-- [ ] POST `/api/v1/campaigns` - Create campaign
-- [ ] GET `/api/v1/campaigns` - List campaigns (with filters)
-- [ ] GET `/api/v1/campaigns/:id` - Get campaign details
-- [ ] PUT `/api/v1/campaigns/:id` - Update campaign
-- [ ] DELETE `/api/v1/campaigns/:id` - Delete campaign
-- [ ] GET `/api/v1/campaigns/:id/metrics` - Get metrics
-- [ ] POST `/api/v1/campaigns/:id/metrics` - Add metrics
-- [ ] POST `/api/v1/campaigns/:id/creatives` - Add ad creative
-- [ ] GET `/api/v1/campaigns/:id/creatives` - List ad creatives
+- [x] POST `/api/v1/campaigns` - Create campaign
+- [x] GET `/api/v1/campaigns` - List campaigns (with filters)
+- [x] GET `/api/v1/campaigns/:id` - Get campaign details
+- [x] PUT `/api/v1/campaigns/:id` - Update campaign
+- [x] DELETE `/api/v1/campaigns/:id` - Delete campaign
+- [x] GET `/api/v1/campaigns/:id/metrics` - Get metrics
+- [x] POST `/api/v1/campaigns/:id/metrics` - Add metrics
+- [x] POST `/api/v1/campaigns/:id/creatives` - Add ad creative
+- [x] GET `/api/v1/campaigns/:id/creatives` - List ad creatives
 
 ---
 
@@ -1034,9 +1034,9 @@ git checkout -b feature/campaign-management
 - `backend/src/index.ts`
 
 **Implementation Steps**:
-- [ ] Define campaign routes with team access middleware
-- [ ] Add validation for budget, dates, platforms
-- [ ] Mount under `/api/v1/campaigns`
+- [x] Define campaign routes with team access middleware
+- [x] Add validation for budget, dates, platforms
+- [x] Mount under `/api/v1/campaigns`
 
 ---
 
@@ -1058,8 +1058,8 @@ git commit -m "feat: Add campaign management with metrics tracking"
 git push origin feature/campaign-management
 ```
 **Your Actions**:
-- [ ] Create PR #5: "Campaign Management"
-- [ ] Merge to master
+- [x] Create PR #5: "Campaign Management"
+- [x] Merge to master
 
 ---
 
@@ -1082,15 +1082,15 @@ git checkout -b feature/lead-management
 - `backend/src/services/leads.service.ts`
 
 **Implementation Steps**:
-- [ ] `createLead(teamId, campaignId, data)` - Create lead
-- [ ] `getLead(leadId, teamId)` - Get lead details
-- [ ] `listLeads(teamId, filters)` - List leads with filters (status, campaign, date)
-- [ ] `updateLeadStatus(leadId, teamId, newStatus)` - Update status
-- [ ] `claimLead(leadId, userId, teamId)` - Assign lead to user
-- [ ] `addLeadActivity(leadId, userId, activityType, description)` - Log activity
-- [ ] `getLeadActivities(leadId, teamId)` - Get activity history
-- [ ] `searchLeads(teamId, query)` - Search by name/email
-- [ ] Calculate lead qualification score placeholder
+- [x] `createLead(teamId, campaignId, data)` - Create lead
+- [x] `getLead(leadId, teamId)` - Get lead details
+- [x] `listLeads(teamId, filters)` - List leads with filters (status, campaign, date)
+- [x] `updateLeadStatus(leadId, teamId, newStatus)` - Update status
+- [x] `claimLead(leadId, userId, teamId)` - Assign lead to user
+- [x] `addLeadActivity(leadId, userId, activityType, description)` - Log activity
+- [x] `getLeadActivities(leadId, teamId)` - Get activity history
+- [x] `searchLeads(teamId, query)` - Search by name/email
+- [x] Calculate lead qualification score placeholder
 
 ---
 
@@ -1100,14 +1100,14 @@ git checkout -b feature/lead-management
 - `backend/src/controllers/leads.controller.ts`
 
 **Implementation Steps**:
-- [ ] GET `/api/v1/leads` - List leads (with filters)
-- [ ] GET `/api/v1/leads/:id` - Get lead details
-- [ ] PUT `/api/v1/leads/:id` - Update lead
-- [ ] POST `/api/v1/leads/:id/claim` - Claim lead
-- [ ] POST `/api/v1/leads/:id/activities` - Add activity
-- [ ] GET `/api/v1/leads/:id/activities` - Get activities
-- [ ] GET `/api/v1/leads/:id/discovery` - Get discovery session
-- [ ] POST `/api/v1/leads/search` - Search leads
+- [x] GET `/api/v1/leads` - List leads (with filters)
+- [x] GET `/api/v1/leads/:id` - Get lead details
+- [x] PUT `/api/v1/leads/:id` - Update lead
+- [x] POST `/api/v1/leads/:id/claim` - Claim lead
+- [x] POST `/api/v1/leads/:id/activities` - Add activity
+- [x] GET `/api/v1/leads/:id/activities` - Get activities
+- [x] GET `/api/v1/leads/:id/discovery` - Get discovery session
+- [x] POST `/api/v1/leads/search` - Search leads
 
 ---
 
@@ -1119,9 +1119,9 @@ git checkout -b feature/lead-management
 - `backend/src/index.ts`
 
 **Implementation Steps**:
-- [ ] Define lead routes with team access middleware
-- [ ] Add validation for status transitions
-- [ ] Mount under `/api/v1/leads`
+- [x] Define lead routes with team access middleware
+- [x] Add validation for status transitions
+- [x] Mount under `/api/v1/leads`
 
 ---
 
@@ -1134,11 +1134,11 @@ git checkout -b feature/lead-management
 - `backend/src/socket/index.ts`
 
 **Implementation Steps**:
-- [ ] `notifyNewLead(teamId, lead)` - Broadcast to team
-- [ ] `notifyLeadClaimed(teamId, leadId, userId)` - Update claimed status
-- [ ] `notifyLeadStatusChanged(teamId, leadId, newStatus)` - Status update
-- [ ] Join team rooms: `team_{teamId}`
-- [ ] Emit events to appropriate rooms
+- [x] `notifyNewLead(teamId, lead)` - Broadcast to team
+- [x] `notifyLeadClaimed(teamId, leadId, userId)` - Update claimed status
+- [x] `notifyLeadStatusChanged(teamId, leadId, newStatus)` - Status update
+- [x] Join team rooms: `team_{teamId}`
+- [x] Emit events to appropriate rooms
 
 ---
 
@@ -1161,8 +1161,8 @@ git commit -m "feat: Add lead management with real-time notifications"
 git push origin feature/lead-management
 ```
 **Your Actions**:
-- [ ] Create PR #7: "Lead Management System"
-- [ ] Merge to master
+- [x] Create PR #7: "Lead Management System"
+- [x] Merge to master
 
 ---
 
@@ -1182,17 +1182,17 @@ git checkout -b feature/lambda-webhook-processor
 - `aws-lambdas/webhook-processor/README.md`
 
 **Implementation Steps**:
-- [ ] Install dependencies: `prisma`, `@prisma/client`, `aws-sdk`
-- [ ] Initialize Prisma client
-- [ ] Handle SQS event batch
-- [ ] For each webhook message:
-  - [ ] Parse lead data
-  - [ ] Match to campaign (if campaign ID in payload)
-  - [ ] Create Lead record in database
-  - [ ] Trigger Socket.io notification via HTTP request
-  - [ ] Mark message as processed
-- [ ] Error handling: send failures to DLQ
-- [ ] Log all operations
+- [x] Install dependencies: `prisma`, `@prisma/client`, `aws-sdk`
+- [x] Initialize Prisma client
+- [x] Handle SQS event batch
+- [x] For each webhook message:
+  - [x] Parse lead data
+  - [x] Match to campaign (if campaign ID in payload)
+  - [x] Create Lead record in database
+  - [x] Trigger Socket.io notification via HTTP request
+  - [x] Mark message as processed
+- [x] Error handling: send failures to DLQ
+- [x] Log all operations
 
 **package.json**:
 ```json
@@ -1218,21 +1218,21 @@ git checkout -b feature/lambda-webhook-processor
 - `terraform/iam.tf`
 
 **Implementation Steps**:
-- [ ] Define Lambda function resource
-- [ ] Set environment variables (DATABASE_URL, API_URL)
-- [ ] Configure SQS trigger
-- [ ] Set timeout: 60 seconds
-- [ ] Set memory: 512 MB
-- [ ] Add IAM role with SQS read permissions
+- [x] Define Lambda function resource
+- [x] Set environment variables (DATABASE_URL, API_URL)
+- [x] Configure SQS trigger
+- [x] Set timeout: 60 seconds
+- [x] Set memory: 512 MB
+- [x] Add IAM role with SQS read permissions
 
 ---
 
 #### Task 8.3: Build and Deploy Lambda
 **Your Actions**:
 - [ ] Build Lambda: `cd aws-lambdas/webhook-processor && npm install && npm run build`
-- [ ] Create deployment package: `zip -r function.zip dist/ node_modules/`
-- [ ] Deploy via Terraform: `cd terraform && terraform apply`
-- [ ] Or upload via AWS Console
+- [x] Create deployment package: `zip -r function.zip dist/ node_modules/`
+- [x] Deploy via Terraform: `cd terraform && terraform apply`
+- [x] Or upload via AWS Console
 - [ ] Test with sample SQS message
 
 ---
@@ -1255,8 +1255,8 @@ git commit -m "feat: Add Lambda function to process webhooks from SQS"
 git push origin feature/lambda-webhook-processor
 ```
 **Your Actions**:
-- [ ] Create PR #8: "Lambda Webhook Processor"
-- [ ] Merge to master
+- [x] Create PR #8: "Lambda Webhook Processor"
+- [x] Merge to master
 
 ---
 
@@ -1282,10 +1282,10 @@ npm install ai @ai-sdk/openai zod
 - `backend/src/config/openai.ts` (if not exists)
 
 **Implementation Steps**:
-- [ ] Configure OpenAI provider from AI SDK
-- [ ] Set up streaming configuration
-- [ ] Add error handling for API failures
-- [ ] Configure retry logic
+- [x] Configure OpenAI provider from AI SDK
+- [x] Set up streaming configuration
+- [x] Add error handling for API failures
+- [x] Configure retry logic
 
 ---
 
@@ -1295,13 +1295,13 @@ npm install ai @ai-sdk/openai zod
 - `backend/src/utils/prompts.ts`
 
 **Implementation Steps**:
-- [ ] `PRODUCT_DEFINER_SYSTEM_PROMPT` - Product/ICP definition agent
-- [ ] `CAMPAIGN_ADVISOR_SYSTEM_PROMPT` - Campaign strategy agent
-- [ ] `CONTENT_GENERATOR_SYSTEM_PROMPT` - Marketing content agent
-- [ ] `DISCOVERY_BOT_SYSTEM_PROMPT` - Customer discovery agent
-- [ ] `PERFORMANCE_ANALYZER_SYSTEM_PROMPT` - Analytics agent
-- [ ] Include instructions, examples, constraints
-- [ ] Format with proper escaping
+- [x] `PRODUCT_DEFINER_SYSTEM_PROMPT` - Product/ICP definition agent
+- [x] `CAMPAIGN_ADVISOR_SYSTEM_PROMPT` - Campaign strategy agent
+- [x] `CONTENT_GENERATOR_SYSTEM_PROMPT` - Marketing content agent
+- [x] `DISCOVERY_BOT_SYSTEM_PROMPT` - Customer discovery agent
+- [x] `PERFORMANCE_ANALYZER_SYSTEM_PROMPT` - Analytics agent
+- [x] Include instructions, examples, constraints
+- [x] Format with proper escaping
 
 ---
 
@@ -1311,11 +1311,11 @@ npm install ai @ai-sdk/openai zod
 - `backend/src/utils/streaming.ts`
 
 **Implementation Steps**:
-- [ ] `initSSE(res)` - Initialize SSE headers
-- [ ] `sendSSEMessage(res, data)` - Send data chunk
-- [ ] `closeSSE(res)` - Close connection
-- [ ] `streamToSSE(stream, res)` - Pipe AI stream to SSE
-- [ ] Handle connection close/error
+- [x] `initSSE(res)` - Initialize SSE headers
+- [x] `sendSSEMessage(res, data)` - Send data chunk
+- [x] `closeSSE(res)` - Close connection
+- [x] `streamToSSE(stream, res)` - Pipe AI stream to SSE
+- [x] Handle connection close/error
 
 ---
 
@@ -1325,12 +1325,12 @@ npm install ai @ai-sdk/openai zod
 - `backend/src/services/aiConversations.service.ts`
 
 **Implementation Steps**:
-- [ ] `createConversation(userId, teamId, agentType, contextId)` - Start conversation
-- [ ] `getConversation(conversationId, userId)` - Get conversation
-- [ ] `addMessage(conversationId, role, content)` - Add message to history
-- [ ] `getMessages(conversationId)` - Get message history
-- [ ] `updateConversationStatus(conversationId, status)` - Mark completed
-- [ ] `deleteConversation(conversationId)` - Archive conversation
+- [x] `createConversation(userId, teamId, agentType, contextId)` - Start conversation
+- [x] `getConversation(conversationId, userId)` - Get conversation
+- [x] `addMessage(conversationId, role, content)` - Add message to history
+- [x] `getMessages(conversationId)` - Get message history
+- [x] `updateConversationStatus(conversationId, status)` - Mark completed
+- [x] `deleteConversation(conversationId)` - Archive conversation
 
 ---
 
@@ -1351,8 +1351,8 @@ git commit -m "feat: Add AI agent foundation with streaming support"
 git push origin feature/ai-agent-foundation
 ```
 **Your Actions**:
-- [ ] Create PR #9: "AI Agent Foundation"
-- [ ] Merge to master
+- [x] Create PR #9: "AI Agent Foundation"
+- [x] Merge to master
 
 ---
 
@@ -1370,25 +1370,25 @@ git checkout -b feature/ai-product-definer
 - `backend/src/services/aiAgents/productDefiner.service.ts`
 
 **Implementation Steps**:
-- [ ] `startConversation(userId, teamId)` - Initialize product definition flow
-- [ ] `processMessage(conversationId, userMessage)` - Handle user input
-- [ ] Define tools/functions:
-  - [ ] `save_product(name, description, features, pricing, usps)`
-  - [ ] `save_icp(productId, demographics, firmographics, psychographics, behaviors)`
-  - [ ] `search_similar_products(query)` - Find examples
-- [ ] Implement conversation flow:
-  - [ ] Ask about product name and offering
-  - [ ] Ask about features and benefits
-  - [ ] Ask about pricing structure
-  - [ ] Ask about USPs vs competitors
-  - [ ] Transition to ICP questions
-  - [ ] Ask about demographics (age, location, job titles)
-  - [ ] Ask about firmographics (company size, industry)
-  - [ ] Ask about psychographics (pain points, goals)
-  - [ ] Ask about behaviors (buying triggers)
-  - [ ] Confirm with user before saving
-- [ ] Call vector database service to store embeddings
-- [ ] Stream responses to client
+- [x] `startConversation(userId, teamId)` - Initialize product definition flow
+- [x] `processMessage(conversationId, userMessage)` - Handle user input
+- [x] Define tools/functions:
+  - [x] `save_product(name, description, features, pricing, usps)`
+  - [x] `save_icp(productId, demographics, firmographics, psychographics, behaviors)`
+  - [x] `search_similar_products(query)` - Find examples
+- [x] Implement conversation flow:
+  - [x] Ask about product name and offering
+  - [x] Ask about features and benefits
+  - [x] Ask about pricing structure
+  - [x] Ask about USPs vs competitors
+  - [x] Transition to ICP questions
+  - [x] Ask about demographics (age, location, job titles)
+  - [x] Ask about firmographics (company size, industry)
+  - [x] Ask about psychographics (pain points, goals)
+  - [x] Ask about behaviors (buying triggers)
+  - [x] Confirm with user before saving
+- [x] Call vector database service to store embeddings
+- [x] Stream responses to client
 
 ---
 
@@ -1398,15 +1398,15 @@ git checkout -b feature/ai-product-definer
 - `backend/src/controllers/aiAgents.controller.ts`
 
 **Implementation Steps**:
-- [ ] POST `/api/v1/ai/product-definer/start` - Start conversation
+- [x] POST `/api/v1/ai/product-definer/start` - Start conversation
   - Create AIAgentConversation record
   - Return conversationId
-- [ ] POST `/api/v1/ai/product-definer/message` - Send message (streaming response)
+- [x] POST `/api/v1/ai/product-definer/message` - Send message (streaming response)
   - Accept conversationId and message
   - Call agent service
   - Stream AI response via SSE
   - Save messages to conversation history
-- [ ] POST `/api/v1/ai/product-definer/complete` - Finalize product/ICP
+- [x] POST `/api/v1/ai/product-definer/complete` - Finalize product/ICP
   - Mark conversation as completed
   - Return created product/ICP IDs
 
@@ -1420,9 +1420,9 @@ git checkout -b feature/ai-product-definer
 - `backend/src/index.ts`
 
 **Implementation Steps**:
-- [ ] Define AI agent routes with team access middleware
-- [ ] Mount under `/api/v1/ai`
-- [ ] Add rate limiting (100 requests/hour per user)
+- [x] Define AI agent routes with team access middleware
+- [x] Mount under `/api/v1/ai`
+- [x] Add rate limiting (100 requests/hour per user)
 
 ---
 
@@ -1445,8 +1445,8 @@ git commit -m "feat: Add Product & ICP Definer AI agent with conversational flow
 git push origin feature/ai-product-definer
 ```
 **Your Actions**:
-- [ ] Create PR #10: "AI Product Definer Agent"
-- [ ] Merge to master
+- [x] Create PR #10: "AI Product Definer Agent"
+- [x] Merge to master
 
 ---
 
@@ -1464,25 +1464,25 @@ git checkout -b feature/ai-campaign-advisor
 - `backend/src/services/aiAgents/campaignAdvisor.service.ts`
 
 **Implementation Steps**:
-- [ ] `startCampaignPlanning(userId, teamId, productId, icpId)` - Start conversation
-- [ ] `processMessage(conversationId, userMessage)` - Handle input
-- [ ] Define tools/functions:
-  - [ ] `get_product_and_icp(productId, icpId)` - Retrieve context
-  - [ ] `get_platform_demographics(platform)` - Platform data
-  - [ ] `calculate_budget_allocation(totalBudget, platforms, icp)` - Optimize
-  - [ ] `get_targeting_suggestions(platform, icp)` - Audience targeting
-  - [ ] `get_industry_benchmarks(industry, platform)` - CPL, CTR data
-  - [ ] `save_campaign_strategy(campaignData)` - Save plan
-- [ ] Implement conversation flow:
-  - [ ] Retrieve product and ICP from database
-  - [ ] Ask about campaign objectives
-  - [ ] Ask about total budget
-  - [ ] Ask about timeline
-  - [ ] Recommend platforms based on ICP
-  - [ ] Suggest budget allocation with rationale
-  - [ ] Provide targeting strategy
-  - [ ] Generate campaign brief
-- [ ] Store campaign strategy in vector DB
+- [x] `startCampaignPlanning(userId, teamId, productId, icpId)` - Start conversation
+- [x] `processMessage(conversationId, userMessage)` - Handle input
+- [x] Define tools/functions:
+  - [x] `get_product_and_icp(productId, icpId)` - Retrieve context
+  - [x] `get_platform_demographics(platform)` - Platform data
+  - [x] `calculate_budget_allocation(totalBudget, platforms, icp)` - Optimize
+  - [x] `get_targeting_suggestions(platform, icp)` - Audience targeting
+  - [x] `get_industry_benchmarks(industry, platform)` - CPL, CTR data
+  - [x] `save_campaign_strategy(campaignData)` - Save plan
+- [x] Implement conversation flow:
+  - [x] Retrieve product and ICP from database
+  - [x] Ask about campaign objectives
+  - [x] Ask about total budget
+  - [x] Ask about timeline
+  - [x] Recommend platforms based on ICP
+  - [x] Suggest budget allocation with rationale
+  - [x] Provide targeting strategy
+  - [x] Generate campaign brief
+- [x] Store campaign strategy in vector DB
 
 ---
 
@@ -1492,12 +1492,12 @@ git checkout -b feature/ai-campaign-advisor
 - `backend/src/data/platformDemographics.json`
 
 **Implementation Steps**:
-- [ ] Facebook demographics (age groups, interests)
-- [ ] LinkedIn demographics (job titles, industries, seniority)
-- [ ] Instagram demographics (age, interests, behaviors)
-- [ ] X demographics (interests, topics)
-- [ ] TikTok demographics (age groups, content types)
-- [ ] Industry benchmarks (CPL, CTR by industry/platform)
+- [x] Facebook demographics (age groups, interests)
+- [x] LinkedIn demographics (job titles, industries, seniority)
+- [x] Instagram demographics (age, interests, behaviors)
+- [x] X demographics (interests, topics)
+- [x] TikTok demographics (age groups, content types)
+- [v] Industry benchmarks (CPL, CTR by industry/platform)
 
 ---
 
@@ -1507,11 +1507,11 @@ git checkout -b feature/ai-campaign-advisor
 - `backend/src/services/aiAgents/campaignAdvisor.service.ts`
 
 **Implementation Steps**:
-- [ ] Score each platform for ICP match (0-100)
-- [ ] Factor in CPL benchmarks
-- [ ] Allocate budget proportionally to scores
-- [ ] Ensure minimum budget threshold per platform ($500)
-- [ ] Return allocation with rationale
+- [x] Score each platform for ICP match (0-100)
+- [x] Factor in CPL benchmarks
+- [x] Allocate budget proportionally to scores
+- [x] Ensure minimum budget threshold per platform ($500)
+- [x] Return allocation with rationale
 
 ---
 
@@ -1521,9 +1521,9 @@ git checkout -b feature/ai-campaign-advisor
 - `backend/src/routes/aiAgents.routes.ts`
 
 **Implementation Steps**:
-- [ ] POST `/api/v1/ai/campaign-advisor/start` - Start planning
-- [ ] POST `/api/v1/ai/campaign-advisor/message` - Continue conversation
-- [ ] POST `/api/v1/ai/campaign-advisor/export` - Export campaign plan (PDF/JSON)
+- [x] POST `/api/v1/ai/campaign-advisor/start` - Start planning
+- [x] POST `/api/v1/ai/campaign-advisor/message` - Continue conversation
+- [x] POST `/api/v1/ai/campaign-advisor/export` - Export campaign plan (PDF/JSON)
 
 ---
 
@@ -1546,8 +1546,8 @@ git commit -m "feat: Add Campaign Strategy Advisor AI agent"
 git push origin feature/ai-campaign-advisor
 ```
 **Your Actions**:
-- [ ] Create PR #11: "AI Campaign Advisor"
-- [ ] Merge to master
+- [x] Create PR #11: "AI Campaign Advisor"
+- [x] Merge to master
 
 ---
 
@@ -1565,26 +1565,26 @@ git checkout -b feature/ai-content-generator
 - `backend/src/services/aiAgents/contentGenerator.service.ts`
 
 **Implementation Steps**:
-- [ ] `generateAdCopy(productId, platform, variations)` - Create ad copy
+- [x] `generateAdCopy(productId, platform, variations)` - Create ad copy
   - Generate headlines (3-5 variations)
   - Generate body copy (3-5 variations)
   - Generate CTAs
   - Tailor to platform constraints (character limits)
-- [ ] `generateSocialPosts(productId, platform, count)` - Create social posts
+- [x] `generateSocialPosts(productId, platform, count)` - Create social posts
   - Facebook post format
   - LinkedIn article/post
   - Instagram caption with hashtags
   - X thread (multi-tweet)
   - TikTok video script
-- [ ] `generateLandingPageCopy(productId)` - Create landing page sections
+- [x] `generateLandingPageCopy(productId)` - Create landing page sections
   - Hero headline and subheading
   - Feature/benefit sections
   - Social proof framework
   - FAQ section
   - CTA sections
-- [ ] `generateImagePrompts(productId, concept)` - DALL-E prompts
-- [ ] `saveToContentLibrary(teamId, content, type)` - Store in database
-- [ ] Retrieve product details from vector DB for context
+- [x] `generateImagePrompts(productId, concept)` - DALL-E prompts
+- [x] `saveToContentLibrary(teamId, content, type)` - Store in database
+- [x] Retrieve product details from vector DB for context
 
 ---
 
@@ -1595,12 +1595,12 @@ git checkout -b feature/ai-content-generator
 - `backend/src/services/contentLibrary.service.ts` (new)
 
 **Implementation Steps**:
-- [ ] Add ContentLibrary model to schema (if not exists)
-- [ ] `saveContent(teamId, campaignId, contentType, content)` - Save
-- [ ] `listContent(teamId, filters)` - List with filters
-- [ ] `getContent(contentId, teamId)` - Get content
-- [ ] `updateContent(contentId, teamId, content)` - Edit
-- [ ] `deleteContent(contentId, teamId)` - Delete
+- [x] Add ContentLibrary model to schema (if not exists)
+- [x] `saveContent(teamId, campaignId, contentType, content)` - Save
+- [x] `listContent(teamId, filters)` - List with filters
+- [x] `getContent(contentId, teamId)` - Get content
+- [x] `updateContent(contentId, teamId, content)` - Edit
+- [x] `deleteContent(contentId, teamId)` - Delete
 
 ---
 
@@ -1610,15 +1610,15 @@ git checkout -b feature/ai-content-generator
 - `backend/src/routes/aiAgents.routes.ts`
 
 **Implementation Steps**:
-- [ ] POST `/api/v1/ai/content-generator/ad-copy` - Generate ad copy
+- [x] POST `/api/v1/ai/content-generator/ad-copy` - Generate ad copy
   - Body: { productId, platform, variations: 3 }
-- [ ] POST `/api/v1/ai/content-generator/social-posts` - Generate social posts
+- [x] POST `/api/v1/ai/content-generator/social-posts` - Generate social posts
   - Body: { productId, platform, count: 5 }
-- [ ] POST `/api/v1/ai/content-generator/landing-page` - Generate landing page
+- [x] POST `/api/v1/ai/content-generator/landing-page` - Generate landing page
   - Body: { productId }
-- [ ] POST `/api/v1/ai/content-generator/image-prompts` - Generate prompts
+- [x] POST `/api/v1/ai/content-generator/image-prompts` - Generate prompts
   - Body: { productId, concept: "professional headshot" }
-- [ ] POST `/api/v1/ai/content-generator/regenerate` - Request variations
+- [x] POST `/api/v1/ai/content-generator/regenerate` - Request variations
   - Body: { contentId, instruction: "make it more casual" }
 
 ---
@@ -1643,8 +1643,8 @@ git commit -m "feat: Add Content Generator AI agent for ads, social posts, landi
 git push origin feature-ai-content-generator
 ```
 **Your Actions**:
-- [ ] Create PR #12: "AI Content Generator"
-- [ ] Merge to master
+- [x] Create PR #12: "AI Content Generator"
+- [x] Merge to master
 
 ---
 
@@ -1662,31 +1662,31 @@ git checkout -b feature/ai-discovery-bot
 - `backend/src/services/aiAgents/discoveryBot.service.ts`
 
 **Implementation Steps**:
-- [ ] `startDiscoverySession(productId, leadData)` - Start discovery
+- [x] `startDiscoverySession(productId, leadData)` - Start discovery
   - Create Lead record
   - Create DiscoverySession record
   - Initialize conversation
-- [ ] `processMessage(sessionId, userMessage)` - Handle prospect input
+- [x] `processMessage(sessionId, userMessage)` - Handle prospect input
   - Use RAG to answer product questions
   - Ask discovery questions in sequence
   - Track responses
-- [ ] Define tools/functions:
-  - [ ] `search_product_info(query)` - Vector search for product details
-  - [ ] `search_faq(query)` - Find FAQ answers
-  - [ ] `calculate_qualification_score(responses)` - Score lead
-  - [ ] `generate_discovery_summary(transcript)` - Create summary
-  - [ ] `notify_sales_team(leadId, summary, score)` - Alert team
-- [ ] Implement discovery flow:
-  - [ ] Build rapport
-  - [ ] Answer product questions using RAG
-  - [ ] Ask: "What challenges are you facing with [problem]?"
-  - [ ] Ask: "What's your timeline for solving this?"
-  - [ ] Ask: "Who else is involved in this decision?"
-  - [ ] Ask: "What's your budget range?"
-  - [ ] Ask: "What have you tried before?"
-  - [ ] Calculate qualification score (0-100)
-  - [ ] Generate structured summary
-  - [ ] Notify sales team via Socket.io
+- [x] Define tools/functions:
+  - [x] `search_product_info(query)` - Vector search for product details
+  - [x] `search_faq(query)` - Find FAQ answers
+  - [x] `calculate_qualification_score(responses)` - Score lead
+  - [x] `generate_discovery_summary(transcript)` - Create summary
+  - [x] `notify_sales_team(leadId, summary, score)` - Alert team
+- [x] Implement discovery flow:
+  - [x] Build rapport
+  - [x] Answer product questions using RAG
+  - [x] Ask: "What challenges are you facing with [problem]?"
+  - [x] Ask: "What's your timeline for solving this?"
+  - [x] Ask: "Who else is involved in this decision?"
+  - [x] Ask: "What's your budget range?"
+  - [x] Ask: "What have you tried before?"
+  - [x] Calculate qualification score (0-100)
+  - [x] Generate structured summary
+  - [x] Notify sales team via Socket.io
 
 ---
 
@@ -1696,13 +1696,13 @@ git checkout -b feature/ai-discovery-bot
 - `backend/src/services/aiAgents/discoveryBot.service.ts`
 
 **Implementation Steps**:
-- [ ] Budget fit: 30 points (within range = 30, above = 20, below = 10)
-- [ ] Timeline: 25 points (urgent = 25, 1-3 months = 20, 3+ months = 10)
-- [ ] Decision maker: 20 points (is DM = 20, influences = 15, not involved = 5)
-- [ ] Problem fit: 15 points (perfect match = 15, partial = 10, poor = 5)
-- [ ] Prior attempts: 10 points (tried solutions = 10, first time = 5)
-- [ ] Total: 0-100 score
-- [ ] Classify: Hot (80+), Warm (60-79), Cold (<60)
+- [x] Budget fit: 30 points (within range = 30, above = 20, below = 10)
+- [x] Timeline: 25 points (urgent = 25, 1-3 months = 20, 3+ months = 10)
+- [x] Decision maker: 20 points (is DM = 20, influences = 15, not involved = 5)
+- [x] Problem fit: 15 points (perfect match = 15, partial = 10, poor = 5)
+- [x] Prior attempts: 10 points (tried solutions = 10, first time = 5)
+- [x] Total: 0-100 score
+- [x] Classify: Hot (80+), Warm (60-79), Cold (<60)
 
 ---
 
@@ -1713,14 +1713,14 @@ git checkout -b feature/ai-discovery-bot
 - `backend/src/routes/aiAgents.routes.ts`
 
 **Implementation Steps**:
-- [ ] POST `/api/v1/public/discovery/start` - Start discovery (NO AUTH)
+- [v] POST `/api/v1/public/discovery/start` - Start discovery (NO AUTH)
   - Body: { productId, name, email, phone }
   - Create Lead and DiscoverySession
   - Return sessionId
-- [ ] POST `/api/v1/public/discovery/message` - Send message (NO AUTH)
+- [x] POST `/api/v1/public/discovery/message` - Send message (NO AUTH)
   - Body: { sessionId, message }
   - Stream AI response via SSE
-- [ ] POST `/api/v1/public/discovery/complete` - End session (NO AUTH)
+- [x] POST `/api/v1/public/discovery/complete` - End session (NO AUTH)
   - Finalize discovery
   - Generate summary and score
   - Notify sales team
@@ -1746,253 +1746,744 @@ git checkout -b feature/ai-discovery-bot
 git add .
 git commit
 
-Here’s a new markdown document summarizing **remaining tasks** needed to complete the **MessageAI Sales PRD**, based on the current `messageai-sales-tasklist.md` file you provided.
-
----
-
-# messageai-sales-remaining-tasks.md
-
-## Overview
-
-The last task in the attached task list is **Task 9.5: Test Streaming Setup** under **PR #9: AI Agent Foundation & Streaming**.
-This establishes the foundation for real-time, streaming AI responses via the backend.
-
-The **next logical step** is to build the *AI agent endpoints* outlined in the PRD — such as the Product/ICP Definer, Campaign Advisor, Content Generator, Discovery Bot, and Performance Analyzer.
-These directly depend on the streaming and prompt infrastructure completed in PR #9.
-
----
-
-## Phase 3 (Continued): AI Agent Endpoints
-
-### PR #10: AI Agent - Product & ICP Definer
-
-#### Task 10.1: Create Product Definer Controller
-
-**Description**: Handles product definition conversations via AI.
-**Files Created**:
-
-* `backend/src/controllers/ai/productDefiner.controller.ts`
-
-**Implementation Steps**:
-
-* [ ] POST `/api/v1/ai/product-definer/start` – Start new conversation
-* [ ] POST `/api/v1/ai/product-definer/message` – Continue conversation
-* [ ] POST `/api/v1/ai/product-definer/complete` – Finalize and persist product
-* [ ] Use `PRODUCT_DEFINER_SYSTEM_PROMPT`
-* [ ] Stream responses using `streamToSSE()`
-
----
-
-#### Task 10.2: Create Product Definer Routes
-
-**Files Created**:
-
-* `backend/src/routes/ai/productDefiner.routes.ts`
-
-**Implementation Steps**:
-
-* [ ] Define REST endpoints under `/api/v1/ai/product-definer`
-* [ ] Use team access middleware
-* [ ] Validate session context (teamId, userId, product data)
-
----
-
-#### Task 10.3: Update Product Service Integration
-
-**Files Modified**:
-
-* `backend/src/services/products.service.ts`
-
-**Implementation Steps**:
-
-* [ ] Persist AI-generated product details
-* [ ] Vectorize and store key product fields (name, features, USPs)
-* [ ] Link to created ICP session if applicable
-
----
-
-#### Task 10.4: Test Product Definer Flow
-
-**Your Actions**:
-
-* [ ] Start conversation with sample input
-* [ ] Verify streaming responses
-* [ ] Finalize and store product
-* [ ] Confirm vector records created in Pinecone
-
----
-
-### PR #11: AI Agent - Campaign Strategy Advisor
-
-#### Task 11.1: Create Campaign Advisor Controller
-
-**Description**: AI-driven campaign strategy planner.
-**Files Created**:
-
-* `backend/src/controllers/ai/campaignAdvisor.controller.ts`
-
-**Implementation Steps**:
-
-* [ ] POST `/api/v1/ai/campaign-advisor/start`
-* [ ] POST `/api/v1/ai/campaign-advisor/message`
-* [ ] POST `/api/v1/ai/campaign-advisor/export`
-* [ ] Use `CAMPAIGN_ADVISOR_SYSTEM_PROMPT`
-* [ ] Generate and persist strategy summaries
-
----
-
-#### Task 11.2: Integrate with Campaign Service
-
-**Files Modified**:
-
-* `backend/src/services/campaigns.service.ts`
-
-**Implementation Steps**:
-
-* [ ] Store AI campaign recommendations (budget, platform, targeting)
-* [ ] Link to existing campaign record
-* [ ] Allow manual edits via dashboard
-
----
-
-#### Task 11.3: Test Campaign Strategy Flow
-
-**Your Actions**:
-
-* [ ] Start campaign advisor conversation
-* [ ] Verify recommendations saved correctly
-* [ ] Export plan and confirm valid JSON structure
-
----
-
-### PR #12: AI Agent - Content Generator
-
-#### Task 12.1: Create Content Generator Controller
-
-**Description**: Generates ad copy, social posts, and landing page content.
-**Files Created**:
-
-* `backend/src/controllers/ai/contentGenerator.controller.ts`
-
-**Implementation Steps**:
-
-* [ ] Implement endpoints per PRD:
-
-  * `/api/v1/ai/content-generator/ad-copy`
-  * `/api/v1/ai/content-generator/social-posts`
-  * `/api/v1/ai/content-generator/landing-page`
-  * `/api/v1/ai/content-generator/image-prompts`
-  * `/api/v1/ai/content-generator/regenerate`
-* [ ] Use `CONTENT_GENERATOR_SYSTEM_PROMPT`
-* [ ] Stream responses and persist in campaign creatives
-
----
-
-#### Task 12.2: Update Ad Creative Service
-
-**Files Modified**:
-
-* `backend/src/services/adCreatives.service.ts`
-
-**Implementation Steps**:
-
-* [ ] Add AI generation metadata (prompt version, generation date)
-* [ ] Store generated copy in vector database for retrieval
-* [ ] Add endpoint for regeneration history
-
----
-
-### PR #13: AI Agent - Discovery Bot (Public)
-
-#### Task 13.1: Create Discovery Bot Controller
-
-**Description**: Public-facing bot for customer discovery.
-**Files Created**:
-
-* `backend/src/controllers/ai/discoveryBot.controller.ts`
-
-**Implementation Steps**:
-
-* [ ] POST `/api/v1/public/discovery/start`
-* [ ] POST `/api/v1/public/discovery/message`
-* [ ] POST `/api/v1/public/discovery/complete`
-* [ ] Use `DISCOVERY_BOT_SYSTEM_PROMPT`
-* [ ] Handle unauthenticated context safely
-
----
-
-#### Task 13.2: Integrate Discovery Sessions
-
-**Files Modified**:
-
-* `backend/src/services/leads.service.ts`
-* `backend/src/services/discovery.service.ts` (new)
-
-**Implementation Steps**:
-
-* [ ] Store transcript and summary
-* [ ] Generate lead qualification score
-* [ ] Notify sales team via Socket.io event `lead_received`
-
 ---
 
 ### PR #14: AI Agent - Performance Analyzer
 
-#### Task 14.1: Create Performance Analyzer Controller
+#### Task 14.1: Create Performance Analyzer Service & Endpoints
 
-**Description**: Provides insights and optimization advice.
-**Files Created**:
+**Description**: AI agent that analyzes campaign performance and provides optimization recommendations
+**Files Created/Modified**:
 
-* `backend/src/controllers/ai/performanceAnalyzer.controller.ts`
+* `backend/src/services/aiAgents/performanceAnalyzer.service.ts` (new)
+* `backend/src/controllers/aiAgents.controller.ts` (modified - add endpoints)
+* `backend/src/routes/aiAgents.routes.ts` (modified - add routes)
 
-**Implementation Steps**:
+**Expanded Implementation Steps**:
 
-* [ ] Implement endpoints:
+**Service Layer** (`performanceAnalyzer.service.ts`):
+* [x] Create `analyzeCampaignPerformance(campaignId, teamId, timeRange)` function
+  - [x] Query CampaignMetric data for the campaign
+  - [x] Calculate KPIs: CTR, CPC, CPA, ROAS, ROI
+  - [x] Identify trends (week-over-week, month-over-month)
+  - [x] Compare against industry benchmarks
+  - [x] Generate insights using AI with PERFORMANCE_ANALYZER_SYSTEM_PROMPT
+  - [x] Return structured analysis with recommendations
 
-  * `/api/v1/ai/performance-analyzer/query`
-  * `/api/v1/ai/performance-analyzer/insights`
-  * `/api/v1/ai/performance-analyzer/optimize`
-* [ ] Use `PERFORMANCE_ANALYZER_SYSTEM_PROMPT`
-* [ ] Query campaign metrics data
-* [ ] Stream analytics responses
+#### Task 14.2: Optimization Recommendations
+* [x] Create `getOptimizationRecommendations(campaignId, teamId)` function
+  - [x] Analyze campaign performance metrics
+  - [x] Identify red flags (creative fatigue, poor CTR, high CPA)
+  - [x] Use AI to generate prioritized recommendations
+  - [x] Include predicted impact for each recommendation
+  - [x] Return actionable optimization steps
+
+#### Task 14.3: Compare Performance amongst campaigns
+* [x] Create `comparePerformance(campaignIds, teamId)` function
+  - [x] Query metrics for multiple campaigns
+  - [x] Calculate comparative metrics
+  - [x] Identify best and worst performers
+  - [x] Generate cross-campaign insights
+  - [x] Return comparison analysis
+
+#### Task 14.4: Generate Executive Summary
+* [x] Create `generateExecutiveSummary(teamId, timeRange)` function
+  - [x] Aggregate all campaign metrics for team
+  - [x] Calculate team-wide KPIs
+  - [x] Identify overall trends
+  - [x] Use AI to generate executive summary (3-5 key takeaways)
+  - [x] Return summary with high-level insights
+
+#### Task 14.5: Performance Analyzer Controller
+**Controller Layer** (`aiAgents.controller.ts`):
+* [x] Add `analyzeCampaignPerformance` endpoint
+  - POST `/api/v1/ai/performance-analyzer/analyze`
+  - Body: `{ campaignId, timeRange }`
+  - Returns: Detailed performance analysis
+
+#### Task 14.6: Optimizeation Recommendations route
+* [x] Add `getOptimizationRecommendations` endpoint
+  - POST `/api/v1/ai/performance-analyzer/optimize`
+  - Body: `{ campaignId }`
+  - Returns: Prioritized optimization recommendations
+
+#### Task 14.7: Compare campaigns route
+* [x] Add `compareMultipleCampaigns` endpoint
+  - POST `/api/v1/ai/performance-analyzer/compare`
+  - Body: `{ campaignIds }`
+  - Returns: Comparative analysis
+
+#### Task 14.8: Get Executive Summary Route
+* [x] Add `getExecutiveSummary` endpoint
+  - POST `/api/v1/ai/performance-analyzer/summary`
+  - Body: `{ timeRange }` (optional)
+  - Returns: Executive summary for all campaigns
+
+#### Task 14.9: Performance Analyzer Controller
+**Routes Layer** (`aiAgents.routes.ts`):
+* [x] Mount Performance Analyzer routes under `/api/v1/ai/performance-analyzer/`
+* [x] Add authentication middleware (requires team access)
+* [x] Add route handlers for all 4 endpoints
+
+#### Task 14.10: Performance Analyzer Controller
+**Additional Requirements**:
+* [x] Use `PERFORMANCE_ANALYZER_SYSTEM_PROMPT` from utils/prompts.ts
+* [x] Query CampaignMetric model for performance data
+* [x] Calculate standard metrics (CTR, CPC, CPA, ROAS)
+* [x] Include industry benchmarks for context
+* [x] Stream AI responses for real-time insights (optional)
+* [x] Handle edge cases (no data, insufficient data for analysis)
+
+**Your Actions**:
+- [x] Create PR #14: "Campaign Performance Analyzer"
+- [x] Merge to master
 
 ---
 
 ### PR #15: Frontend Integration - React Native & Dashboard
 
-#### Task 15.1: Extend Mobile Frontend (Expo)
+**Description**: Comprehensive mobile frontend integration for all 5 AI agents with state management, API integration, SSE streaming, and real-time updates.
 
-**Files Modified**:
+**Git Actions**:
+```bash
+git checkout master && git pull
+git checkout -b feature/mobile-ai-agents
+```
 
-* `mobile/app/(tabs)/leads.tsx`
-* `mobile/app/(tabs)/campaigns.tsx`
-* `mobile/app/ai-agents/` (various)
+---
+
+#### Task 15.1: Create AI Agent API Client & Types
+
+**Description**: Set up API client functions and TypeScript types for all AI agent endpoints
+
+**Files Created**:
+* `mobile/lib/aiAgentsAPI.ts` - API client with all 20 AI agent endpoints
+* `mobile/types/aiAgents.ts` - TypeScript interfaces for AI agents
 
 **Implementation Steps**:
 
-* [ ] Add new AI agent chat screens (product, campaign, content, discovery, analyzer)
-* [ ] Implement streaming message components
-* [ ] Integrate Socket.io for real-time lead updates
+**API Client Functions** (`aiAgentsAPI.ts`):
+* [ ] **Product Definer API**
+  - [ ] `startProductDefinerConversation()` - POST /ai/product-definer/start
+  - [ ] `sendProductDefinerMessage()` - POST /ai/product-definer/message (returns EventSource for SSE)
+  - [ ] `completeProductDefinerConversation()` - POST /ai/product-definer/complete
+  - [ ] `getProductDefinerStatus()` - GET /ai/product-definer/status/:id
+
+* [ ] **Campaign Advisor API**
+  - [ ] `startCampaignAdvisorConversation(productId, icpId)` - POST /ai/campaign-advisor/start
+  - [ ] `sendCampaignAdvisorMessage()` - POST /ai/campaign-advisor/message (SSE)
+  - [ ] `completeCampaignAdvisorConversation()` - POST /ai/campaign-advisor/complete
+  - [ ] `getCampaignAdvisorStatus()` - GET /ai/campaign-advisor/status/:id
+
+* [ ] **Content Generator API**
+  - [ ] `generateAdCopy(productId, platform, variations, saveToLibrary)` - POST /ai/content-generator/ad-copy
+  - [ ] `generateSocialPosts(productId, platform, count, saveToLibrary)` - POST /ai/content-generator/social-posts
+  - [ ] `generateLandingPage(productId, saveToLibrary)` - POST /ai/content-generator/landing-page
+  - [ ] `generateImagePrompts(productId, concept, count, saveToLibrary)` - POST /ai/content-generator/image-prompts
+  - [ ] `regenerateContent(contentId, instruction, saveToLibrary)` - POST /ai/content-generator/regenerate
+
+* [ ] **Performance Analyzer API**
+  - [ ] `analyzeCampaignPerformance(campaignId, timeRange)` - POST /ai/performance-analyzer/analyze
+  - [ ] `getOptimizationRecommendations(campaignId)` - POST /ai/performance-analyzer/optimize
+  - [ ] `compareMultipleCampaigns(campaignIds)` - POST /ai/performance-analyzer/compare
+  - [ ] `getExecutiveSummary(timeRange)` - POST /ai/performance-analyzer/summary
+
+**TypeScript Types** (`types/aiAgents.ts`):
+* [ ] Define conversation types: `AgentConversation`, `ConversationStatus`, `AgentType`
+* [ ] Define message types: `AgentMessage`, `MessageRole`, `MessageMetadata`
+* [ ] Define Product Definer types: `ProductData`, `ICPData`, `ProductDefinerSummary`
+* [ ] Define Campaign Advisor types: `CampaignData`, `CampaignStrategy`, `CampaignAdvisorSummary`
+* [ ] Define Content Generator types: `AdCopyResult`, `SocialPostsResult`, `LandingPageResult`, `ImagePromptsResult`, `ContentType`, `Platform`
+* [ ] Define Performance Analyzer types: `PerformanceAnalysis`, `OptimizationRecommendations`, `CampaignComparison`, `ExecutiveSummary`, `TimeRange`, `PerformanceMetrics`, `Benchmark`
+* [ ] Define SSE types: `SSEEvent`, `SSEMessageData`, `SSEErrorData`
 
 ---
 
-#### Task 15.2: Test End-to-End Sales Funnel
+#### Task 15.2: Create AI Agent State Management (Kea Stores)
+
+**Description**: Create Kea logic stores for AI agent state management
+
+**Files Created**:
+* `mobile/store/aiAgents/productDefiner.ts` - Product Definer state
+* `mobile/store/aiAgents/campaignAdvisor.ts` - Campaign Advisor state
+* `mobile/store/aiAgents/contentGenerator.ts` - Content Generator state
+* `mobile/store/aiAgents/performanceAnalyzer.ts` - Performance Analyzer state
+* `mobile/store/aiAgents/index.ts` - Barrel export
+
+**Implementation Steps**:
+
+**Product Definer Store** (`productDefiner.ts`):
+* [ ] **State**:
+  - [ ] `conversations: Record<string, AgentConversation>` - Active conversations
+  - [ ] `messages: Record<string, AgentMessage[]>` - Messages by conversation ID
+  - [ ] `currentConversationId: string | null` - Selected conversation
+  - [ ] `isStreaming: boolean` - SSE streaming status
+  - [ ] `streamingMessage: string` - Accumulating streamed text
+  - [ ] `isLoading: boolean` - API loading state
+  - [ ] `error: string | null` - Error message
+
+* [ ] **Actions**:
+  - [ ] `startConversation()` - Create new conversation
+  - [ ] `sendMessage(conversationId, message)` - Send message and handle SSE stream
+  - [ ] `appendStreamChunk(chunk)` - Accumulate SSE chunks
+  - [ ] `completeStream()` - Finalize streamed message
+  - [ ] `completeConversation(conversationId)` - Mark conversation complete
+  - [ ] `loadConversationStatus(conversationId)` - Fetch status
+  - [ ] `clearError()` - Reset error state
+  - [ ] `resetConversation()` - Clear current conversation
+
+* [ ] **Listeners**:
+  - [ ] `startConversation` → Call API, update state
+  - [ ] `sendMessage` → Open SSE connection, stream chunks, save final message
+  - [ ] `completeConversation` → Call API, get summary (productId, icpId)
+
+* [ ] **Selectors**:
+  - [ ] `getCurrentConversation()` - Get active conversation
+  - [ ] `getMessagesForConversation(id)` - Get conversation messages
+  - [ ] `isConversationComplete()` - Check if conversation finished
+  - [ ] `hasSavedProduct()` - Check if product was created
+
+**Campaign Advisor Store** (`campaignAdvisor.ts`):
+* [ ] **State**: Same structure as Product Definer + `productId`, `icpId`
+* [ ] **Actions**: `startConversation(productId, icpId)`, `sendMessage()`, `completeConversation()`
+* [ ] **Listeners**: Handle SSE streaming, save campaignId on completion
+* [ ] **Selectors**: `getCampaignId()`, `hasCreatedCampaign()`
+
+**Content Generator Store** (`contentGenerator.ts`):
+* [ ] **State**:
+  - [ ] `generatedContent: Record<string, any>` - Generated content by type
+  - [ ] `isGenerating: boolean` - Generation in progress
+  - [ ] `selectedPlatform: Platform | null` - Target platform
+  - [ ] `savedContentIds: string[]` - Saved content IDs
+  - [ ] `error: string | null`
+
+* [ ] **Actions**:
+  - [ ] `generateAdCopy(productId, platform, variations, saveToLibrary)`
+  - [ ] `generateSocialPosts(productId, platform, count, saveToLibrary)`
+  - [ ] `generateLandingPage(productId, saveToLibrary)`
+  - [ ] `generateImagePrompts(productId, concept, count, saveToLibrary)`
+  - [ ] `regenerateContent(contentId, instruction, saveToLibrary)`
+  - [ ] `clearGeneratedContent()`
+
+* [ ] **Listeners**: Call respective APIs, store results
+* [ ] **Selectors**: `getContentByType()`, `hasGeneratedContent()`, `getSavedContentIds()`
+
+**Performance Analyzer Store** (`performanceAnalyzer.ts`):
+* [ ] **State**:
+  - [ ] `analysis: PerformanceAnalysis | null` - Campaign analysis
+  - [ ] `recommendations: OptimizationRecommendations | null` - Optimization tips
+  - [ ] `comparison: CampaignComparison | null` - Multi-campaign comparison
+  - [ ] `executiveSummary: ExecutiveSummary | null` - Team summary
+  - [ ] `selectedCampaignId: string | null`
+  - [ ] `selectedTimeRange: TimeRange | null`
+  - [ ] `isAnalyzing: boolean`
+  - [ ] `error: string | null`
+
+* [ ] **Actions**:
+  - [ ] `analyzeCampaign(campaignId, timeRange)`
+  - [ ] `getRecommendations(campaignId)`
+  - [ ] `compareCampaigns(campaignIds)`
+  - [ ] `getExecutiveSummary(timeRange)`
+  - [ ] `setSelectedCampaign(campaignId)`
+  - [ ] `setTimeRange(timeRange)`
+  - [ ] `clearAnalysis()`
+
+* [ ] **Listeners**: Call APIs, store results with error handling
+* [ ] **Selectors**: `getCurrentAnalysis()`, `getRedFlags()`, `getBestPerformers()`, `getWorstPerformers()`
+
+---
+
+#### Task 15.3: Create SSE Streaming Hook
+
+**Description**: Reusable hook for Server-Sent Events streaming
+
+**Files Created**:
+* `mobile/hooks/useSSEStream.ts` - SSE streaming hook
+
+**Implementation Steps**:
+* [ ] Create `useSSEStream()` hook with:
+  - [ ] `startStream(url, options)` - Initiate SSE connection
+  - [ ] `stopStream()` - Close connection
+  - [ ] `isStreaming` - Connection status
+  - [ ] `streamedText` - Accumulated text chunks
+  - [ ] `error` - Connection error
+  - [ ] Event handlers: `onMessage`, `onError`, `onComplete`
+* [ ] Handle EventSource API for SSE
+* [ ] Parse SSE event format: `event: message\ndata: {...}\n\n`
+* [ ] Handle errors and reconnection
+* [ ] Auto-cleanup on unmount
+
+---
+
+#### Task 15.4: Create AI Agent Custom Hooks
+
+**Description**: High-level hooks combining state + API + SSE
+
+**Files Created**:
+* `mobile/hooks/useProductDefiner.ts`
+* `mobile/hooks/useCampaignAdvisor.ts`
+* `mobile/hooks/useContentGenerator.ts`
+* `mobile/hooks/usePerformanceAnalyzer.ts`
+
+**Implementation Steps**:
+
+**useProductDefiner Hook**:
+* [ ] Export methods:
+  - [ ] `startConversation()` - Create new session
+  - [ ] `sendMessage(message)` - Send with SSE streaming
+  - [ ] `completeConversation()` - Finalize and get productId/icpId
+  - [ ] `loadStatus(conversationId)` - Check status
+* [ ] Return state: `conversation`, `messages`, `isStreaming`, `streamingMessage`, `isLoading`, `error`, `summary`
+* [ ] Integrate with Kea store + useSSEStream hook
+
+**useCampaignAdvisor Hook**:
+* [ ] Export methods: `startConversation(productId, icpId)`, `sendMessage()`, `completeConversation()`
+* [ ] Return state: `conversation`, `messages`, `isStreaming`, `campaignId`, `isLoading`, `error`
+
+**useContentGenerator Hook**:
+* [ ] Export methods: `generateAdCopy()`, `generateSocialPosts()`, `generateLandingPage()`, `generateImagePrompts()`, `regenerateContent()`
+* [ ] Return state: `generatedContent`, `isGenerating`, `savedContentIds`, `error`
+
+**usePerformanceAnalyzer Hook**:
+* [ ] Export methods: `analyzeCampaign()`, `getRecommendations()`, `compareCampaigns()`, `getExecutiveSummary()`
+* [ ] Return state: `analysis`, `recommendations`, `comparison`, `executiveSummary`, `isAnalyzing`, `error`
+
+---
+
+#### Task 15.5: Create AI Agent Screens (Expo Router)
+
+**Description**: Create screen components for all AI agents
+
+**Files Created**:
+* `mobile/app/ai-agents/_layout.tsx` - AI agents layout wrapper
+* `mobile/app/ai-agents/product-definer.tsx` - Product definition chat
+* `mobile/app/ai-agents/campaign-advisor.tsx` - Campaign planning chat
+* `mobile/app/ai-agents/content-generator.tsx` - Content generation screen
+* `mobile/app/ai-agents/performance-analyzer.tsx` - Analytics dashboard
+
+**Implementation Steps**:
+
+**Layout** (`_layout.tsx`):
+* [ ] Create Stack navigator for AI agent screens
+* [ ] Add header with back button
+* [ ] Common styling for agent screens
+
+**Product Definer Screen** (`product-definer.tsx`):
+* [ ] Use `useProductDefiner()` hook
+* [ ] Display conversation messages (user + assistant)
+* [ ] Show streaming indicator when AI is responding
+* [ ] Input area for user messages
+* [ ] "Start New Conversation" button
+* [ ] "Complete & Save Product" button
+* [ ] Show success modal with productId/icpId on completion
+* [ ] Handle errors gracefully
+
+**Campaign Advisor Screen** (`campaign-advisor.tsx`):
+* [ ] Accept productId + icpId as route params or from context
+* [ ] Use `useCampaignAdvisor()` hook
+* [ ] Similar chat UI as Product Definer
+* [ ] Show campaign details on completion (budget, platforms, dates)
+* [ ] "View Campaign" button → Navigate to campaign details
+
+**Content Generator Screen** (`content-generator.tsx`):
+* [ ] Use `useContentGenerator()` hook
+* [ ] **Tab-based UI** with 4 tabs:
+  - [ ] Ad Copy tab - Form: select platform, variations count, generate button
+  - [ ] Social Posts tab - Form: platform, count, generate
+  - [ ] Landing Page tab - Generate button (no options)
+  - [ ] Image Prompts tab - Form: concept input, count, generate
+* [ ] Display generated content in readable format
+* [ ] "Save to Library" toggle
+* [ ] "Regenerate" button with instruction input
+* [ ] Copy to clipboard functionality
+* [ ] Show character limits per platform
+
+**Performance Analyzer Screen** (`performance-analyzer.tsx`):
+* [ ] Use `usePerformanceAnalyzer()` hook
+* [ ] **4 Sections** (scrollable):
+  1. **Campaign Analysis**:
+     - [ ] Campaign selector dropdown
+     - [ ] Time range picker (last 7/30/90 days, custom)
+     - [ ] "Analyze" button
+     - [ ] Display: KPIs (CTR, CPC, CPA, ROAS), trends, insights, benchmarks
+  2. **Optimization Recommendations**:
+     - [ ] Campaign selector
+     - [ ] "Get Recommendations" button
+     - [ ] Display: Red flags list, prioritized recommendations with impact/effort
+  3. **Campaign Comparison**:
+     - [ ] Multi-select for 2-5 campaigns
+     - [ ] "Compare" button
+     - [ ] Display: Comparison table, rankings, insights
+  4. **Executive Summary**:
+     - [ ] Time range picker
+     - [ ] "Generate Summary" button
+     - [ ] Display: Team-wide KPIs, key takeaways
+* [ ] Charts for metrics visualization (optional - use react-native-chart-kit)
+* [ ] Export summary functionality
+
+---
+
+#### Task 15.6: Create Reusable AI Components
+
+**Description**: Shared components for AI agent screens
+
+**Files Created**:
+* `mobile/components/ai/StreamingMessage.tsx` - Animated streaming text
+* `mobile/components/ai/MessageBubble.tsx` - AI/user message bubble
+* `mobile/components/ai/AgentTypingIndicator.tsx` - "AI is thinking..."
+* `mobile/components/ai/ConversationList.tsx` - List of agent conversations
+* `mobile/components/ai/PlatformSelector.tsx` - Platform picker dropdown
+* `mobile/components/ai/TimeRangePicker.tsx` - Date range selector
+* `mobile/components/ai/MetricsCard.tsx` - Display KPI card
+* `mobile/components/ai/RecommendationCard.tsx` - Optimization recommendation card
+
+**Implementation Steps**:
+
+**StreamingMessage Component**:
+* [ ] Props: `text`, `isStreaming`, `onComplete`
+* [ ] Animated typing effect (cursor blinking)
+* [ ] Markdown rendering for formatted text
+* [ ] Auto-scroll to bottom as text streams
+
+**MessageBubble Component**:
+* [ ] Props: `message`, `role` (user | assistant), `timestamp`, `metadata`
+* [ ] Different styling for user vs AI messages
+* [ ] Show timestamp on tap
+* [ ] Support for tool call indicators (e.g., "Saved product: ProductName")
+
+**AgentTypingIndicator Component**:
+* [ ] Animated dots or "AI is typing..." text
+* [ ] Show agent icon/avatar
+* [ ] Pulsing animation
+
+**PlatformSelector Component**:
+* [ ] Props: `selectedPlatform`, `onSelect`, `platforms` array
+* [ ] Dropdown or radio buttons for platforms
+* [ ] Show platform icons (Facebook, LinkedIn, Instagram, TikTok, X, Google)
+
+**MetricsCard Component**:
+* [ ] Props: `label`, `value`, `unit`, `trend`, `benchmark`
+* [ ] Display metric with label (e.g., "CTR: 2.5%")
+* [ ] Show trend indicator (↑ +15% vs last period)
+* [ ] Color-coded: green (good), yellow (average), red (below benchmark)
+
+**RecommendationCard Component**:
+* [ ] Props: `recommendation` (title, description, priority, impact, effort)
+* [ ] Priority badge (High, Medium, Low)
+* [ ] Impact/effort indicators
+* [ ] Expandable details section
+
+---
+
+#### Task 15.7: Add AI Agents Tab to Main Navigation
+
+**Description**: Add AI Agents tab to bottom navigation
+
+**Files Modified**:
+* `mobile/app/(tabs)/_layout.tsx` - Add AI Agents tab
+
+**Implementation Steps**:
+* [ ] Add "AI Agents" tab to bottom tabs (icon: sparkles/robot)
+* [ ] Create `mobile/app/(tabs)/ai-agents.tsx` - AI Agents home screen
+* [ ] Display 5 agent cards:
+  - [ ] Product Definer card → Navigate to product-definer screen
+  - [ ] Campaign Advisor card → Navigate to campaign-advisor screen
+  - [ ] Content Generator card → Navigate to content-generator screen
+  - [ ] Performance Analyzer card → Navigate to performance-analyzer screen
+  - [ ] Discovery Bot card → Info only (public-facing, not user-initiated)
+* [ ] Each card shows: Icon, name, description, "Start" button
+* [ ] Show recent conversations list below cards
+
+---
+
+#### Task 15.8: Integrate Leads Tab with Discovery Bot
+
+**Description**: Connect Leads screen to Discovery Bot sessions
+
+**Files Modified**:
+* `mobile/app/(tabs)/leads.tsx` - Add Discovery Bot integration
+
+**Implementation Steps**:
+* [ ] Create `mobile/hooks/useLeads.ts` hook
+* [ ] Fetch leads from `/api/v1/leads` endpoint
+* [ ] Display lead list with:
+  - [ ] Lead name, email, company
+  - [ ] Lead score/status badge (hot, warm, cold, qualified, unqualified)
+  - [ ] Source indicator
+  - [ ] Tap → Navigate to lead details
+* [ ] Lead details screen:
+  - [ ] Lead contact info
+  - [ ] Discovery session summary (from Discovery Bot)
+  - [ ] Lead activities timeline
+  - [ ] "Claim Lead" button (if unclaimed)
+  - [ ] "Add Activity" button
+  - [ ] "Update Status" dropdown
+* [ ] Real-time lead updates via Socket.io:
+  - [ ] Listen for `new_lead` event
+  - [ ] Show notification banner
+  - [ ] Update leads list automatically
+
+---
+
+#### Task 15.9: Integrate Campaigns Tab with AI Agents
+
+**Description**: Connect Campaigns screen to Campaign Advisor and Performance Analyzer
+
+**Files Modified**:
+* `mobile/app/(tabs)/campaigns.tsx` - Add AI agent integrations
+
+**Implementation Steps**:
+* [ ] Create `mobile/hooks/useCampaigns.ts` hook
+* [ ] Fetch campaigns from `/api/v1/campaigns` endpoint
+* [ ] Display campaign list with:
+  - [ ] Campaign name, status, platforms
+  - [ ] Budget, dates, metrics preview
+  - [ ] Tap → Navigate to campaign details
+* [ ] Campaign details screen:
+  - [ ] Campaign info (name, description, budget, dates, platforms)
+  - [ ] Quick metrics (impressions, clicks, conversions, spend)
+  - [ ] "Analyze Performance" button → Open Performance Analyzer with this campaign
+  - [ ] "Get Recommendations" button → Open Performance Analyzer recommendations
+  - [ ] "Edit Campaign" button
+  - [ ] Ad Creatives list
+  - [ ] Leads generated from this campaign
+* [ ] "Create Campaign" button → Navigate to Campaign Advisor
+
+---
+
+#### Task 15.10: Add Socket.io Events for AI Agents
+
+**Description**: Extend Socket.io integration for real-time AI updates
+
+**Files Modified**:
+* `mobile/lib/socket.ts` - Add AI agent events
+
+**Implementation Steps**:
+* [ ] **Events to Listen**:
+  - [ ] `new_lead` - New lead from Discovery Bot
+  - [ ] `lead_qualified` - Lead reached qualification threshold
+  - [ ] `campaign_created` - Campaign created by Campaign Advisor
+  - [ ] `content_generated` - Content ready from Content Generator
+  - [ ] `analysis_complete` - Performance analysis finished
+* [ ] **Event Handlers**:
+  - [ ] `onNewLead(lead)` - Update leads store, show notification
+  - [ ] `onLeadQualified(lead)` - Update lead status, notify user
+  - [ ] `onCampaignCreated(campaign)` - Update campaigns store, show success
+  - [ ] `onContentGenerated(content)` - Update content store, notify completion
+  - [ ] `onAnalysisComplete(analysis)` - Update analyzer store, show results
+* [ ] Integrate handlers with Kea stores
+* [ ] Show in-app notifications for events
+
+---
+
+#### Task 15.11: Add Products & ICPs Management
+
+**Description**: Create screens for managing products and ICPs
+
+**Files Created**:
+* `mobile/app/products/index.tsx` - Products list screen
+* `mobile/app/products/[id].tsx` - Product details screen
+* `mobile/app/icps/index.tsx` - ICPs list screen
+* `mobile/app/icps/[id].tsx` - ICP details screen
+* `mobile/hooks/useProducts.ts` - Products hook
+* `mobile/hooks/useICPs.ts` - ICPs hook
+
+**Implementation Steps**:
+
+**Products List Screen**:
+* [ ] Fetch products from `/api/v1/products`
+* [ ] Display product cards (name, description, pricing, USPs)
+* [ ] "Create with AI" button → Navigate to Product Definer
+* [ ] Tap product → Navigate to product details
+
+**Product Details Screen**:
+* [ ] Display full product info
+* [ ] Edit product form
+* [ ] Delete product button
+* [ ] "Create Campaign" button → Navigate to Campaign Advisor with this product
+* [ ] "Generate Content" button → Navigate to Content Generator with this product
+* [ ] Associated ICPs list
+
+**ICPs Management**:
+* [ ] Similar structure to products
+* [ ] Display ICP demographics, pain points, preferred channels
+* [ ] Link ICPs to products
+
+---
+
+#### Task 15.12: Add Content Library Screen
+
+**Description**: Screen for viewing and managing generated content
+
+**Files Created**:
+* `mobile/app/content-library/index.tsx` - Content library screen
+* `mobile/hooks/useContentLibrary.ts` - Content library hook
+
+**Implementation Steps**:
+* [ ] Fetch content from `/api/v1/content-library` endpoint (needs to be created in backend)
+* [ ] Filter by content type (ad_copy, social_post, landing_page, image_prompt)
+* [ ] Filter by platform
+* [ ] Filter by product/campaign
+* [ ] Display content cards with preview
+* [ ] Tap → Full content view with:
+  - [ ] Full text/content
+  - [ ] Copy to clipboard button
+  - [ ] "Regenerate" button → Open Content Generator regeneration
+  - [ ] Share button
+  - [ ] Delete button
+
+---
+
+#### Task 15.13: Add Error Handling & Loading States
+
+**Description**: Comprehensive error handling for AI agent interactions
+
+**Implementation Steps**:
+* [ ] Create `mobile/components/ai/ErrorBoundary.tsx` for AI screens
+* [ ] Create `mobile/components/ai/LoadingState.tsx` - Skeleton loaders
+* [ ] Handle API errors:
+  - [ ] 401 Unauthorized → Redirect to login
+  - [ ] 429 Rate Limit → Show rate limit message (100 req/hr)
+  - [ ] 500 Server Error → Show retry button
+  - [ ] Network error → Show offline message
+* [ ] Handle SSE errors:
+  - [ ] Connection failure → Retry logic
+  - [ ] Stream timeout → Show timeout message
+  - [ ] Parse errors → Fallback to plain text
+* [ ] Show loading indicators during API calls
+* [ ] Show "AI is thinking..." during streaming
+* [ ] Empty states for no data scenarios
+
+---
+
+#### Task 15.14: Add Offline Support for AI Agents
+
+**Description**: Queue AI requests when offline
+
+**Implementation Steps**:
+* [ ] Extend SQLite database with `ai_agent_queue` table
+* [ ] Queue AI requests when offline:
+  - [ ] Store conversation messages locally
+  - [ ] Mark as "pending sync"
+  - [ ] Show offline indicator
+* [ ] Process queue on reconnection:
+  - [ ] Send queued messages in order
+  - [ ] Update local state with server responses
+  - [ ] Handle conflicts
+* [ ] Cache generated content locally
+* [ ] Cache campaign analysis for offline viewing
+
+---
+
+#### Task 15.15: Commit and Create PR #15
+
+**Git Actions**:
+```bash
+git add .
+git commit -m "feat: Add comprehensive mobile frontend for AI agents
+
+Implemented mobile frontend integration for all 5 AI agents:
+- Product Definer: Conversational product/ICP definition with SSE streaming
+- Campaign Advisor: AI-powered campaign planning with budget optimization
+- Content Generator: Multi-platform content generation (ad copy, social posts, landing pages, image prompts)
+- Performance Analyzer: Campaign analytics with KPIs, recommendations, comparisons, executive summaries
+- Discovery Bot: Lead qualification integration with real-time updates
+
+Features:
+- 20 API client functions for all AI endpoints
+- 4 Kea stores for state management (productDefiner, campaignAdvisor, contentGenerator, performanceAnalyzer)
+- 4 custom hooks with SSE streaming support
+- 8 new screens (AI agents hub, 4 agent screens, products, ICPs, content library)
+- 8 reusable AI components (StreamingMessage, MessageBubble, MetricsCard, etc.)
+- Socket.io integration for real-time AI events (new_lead, campaign_created, analysis_complete)
+- Comprehensive error handling and loading states
+- Offline support with request queueing
+
+Navigation:
+- Added AI Agents tab to bottom navigation
+- Integrated with Leads tab (Discovery Bot sessions)
+- Integrated with Campaigns tab (Campaign Advisor + Performance Analyzer)
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+git push origin feature/mobile-ai-agents
+```
+
+**Your Actions**:
+* [ ] Create PR #15: "Mobile AI Agents Frontend Integration"
+* [ ] Merge to master
+
+---
+
+#### Task 15.16: Test End-to-End Sales Funnel
 
 **Your Actions**:
 
-* [ ] Trigger lead webhook → verify DB record
-* [ ] Run AI product definition → generate campaign → content → discovery flow
-* [ ] Verify insights and recommendations appear in dashboard
-* [ ] Confirm notifications fire correctly across sockets
+**1. Test Product Definition Flow**:
+* [ ] Open Product Definer screen
+* [ ] Start conversation, provide product details
+* [ ] Verify SSE streaming works (text appears character-by-character)
+* [ ] Complete conversation, verify productId saved
+* [ ] Check product appears in Products list
+
+**2. Test Campaign Planning Flow**:
+* [ ] Open Campaign Advisor with productId
+* [ ] Chat about campaign strategy
+* [ ] Verify AI suggests platforms, budget, targeting
+* [ ] Complete conversation, verify campaignId saved
+* [ ] Check campaign appears in Campaigns list
+
+**3. Test Content Generation**:
+* [ ] Open Content Generator with productId
+* [ ] Generate ad copy for Facebook (3 variations)
+* [ ] Verify character limits respected
+* [ ] Generate social posts for LinkedIn (5 posts)
+* [ ] Generate landing page copy
+* [ ] Generate image prompts
+* [ ] Verify "Save to Library" creates content records
+* [ ] Test regeneration with instruction
+
+**4. Test Performance Analysis**:
+* [ ] Create test campaign metrics (seed database)
+* [ ] Open Performance Analyzer
+* [ ] Analyze campaign, verify KPIs calculated correctly (CTR, CPC, CPA, ROAS)
+* [ ] Check benchmarks displayed
+* [ ] Get optimization recommendations, verify red flags identified
+* [ ] Compare 2-3 campaigns, verify rankings
+* [ ] Generate executive summary for team
+
+**5. Test Discovery Bot Integration**:
+* [ ] Trigger test webhook to create lead
+* [ ] Verify lead appears in Leads tab in real-time (Socket.io event)
+* [ ] Open lead details, check Discovery Bot session summary
+* [ ] Verify lead score displayed correctly
+* [ ] Test claim lead functionality
+* [ ] Add activity to lead
+
+**6. Test Real-time Updates**:
+* [ ] Keep app open while triggering webhook
+* [ ] Verify `new_lead` Socket event fires
+* [ ] Check notification appears
+* [ ] Verify leads list updates automatically
+* [ ] Test in background mode (push notifications)
+
+**7. Test Offline Mode**:
+* [ ] Enable airplane mode
+* [ ] Send message to Product Definer
+* [ ] Verify message queued locally
+* [ ] Re-enable network
+* [ ] Verify message sent automatically
+* [ ] Check response received
+
+**8. Test Error Scenarios**:
+* [ ] Trigger rate limit (100+ requests/hour)
+* [ ] Verify rate limit message displayed
+* [ ] Test invalid authentication (expired token)
+* [ ] Verify auto token refresh
+* [ ] Test server error (500)
+* [ ] Verify retry button works
+* [ ] Test SSE connection failure
+* [ ] Verify graceful fallback
 
 ---
-
-## Summary
-
-| Last Completed Task                | Next Step                                        | Why It Follows                                                                                                                                                                          |
-| ---------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Task 9.5: Test Streaming Setup** | **Task 10.1: Create Product Definer Controller** | The PRD’s next objective is to build the AI agents using the streaming foundation established in PR #9. The Product Definer is the first agent required for the AI-driven sales funnel. |
-
----
-
-Would you like me to include the **AI Agent Testing & Deployment** phase (e.g., PR #16–17 for cloud deployment, QA, and documentation polish)?
