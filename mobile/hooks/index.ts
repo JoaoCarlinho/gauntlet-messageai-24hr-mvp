@@ -11,3 +11,5 @@ export { usePresence } from './usePresence';
 export { default as usePresenceHook } from './usePresence';
 export { useNotifications } from './useNotifications';
 export { default as useNotificationsHook } from './useNotifications';
+export { useSSEStream, useSSEStreamWithFetch, createSSEUrl } from './useSSEStream';
+export { default as useSSEStreamHook } from './useSSEStream';
