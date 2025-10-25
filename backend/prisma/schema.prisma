@@ -310,6 +310,7 @@ model AIAgentConversation {
   contextId   String?  // Related product/campaign/lead ID
   status      String   @default("active") // "active", "completed", "archived"
   messages    Json     // Conversation messages array
+  metadata    Json?    @default("{}") // Additional conversation metadata (mode, productId, etc.)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

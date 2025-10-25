@@ -37,14 +37,59 @@ export const startProductDefinerConversation = async (
       return;
     }
 
+    // Extract optional mode and productId from request body
+    const { mode, productId } = req.body;
+
+    // Validate mode if provided
+    if (mode && mode !== 'new_product' && mode !== 'new_icp') {
+      res.status(400).json({
+        error: 'Invalid mode. Must be "new_product" or "new_icp"',
+      });
+      return;
+    }
+
+    // If mode is new_icp, productId is required
+    if (mode === 'new_icp' && !productId) {
+      res.status(400).json({
+        error: 'productId is required when mode is "new_icp"',
+      });
+      return;
+    }
+
+    // If productId is provided, verify it exists and belongs to team
+    if (productId) {
+      try {
+        const productExists = await productDefinerService.verifyProductAccess(
+          productId,
+          teamId
+        );
+        if (!productExists) {
+          res.status(404).json({
+            error: 'Product not found or access denied',
+          });
+          return;
+        }
+      } catch (verifyError) {
+        console.error('Error verifying product access:', verifyError);
+        res.status(404).json({
+          error: 'Product not found or access denied',
+        });
+        return;
+      }
+    }
+
     const conversationId = await productDefinerService.startConversation(
       userId,
-      teamId
+      teamId,
+      mode,
+      productId
     );
 
     res.status(201).json({
       conversationId,
       message: 'Conversation started',
+      mode: mode || 'new_product', // Default to new_product if not specified
+      productId: productId || undefined,
     });
   } catch (error) {
     console.error('Error starting product definer conversation:', error);

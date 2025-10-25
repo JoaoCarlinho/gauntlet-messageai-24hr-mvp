@@ -4,6 +4,7 @@ import { PRODUCT_DEFINER_SYSTEM_PROMPT, AgentType } from '../../utils/prompts';
 import * as conversationService from '../aiConversations.service';
 import * as productService from '../products.service';
 import * as icpService from '../icps.service';
+import prisma from '../../config/database';
 
 /**
  * Product Definer AI Agent Service
@@ -13,39 +14,101 @@ import * as icpService from '../icps.service';
  */
 
 /**
+ * Verify product access for a team
+ *
+ * @param productId - Product ID
+ * @param teamId - Team ID
+ * @returns True if product exists and belongs to team
+ */
+export async function verifyProductAccess(
+  productId: string,
+  teamId: string
+): Promise<boolean> {
+  const product = await prisma.product.findFirst({
+    where: {
+      id: productId,
+      teamId: teamId,
+    },
+  });
+
+  return !!product;
+}
+
+/**
  * Start a new product definition conversation
  *
  * Creates a new conversation session for the product definer agent.
  *
  * @param userId - User ID
  * @param teamId - Team ID
+ * @param mode - Conversation mode: 'new_product' or 'new_icp'
+ * @param productId - Product ID (required if mode is 'new_icp')
  * @returns Conversation ID
  */
 export async function startConversation(
   userId: string,
-  teamId: string
+  teamId: string,
+  mode?: 'new_product' | 'new_icp',
+  productId?: string
 ): Promise<string> {
+  // Default mode to 'new_product' if not specified
+  const conversationMode = mode || 'new_product';
+
+  // Prepare metadata for conversation
+  const metadata: any = {
+    mode: conversationMode,
+  };
+
+  // If mode is new_icp, fetch product details for context
+  let productName = '';
+  if (conversationMode === 'new_icp' && productId) {
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
+    });
+
+    if (product) {
+      metadata.productId = productId;
+      metadata.productName = product.name;
+      metadata.productDescription = product.description;
+      productName = product.name;
+    }
+  }
+
   const conversation = await conversationService.createConversation({
     userId,
     teamId,
     agentType: AgentType.PRODUCT_DEFINER,
     contextType: 'general',
+    metadata,
   });
 
-  // Add initial system message to set context
-  await conversationService.addMessage(
-    conversation.id,
-    userId,
-    teamId,
-    {
-      role: 'assistant',
-      content: `Hello! I'm here to help you define your product and identify your ideal customers.
+  // Add initial system message based on mode
+  let initialMessage = '';
+
+  if (conversationMode === 'new_icp' && productName) {
+    initialMessage = `Perfect! Let's define a new Ideal Customer Profile for **${productName}**.
+
+Who specifically is this product for? Let's start with job titles - what roles do your ideal customers hold?`;
+  } else {
+    // Default to new product mode
+    initialMessage = `Hello! I'm here to help you define your product and identify your ideal customers.
 
 Let's start with your product. Could you tell me:
 1. What is the name of your product or service?
-2. What does it do or what problem does it solve?`,
-    }
-  );
+2. What does it do or what problem does it solve?`;
+  }
+
+  // Don't add initial message here - it's handled by mobile app
+  // The mobile app adds the appropriate message based on mode selection
+  // await conversationService.addMessage(
+  //   conversation.id,
+  //   userId,
+  //   teamId,
+  //   {
+  //     role: 'assistant',
+  //     content: initialMessage,
+  //   }
+  // );
 
   return conversation.id;
 }
@@ -79,12 +142,49 @@ export async function processMessage(
     }
   );
 
-  // Build conversation context with system prompt
+  // Get conversation to check mode
+  const conversation = await conversationService.getConversation(
+    conversationId,
+    userId,
+    teamId
+  );
+
+  const metadata = conversation?.metadata as any || {};
+  const mode = metadata.mode || 'new_product';
+  const contextProductId = metadata.productId;
+  const contextProductName = metadata.productName;
+
+  // Build system prompt based on mode
+  let systemPrompt = PRODUCT_DEFINER_SYSTEM_PROMPT;
+
+  if (mode === 'new_icp' && contextProductId) {
+    // Custom system prompt for ICP-only mode
+    systemPrompt = `You are a helpful AI assistant specialized in defining Ideal Customer Profiles (ICPs).
+
+The user is creating a new ICP for an existing product: **${contextProductName}**.
+
+${metadata.productDescription ? `Product Description: ${metadata.productDescription}` : ''}
+
+Your goal is to help the user define a comprehensive ICP by gathering:
+
+1. **Demographics**: Age range, location, job titles, education level, income level
+2. **Firmographics**: Company size, industry, revenue, geography
+3. **Psychographics**: Pain points, goals, motivations, challenges, values
+4. **Behaviors**: Buying triggers, decision-making process, preferred channels
+
+Ask one question at a time and keep the conversation natural and conversational.
+
+IMPORTANT: When you have gathered sufficient information, use the save_icp tool with productId: "${contextProductId}"
+
+Do NOT ask about product details - the product already exists. Focus ONLY on defining the ideal customer.`;
+  }
+
+  // Build conversation context with appropriate system prompt
   const messages = await conversationService.buildConversationContext(
     conversationId,
     userId,
     teamId,
-    PRODUCT_DEFINER_SYSTEM_PROMPT,
+    systemPrompt,
     20 // Last 20 messages for context
   );
 
@@ -283,11 +383,20 @@ export async function getConversationSummary(
     teamId
   );
 
+  const metadata = conversation?.metadata as any || {};
+  const mode = metadata.mode || 'new_product';
+
+  // For new_icp mode, return the productId from metadata (existing product)
+  let productId = productMessage?.metadata?.productId;
+  if (mode === 'new_icp' && metadata.productId) {
+    productId = metadata.productId;
+  }
+
   return {
     status: conversation?.status || 'active',
-    productSaved: !!productMessage,
+    productSaved: mode === 'new_product' ? !!productMessage : false,
     icpSaved: !!icpMessage,
-    productId: productMessage?.metadata?.productId,
+    productId: productId,
     icpId: icpMessage?.metadata?.icpId,
   };
 }
