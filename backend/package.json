@@ -43,14 +43,15 @@
     "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
-    "@prisma/client": "^6.17.1",
-    "@types/multer": "^2.0.0",
-    "@types/socket.io": "^3.0.1",
-    "@types/uuid": "^10.0.0",
     "@aws-sdk/client-s3": "^3.0.0",
     "@aws-sdk/client-sqs": "^3.0.0",
     "@aws-sdk/s3-request-presigner": "^3.0.0",
     "@aws-sdk/types": "^3.0.0",
+    "@pinecone-database/pinecone": "^6.1.2",
+    "@prisma/client": "^6.17.1",
+    "@types/multer": "^2.0.0",
+    "@types/socket.io": "^3.0.1",
+    "@types/uuid": "^10.0.0",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -59,6 +60,7 @@
     "express-validator": "^7.2.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
+    "openai": "^6.7.0",
     "socket.io": "^4.8.1",
     "uuid": "^7.0.3"
   },
