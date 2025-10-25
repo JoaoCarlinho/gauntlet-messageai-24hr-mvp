@@ -31,3 +31,5 @@ export { useProducts } from './useProducts';
 export { default as useProductsHook } from './useProducts';
 export { useICPs } from './useICPs';
 export { default as useICPsHook } from './useICPs';
+export { default as useContentLibrary } from './useContentLibrary';
+export { default as useContentLibraryHook } from './useContentLibrary';
