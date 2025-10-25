@@ -31,7 +31,7 @@ export const addToQueue = async (
   payload: any
 ): Promise<string> => {
   const db = getDatabase();
-  const id = `${agentType}_${action}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const id = `${agentType}_${action}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
   await db.runAsync(
     `INSERT INTO ai_agent_queue (id, agent_type, action, payload, status, created_at, retry_count)
@@ -103,12 +103,9 @@ const processQueueItem = async (item: QueueItem): Promise<boolean> => {
       case 'product_definer':
         if (item.action === 'start_conversation') {
           await aiAgentsAPI.productDefiner.startConversation();
-        } else if (item.action === 'send_message') {
-          await aiAgentsAPI.productDefiner.sendMessage(
-            item.payload.conversationId,
-            item.payload.message
-          );
         }
+        // Note: sendMessage uses SSE streaming via createMessageStream,
+        // which cannot be queued offline. Messages should be cached locally instead.
         break;
 
       case 'campaign_advisor':
@@ -117,46 +114,43 @@ const processQueueItem = async (item: QueueItem): Promise<boolean> => {
             item.payload.productId,
             item.payload.icpId
           );
-        } else if (item.action === 'send_message') {
-          await aiAgentsAPI.campaignAdvisor.sendMessage(
-            item.payload.conversationId,
-            item.payload.message
-          );
         }
+        // Note: sendMessage uses SSE streaming via createMessageStream,
+        // which cannot be queued offline. Messages should be cached locally instead.
         break;
 
       case 'content_generator':
         if (item.action === 'generate_content') {
-          const { type, campaignId, platform, variations, tone, length, cta } = item.payload;
+          const { type, productId, platform, variations, count, concept } = item.payload;
           switch (type) {
             case 'ad_copy':
               await aiAgentsAPI.contentGenerator.generateAdCopy({
-                campaignId,
+                productId,
                 platform,
                 variations,
-                tone,
-                length,
+                saveToLibrary: true,
               });
               break;
             case 'social_post':
-              await aiAgentsAPI.contentGenerator.generateSocialPost({
-                campaignId,
+              await aiAgentsAPI.contentGenerator.generateSocialPosts({
+                productId,
                 platform,
-                variations,
-                tone,
+                count,
+                saveToLibrary: true,
               });
               break;
             case 'landing_page':
               await aiAgentsAPI.contentGenerator.generateLandingPage({
-                campaignId,
-                tone,
-                cta,
+                productId,
+                saveToLibrary: true,
               });
               break;
             case 'image_prompt':
-              await aiAgentsAPI.contentGenerator.generateImagePrompt({
-                campaignId,
-                platform,
+              await aiAgentsAPI.contentGenerator.generateImagePrompts({
+                productId,
+                concept: concept || 'Marketing visual',
+                count,
+                saveToLibrary: true,
               });
               break;
           }
@@ -165,10 +159,10 @@ const processQueueItem = async (item: QueueItem): Promise<boolean> => {
 
       case 'performance_analyzer':
         if (item.action === 'analyze_campaign') {
-          await aiAgentsAPI.performanceAnalyzer.analyzeCampaign(
-            item.payload.campaignId,
-            item.payload.timeRange
-          );
+          await aiAgentsAPI.performanceAnalyzer.analyzeCampaignPerformance({
+            campaignId: item.payload.campaignId,
+            timeRange: item.payload.timeRange,
+          });
         }
         break;
 

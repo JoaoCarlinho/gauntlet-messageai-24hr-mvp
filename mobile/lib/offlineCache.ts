@@ -145,7 +145,7 @@ export const cacheConversationMessage = async (
   syncStatus: 'synced' | 'pending' = 'pending'
 ): Promise<string> => {
   const db = getDatabase();
-  const id = `msg_${conversationId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const id = `msg_${conversationId}_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   const now = Date.now();
 
   await db.runAsync(
