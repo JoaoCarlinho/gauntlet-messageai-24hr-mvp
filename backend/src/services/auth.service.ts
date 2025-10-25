@@ -2,12 +2,15 @@ import bcrypt from 'bcrypt';
 import prisma from '../config/database';
 import { generateTokenPair, verifyRefreshToken } from '../utils/jwt';
 import { addPushToken } from './users.service';
+import { createTeam } from './teams.service';
 
 export interface RegisterData {
   email: string;
   password: string;
   displayName: string;
   phoneNumber?: string;
+  createDefaultTeam?: boolean;
+  teamName?: string;
 }
 
 export interface LoginData {
@@ -25,6 +28,15 @@ export interface AuthResult {
     displayName: string;
     avatarUrl?: string;
     isOnline: boolean;
+    teamMemberships?: Array<{
+      id: string;
+      role: string;
+      team: {
+        id: string;
+        name: string;
+        slug: string;
+      };
+    }>;
   };
   tokens: {
     accessToken: string;
@@ -42,7 +54,7 @@ export interface RefreshResult {
  * Register a new user
  */
 export const registerUser = async (data: RegisterData): Promise<AuthResult> => {
-  const { email, password, displayName, phoneNumber } = data;
+  const { email, password, displayName, phoneNumber, createDefaultTeam = true, teamName } = data;
 
   // Check if user already exists
   const existingUser = await prisma.user.findFirst({
@@ -91,16 +103,55 @@ export const registerUser = async (data: RegisterData): Promise<AuthResult> => {
     }
   });
 
+  // Optionally create default team for user
+  let defaultTeam = null;
+  if (createDefaultTeam) {
+    try {
+      const slug = `${displayName.toLowerCase().replace(/\s+/g, '-')}-${user.id.substring(0, 8)}`;
+      const name = teamName || `${displayName}'s Team`;
+      defaultTeam = await createTeam(name, slug, user.id);
+    } catch (error) {
+      console.error('Error creating default team:', error);
+      // Don't fail registration if team creation fails
+    }
+  }
+
+  // Fetch user with team memberships
+  const userWithTeams = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: {
+      id: true,
+      email: true,
+      displayName: true,
+      avatarUrl: true,
+      isOnline: true,
+      teamMemberships: {
+        select: {
+          id: true,
+          role: true,
+          team: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
   // Generate tokens
   const tokens = generateTokenPair(user.id, user.email);
 
   return {
     user: {
-      id: user.id,
-      email: user.email,
-      displayName: user.displayName,
-      avatarUrl: user.avatarUrl || undefined,
-      isOnline: true
+      id: userWithTeams!.id,
+      email: userWithTeams!.email,
+      displayName: userWithTeams!.displayName,
+      avatarUrl: userWithTeams!.avatarUrl || undefined,
+      isOnline: true,
+      teamMemberships: userWithTeams!.teamMemberships,
     },
     tokens
   };
@@ -151,16 +202,42 @@ export const loginUser = async (data: LoginData): Promise<AuthResult> => {
     }
   }
 
+  // Fetch user with team memberships
+  const userWithTeams = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: {
+      id: true,
+      email: true,
+      displayName: true,
+      avatarUrl: true,
+      isOnline: true,
+      teamMemberships: {
+        select: {
+          id: true,
+          role: true,
+          team: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
   // Generate tokens
   const tokens = generateTokenPair(user.id, user.email);
 
   return {
     user: {
-      id: user.id,
-      email: user.email,
-      displayName: user.displayName,
-      avatarUrl: user.avatarUrl || undefined,
-      isOnline: true
+      id: userWithTeams!.id,
+      email: userWithTeams!.email,
+      displayName: userWithTeams!.displayName,
+      avatarUrl: userWithTeams!.avatarUrl || undefined,
+      isOnline: true,
+      teamMemberships: userWithTeams!.teamMemberships,
     },
     tokens
   };
