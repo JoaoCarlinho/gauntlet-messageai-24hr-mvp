@@ -35,3 +35,16 @@ variable "api_url" {
   type        = string
   default     = ""
 }
+
+variable "backend_url" {
+  description = "Backend URL for Socket.io notifications"
+  type        = string
+  default     = ""
+}
+
+variable "internal_api_secret" {
+  description = "Internal API secret for backend communication"
+  type        = string
+  sensitive   = true
+  default     = ""
+}

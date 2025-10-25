@@ -11,9 +11,11 @@ resource "aws_lambda_function" "webhook_processor" {
 
   environment {
     variables = {
-      DATABASE_URL = var.database_url
-      API_URL      = var.api_url
-      SQS_URL      = aws_sqs_queue.webhook_queue.id
+      DATABASE_URL         = var.database_url
+      API_URL              = var.api_url
+      BACKEND_URL          = var.backend_url
+      INTERNAL_API_SECRET  = var.internal_api_secret
+      SQS_URL              = aws_sqs_queue.webhook_queue.id
     }
   }
 
