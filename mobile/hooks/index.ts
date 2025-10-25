@@ -33,3 +33,5 @@ export { useICPs } from './useICPs';
 export { default as useICPsHook } from './useICPs';
 export { default as useContentLibrary } from './useContentLibrary';
 export { default as useContentLibraryHook } from './useContentLibrary';
+export { default as useOffline } from './useOffline';
+export { default as useOfflineHook } from './useOffline';
