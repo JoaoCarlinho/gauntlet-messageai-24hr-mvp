@@ -202,7 +202,7 @@ async function processMessage(record: SQSRecord): Promise<ProcessResult> {
  */
 export async function handler(event: SQSEvent, context: Context) {
   console.log(`🚀 Webhook processor started. Processing ${event.Records.length} messages`);
-  console.log(`Request ID: ${context.requestId}`);
+  console.log(`Request ID: ${context.awsRequestId}`);
 
   const results: ProcessResult[] = [];
   const failedMessages: string[] = [];
