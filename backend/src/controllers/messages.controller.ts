@@ -4,18 +4,7 @@ import * as messageService from '../services/message.service';
 import * as s3Service from '../services/s3.service';
 import { CreateMessageData, MessagePaginationOptions, MessageStatusUpdate } from '../services/message.service';
 
-// Extend Express Request interface to include user
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: string;
-        email: string;
-        displayName: string;
-      };
-    }
-  }
-}
+// Note: Request.user interface is defined in middleware/auth.ts
 
 /**
  * Validation rules for conversation ID parameter

@@ -8,8 +8,10 @@ declare global {
     interface Request {
       user?: {
         id: string;
+        userId: string; // Alias for id (for controller compatibility)
         email: string;
         displayName: string;
+        teamId?: string; // User's primary team ID
       };
     }
   }
@@ -34,13 +36,24 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     const payload: TokenPayload = verifyAccessToken(token);
 
     // Fetch user from database to ensure they still exist
+    // Include team memberships to get the user's primary team
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
       select: {
         id: true,
         email: true,
         displayName: true,
-        isOnline: true
+        isOnline: true,
+        teamMemberships: {
+          select: {
+            teamId: true,
+            role: true
+          },
+          orderBy: {
+            joinedAt: 'asc' // Get the first team they joined
+          },
+          take: 1
+        }
       }
     });
 
@@ -51,11 +64,16 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
       });
     }
 
+    // Get the user's primary team (first team they joined)
+    const primaryTeamId = user.teamMemberships[0]?.teamId;
+
     // Add user to request object
     req.user = {
       id: user.id,
+      userId: user.id, // Alias for controller compatibility
       email: user.email,
-      displayName: user.displayName
+      displayName: user.displayName,
+      teamId: primaryTeamId
     };
 
     next();
@@ -105,15 +123,29 @@ export const optionalAuth = async (req: Request, res: Response, next: NextFuncti
         id: true,
         email: true,
         displayName: true,
-        isOnline: true
+        isOnline: true,
+        teamMemberships: {
+          select: {
+            teamId: true,
+            role: true
+          },
+          orderBy: {
+            joinedAt: 'asc'
+          },
+          take: 1
+        }
       }
     });
 
     if (user) {
+      const primaryTeamId = user.teamMemberships[0]?.teamId;
+
       req.user = {
         id: user.id,
+        userId: user.id,
         email: user.email,
-        displayName: user.displayName
+        displayName: user.displayName,
+        teamId: primaryTeamId
       };
     }
 

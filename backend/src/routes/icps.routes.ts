@@ -1,12 +1,17 @@
 import { Router } from 'express';
 import * as icpsController from '../controllers/icps.controller';
+import { authenticate } from '../middleware/auth';
 
 /**
  * ICP Routes
  * Routes for Ideal Customer Profile management
+ * All routes require authentication
  */
 
 const router = Router();
+
+// Apply authentication middleware to all ICP routes
+router.use(authenticate);
 
 /**
  * GET /api/v1/icps/:id

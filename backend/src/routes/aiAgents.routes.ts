@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import * as aiAgentsController from '../controllers/aiAgents.controller';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
 
@@ -9,6 +10,9 @@ const router = Router();
  * All routes require authentication and team access
  * Rate limited to 100 requests/hour per user
  */
+
+// Apply authentication middleware to all AI agent routes
+router.use(authenticate);
 
 // Product Definer Agent Routes
 router.post(

@@ -49,6 +49,10 @@ import {
   CreateMessageData,
   MessagePaginationOptions,
   ReadReceiptData,
+  Lead,
+  LeadStatus,
+  LeadActivity,
+  Team,
 } from '../types';
 
 // Environment configuration
@@ -701,6 +705,206 @@ export const mediaAPI = {
   },
 };
 
+// Teams API
+export const teamsAPI = {
+  async getTeams(): Promise<Team[]> {
+    try {
+      const response = await apiClient.get('/teams');
+      // Handle response format: { teams: [], count: number }
+      if (response.data.teams) {
+        return response.data.teams;
+      } else if (Array.isArray(response.data)) {
+        return response.data;
+      }
+      return [];
+    } catch (error: any) {
+      console.error('Error fetching teams:', error);
+      throw error;
+    }
+  },
+};
+
+// Helper function to get effective teamId
+async function getEffectiveTeamId(teamId?: string): Promise<string | null> {
+  if (teamId) return teamId;
+
+  const teams = await teamsAPI.getTeams();
+  if (teams.length === 0) {
+    console.warn('No teams found for user');
+    return null;
+  }
+
+  console.log('Using first team:', teams[0].id);
+  return teams[0].id;
+}
+
+// Products API
+export const productsAPI = {
+  async getProducts(teamId?: string): Promise<any[]> {
+    try {
+      const effectiveTeamId = await getEffectiveTeamId(teamId);
+      if (!effectiveTeamId) return [];
+
+      const response = await apiClient.get('/products', {
+        params: { teamId: effectiveTeamId }
+      });
+
+      return Array.isArray(response.data) ? response.data : response.data.products || [];
+    } catch (error: any) {
+      console.error('Error fetching products:', error);
+      throw error;
+    }
+  },
+
+  async deleteProduct(productId: string, teamId?: string): Promise<void> {
+    const effectiveTeamId = await getEffectiveTeamId(teamId);
+    if (!effectiveTeamId) throw new Error('No team available');
+
+    await apiClient.delete(`/products/${productId}`, {
+      params: { teamId: effectiveTeamId }
+    });
+  },
+};
+
+// Campaigns API
+export const campaignsAPI = {
+  async getCampaigns(teamId?: string): Promise<any[]> {
+    try {
+      const effectiveTeamId = await getEffectiveTeamId(teamId);
+      if (!effectiveTeamId) return [];
+
+      const response = await apiClient.get('/campaigns', {
+        params: { teamId: effectiveTeamId }
+      });
+
+      return Array.isArray(response.data) ? response.data : response.data.campaigns || [];
+    } catch (error: any) {
+      console.error('Error fetching campaigns:', error);
+      throw error;
+    }
+  },
+
+  async updateCampaignStatus(campaignId: string, status: string, teamId?: string): Promise<void> {
+    const effectiveTeamId = await getEffectiveTeamId(teamId);
+    if (!effectiveTeamId) throw new Error('No team available');
+
+    await apiClient.patch(`/campaigns/${campaignId}/status`, {
+      status,
+      teamId: effectiveTeamId
+    });
+  },
+};
+
+// ICPs API
+export const icpsAPI = {
+  async getICPs(teamId?: string): Promise<any[]> {
+    try {
+      const effectiveTeamId = await getEffectiveTeamId(teamId);
+      if (!effectiveTeamId) return [];
+
+      const response = await apiClient.get('/icps', {
+        params: { teamId: effectiveTeamId }
+      });
+
+      return Array.isArray(response.data) ? response.data : response.data.icps || [];
+    } catch (error: any) {
+      console.error('Error fetching ICPs:', error);
+      throw error;
+    }
+  },
+
+  async deleteICP(icpId: string, teamId?: string): Promise<void> {
+    const effectiveTeamId = await getEffectiveTeamId(teamId);
+    if (!effectiveTeamId) throw new Error('No team available');
+
+    await apiClient.delete(`/icps/${icpId}`, {
+      params: { teamId: effectiveTeamId }
+    });
+  },
+};
+
+// Content Library API
+export const contentLibraryAPI = {
+  async getContent(teamId?: string): Promise<any[]> {
+    try {
+      const effectiveTeamId = await getEffectiveTeamId(teamId);
+      if (!effectiveTeamId) return [];
+
+      const response = await apiClient.get('/content-library', {
+        params: { teamId: effectiveTeamId }
+      });
+
+      return Array.isArray(response.data) ? response.data : response.data.content || [];
+    } catch (error: any) {
+      console.error('Error fetching content library:', error);
+      throw error;
+    }
+  },
+
+  async deleteContent(contentId: string, teamId?: string): Promise<void> {
+    const effectiveTeamId = await getEffectiveTeamId(teamId);
+    if (!effectiveTeamId) throw new Error('No team available');
+
+    await apiClient.delete(`/content-library/${contentId}`, {
+      params: { teamId: effectiveTeamId }
+    });
+  },
+};
+
+// Leads API
+export const leadsAPI = {
+  async getLeads(teamId?: string): Promise<Lead[]> {
+    try {
+      const effectiveTeamId = await getEffectiveTeamId(teamId);
+      if (!effectiveTeamId) return [];
+
+      const response = await apiClient.get('/leads', {
+        params: { teamId: effectiveTeamId }
+      });
+
+      // Handle different response formats
+      if (Array.isArray(response.data)) {
+        return response.data;
+      } else if (response.data.leads) {
+        return response.data.leads;
+      } else if (response.data.success && response.data.data) {
+        return response.data.data;
+      }
+      return [];
+    } catch (error: any) {
+      console.error('Error fetching leads:', error);
+      throw error;
+    }
+  },
+
+  async updateLeadStatus(leadId: string, status: LeadStatus, teamId?: string): Promise<void> {
+    const effectiveTeamId = await getEffectiveTeamId(teamId);
+    if (!effectiveTeamId) throw new Error('No team available');
+
+    await apiClient.patch(`/leads/${leadId}/status`, { status, teamId: effectiveTeamId });
+  },
+
+  async claimLead(leadId: string, teamId?: string): Promise<Lead> {
+    const effectiveTeamId = await getEffectiveTeamId(teamId);
+    if (!effectiveTeamId) throw new Error('No team available');
+
+    const response = await apiClient.post(`/leads/${leadId}/claim`, { teamId: effectiveTeamId });
+    return response.data;
+  },
+
+  async addActivity(
+    leadId: string,
+    activity: Omit<LeadActivity, 'id' | 'leadId' | 'userId' | 'createdAt'>,
+    teamId?: string
+  ): Promise<LeadActivity> {
+    const effectiveTeamId = await getEffectiveTeamId(teamId);
+    if (!effectiveTeamId) throw new Error('No team available');
+
+    const response = await apiClient.post(`/leads/${leadId}/activities`, { ...activity, teamId: effectiveTeamId });
+    return response.data;
+  },
+};
+
 // Health check API
 export const healthAPI = {
   async checkHealth(): Promise<{ status: string; timestamp: string }> {
@@ -721,5 +925,11 @@ export default {
   conversations: conversationsAPI,
   messages: messagesAPI,
   media: mediaAPI,
+  teams: teamsAPI,
+  products: productsAPI,
+  campaigns: campaignsAPI,
+  icps: icpsAPI,
+  contentLibrary: contentLibraryAPI,
+  leads: leadsAPI,
   health: healthAPI,
 };

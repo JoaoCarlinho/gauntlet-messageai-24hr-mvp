@@ -1,12 +1,17 @@
 import { Router } from 'express';
 import * as campaignsController from '../controllers/campaigns.controller';
+import { authenticate } from '../middleware/auth';
 
 /**
  * Campaign Routes
  * Routes for campaign and ad creative management
+ * All routes require authentication
  */
 
 const router = Router();
+
+// Apply authentication middleware to all campaign routes
+router.use(authenticate);
 
 /**
  * Campaign CRUD Routes

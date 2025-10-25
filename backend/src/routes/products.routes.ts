@@ -1,13 +1,18 @@
 import { Router } from 'express';
 import * as productsController from '../controllers/products.controller';
 import * as icpsController from '../controllers/icps.controller';
+import { authenticate } from '../middleware/auth';
 
 /**
  * Product Routes
  * Routes for product and ICP management
+ * All routes require authentication
  */
 
 const router = Router();
+
+// Apply authentication middleware to all product routes
+router.use(authenticate);
 
 /**
  * Product Routes

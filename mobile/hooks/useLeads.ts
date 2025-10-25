@@ -6,10 +6,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
-import { useSocket } from './useSocket';
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
+import api from '../lib/api';
+import { socketManager } from '../lib/socket';
 
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'unqualified' | 'converted';
 export type LeadScore = 'hot' | 'warm' | 'cold';
@@ -58,24 +56,15 @@ export const useLeads = (): UseLeadsReturn => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Use socket hook for real-time updates
-  const { socket, isConnected } = useSocket({
-    onMessage: () => {}, // Not used for leads
-  });
-
   // Fetch leads from API
   const fetchLeads = useCallback(async () => {
     try {
       setIsLoading(true);
       setError(null);
 
-      const response = await axios.get<Lead[]>(`${API_BASE_URL}/api/v1/leads`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const leads = await api.leads.getLeads();
 
-      setLeads(response.data);
+      setLeads(leads);
     } catch (err: any) {
       console.error('Error fetching leads:', err);
       setError(err.message || 'Failed to fetch leads');
@@ -87,9 +76,7 @@ export const useLeads = (): UseLeadsReturn => {
   // Update lead status
   const updateLeadStatus = useCallback(async (leadId: string, status: LeadStatus) => {
     try {
-      await axios.patch(`${API_BASE_URL}/api/v1/leads/${leadId}/status`, {
-        status,
-      });
+      await api.leads.updateLeadStatus(leadId, status);
 
       // Update local state
       setLeads((prev) =>
@@ -106,11 +93,11 @@ export const useLeads = (): UseLeadsReturn => {
   // Claim lead
   const claimLead = useCallback(async (leadId: string) => {
     try {
-      const response = await axios.post<Lead>(`${API_BASE_URL}/api/v1/leads/${leadId}/claim`);
+      const updatedLead = await api.leads.claimLead(leadId);
 
       // Update local state
       setLeads((prev) =>
-        prev.map((lead) => (lead.id === leadId ? response.data : lead))
+        prev.map((lead) => (lead.id === leadId ? updatedLead : lead))
       );
     } catch (err: any) {
       console.error('Error claiming lead:', err);
@@ -125,10 +112,7 @@ export const useLeads = (): UseLeadsReturn => {
       activity: Omit<LeadActivity, 'id' | 'leadId' | 'userId' | 'createdAt'>
     ) => {
       try {
-        const response = await axios.post<LeadActivity>(
-          `${API_BASE_URL}/api/v1/leads/${leadId}/activities`,
-          activity
-        );
+        const newActivity = await api.leads.addActivity(leadId, activity);
 
         // Update local state
         setLeads((prev) =>
@@ -136,7 +120,7 @@ export const useLeads = (): UseLeadsReturn => {
             lead.id === leadId
               ? {
                   ...lead,
-                  activities: [...(lead.activities || []), response.data],
+                  activities: [...(lead.activities || []), newActivity],
                   updatedAt: new Date(),
                 }
               : lead
@@ -152,7 +136,7 @@ export const useLeads = (): UseLeadsReturn => {
 
   // Listen for real-time lead updates
   useEffect(() => {
-    if (!socket || !isConnected) return;
+    if (!socketManager.isConnected()) return;
 
     const handleNewLead = (lead: Lead) => {
       console.log('New lead received:', lead);
@@ -166,14 +150,14 @@ export const useLeads = (): UseLeadsReturn => {
       );
     };
 
-    socket.on('new_lead', handleNewLead);
-    socket.on('lead_updated', handleLeadUpdate);
+    socketManager.on('new_lead', handleNewLead);
+    socketManager.on('lead_updated', handleLeadUpdate);
 
     return () => {
-      socket.off('new_lead', handleNewLead);
-      socket.off('lead_updated', handleLeadUpdate);
+      socketManager.off('new_lead', handleNewLead);
+      socketManager.off('lead_updated', handleLeadUpdate);
     };
-  }, [socket, isConnected]);
+  }, []);
 
   // Initial fetch
   useEffect(() => {

@@ -6,10 +6,8 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import api from '../lib/api';
 import { Platform } from '../types/aiAgents';
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001';
 
 export type CampaignStatus = 'draft' | 'active' | 'paused' | 'completed' | 'archived';
 
@@ -60,13 +58,9 @@ export const useCampaigns = (): UseCampaignsReturn => {
       setIsLoading(true);
       setError(null);
 
-      const response = await axios.get<Campaign[]>(`${API_BASE_URL}/api/v1/campaigns`, {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const campaigns = await api.campaigns.getCampaigns();
 
-      setCampaigns(response.data);
+      setCampaigns(campaigns);
     } catch (err: any) {
       console.error('Error fetching campaigns:', err);
       setError(err.message || 'Failed to fetch campaigns');
@@ -78,9 +72,7 @@ export const useCampaigns = (): UseCampaignsReturn => {
   // Update campaign status
   const updateCampaignStatus = useCallback(async (campaignId: string, status: CampaignStatus) => {
     try {
-      await axios.patch(`${API_BASE_URL}/api/v1/campaigns/${campaignId}/status`, {
-        status,
-      });
+      await api.campaigns.updateCampaignStatus(campaignId, status);
 
       // Update local state
       setCampaigns((prev) =>
