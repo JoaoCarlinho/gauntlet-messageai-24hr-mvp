@@ -5,6 +5,7 @@ import * as contentGeneratorService from '../services/aiAgents/contentGenerator.
 import * as contentLibraryService from '../services/contentLibrary.service';
 import * as discoveryBotService from '../services/aiAgents/discoveryBot.service';
 import * as performanceAnalyzerService from '../services/aiAgents/performanceAnalyzer.service';
+import * as conversationService from '../services/aiConversations.service';
 import { streamToSSE } from '../utils/streaming';
 
 /**
@@ -173,7 +174,9 @@ export const sendProductDefinerMessage = async (
  *
  * POST /api/v1/ai/product-definer/complete
  *
- * Marks conversation as completed and returns created entities
+ * Marks conversation as completed and returns created entities.
+ * If the AI hasn't created product/ICP via tool calls yet, this endpoint
+ * will attempt to extract them from the conversation and save them.
  *
  * @param req.body.conversationId - Conversation ID
  * @param req.user.userId - User ID from auth middleware
@@ -201,8 +204,8 @@ export const completeProductDefinerConversation = async (
       return;
     }
 
-    // Get conversation summary
-    const summary = await productDefinerService.getConversationSummary(
+    // Complete the conversation (this may trigger product/ICP creation if needed)
+    const summary = await productDefinerService.completeConversation(
       conversationId,
       userId,
       teamId
@@ -1193,6 +1196,201 @@ export const getExecutiveSummary = async (
     console.error('Error generating executive summary:', error);
     res.status(500).json({
       error: 'Failed to generate executive summary',
+    });
+  }
+};
+
+// ============================================================================
+// AI Conversation Management Endpoints
+// ============================================================================
+
+/**
+ * List AI conversations for the authenticated user
+ *
+ * GET /api/v1/ai/conversations
+ *
+ * Query parameters:
+ * - agentType: Filter by agent type (optional)
+ * - status: Filter by status (optional)
+ * - limit: Number of conversations to return (default: 50)
+ *
+ * @param req.query.agentType - Optional agent type filter
+ * @param req.query.status - Optional status filter
+ * @param req.query.limit - Optional limit (default: 50)
+ * @param req.user.userId - User ID from auth middleware
+ * @param req.user.teamId - Team ID from auth middleware
+ * @returns List of conversations with metadata
+ */
+export const listAIConversations = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const userId = (req as any).user?.userId;
+    const teamId = (req as any).user?.teamId;
+
+    if (!userId || !teamId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const { agentType, status, limit = '50' } = req.query;
+
+    // Build filters
+    const filters: any = {};
+    if (agentType) filters.agentType = agentType as string;
+    if (status) filters.status = status as 'active' | 'completed' | 'archived';
+
+    // Get conversations
+    const conversations = await conversationService.listConversations(
+      userId,
+      teamId,
+      filters
+    );
+
+    // Limit results
+    const limitNum = parseInt(limit as string, 10) || 50;
+    const limitedConversations = conversations.slice(0, limitNum);
+
+    // Parse messages for each conversation to include message count and last message
+    const conversationsWithMetadata = limitedConversations.map((conv: any) => {
+      // Parse messages from JSON
+      let messages: any[] = [];
+      if (Array.isArray(conv.messages)) {
+        messages = conv.messages.filter((msg: any) =>
+          msg && typeof msg === 'object' && msg.id && msg.role && msg.content
+        );
+      }
+      const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+
+      return {
+        id: conv.id,
+        agentType: conv.agentType,
+        status: conv.status,
+        contextId: conv.contextId,
+        metadata: conv.metadata || {},
+        messageCount: messages.length,
+        lastMessage: lastMessage ? {
+          role: lastMessage.role,
+          content: lastMessage.content.substring(0, 100), // Preview only
+          createdAt: lastMessage.createdAt,
+        } : null,
+        createdAt: conv.createdAt,
+        updatedAt: conv.updatedAt,
+      };
+    });
+
+    res.status(200).json({
+      conversations: conversationsWithMetadata,
+      total: conversations.length,
+    });
+  } catch (error) {
+    console.error('Error listing AI conversations:', error);
+    res.status(500).json({
+      error: 'Failed to list conversations',
+    });
+  }
+};
+
+/**
+ * Get a specific AI conversation with full message history
+ *
+ * GET /api/v1/ai/conversations/:conversationId
+ *
+ * @param req.params.conversationId - Conversation ID
+ * @param req.user.userId - User ID from auth middleware
+ * @param req.user.teamId - Team ID from auth middleware
+ * @returns Conversation with full message history
+ */
+export const getAIConversation = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { conversationId } = req.params;
+    const userId = (req as any).user?.userId;
+    const teamId = (req as any).user?.teamId;
+
+    if (!userId || !teamId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    if (!conversationId) {
+      res.status(400).json({ error: 'conversationId is required' });
+      return;
+    }
+
+    // Get conversation with messages
+    const conversation = await conversationService.getConversationWithMessages(
+      conversationId,
+      userId,
+      teamId
+    );
+
+    if (!conversation) {
+      res.status(404).json({ error: 'Conversation not found' });
+      return;
+    }
+
+    res.status(200).json({
+      id: conversation.id,
+      agentType: conversation.agentType,
+      status: conversation.status,
+      contextId: conversation.contextId,
+      metadata: (conversation as any).metadata || {},
+      messages: conversation.parsedMessages,
+      createdAt: conversation.createdAt,
+      updatedAt: conversation.updatedAt,
+    });
+  } catch (error) {
+    console.error('Error getting AI conversation:', error);
+    res.status(500).json({
+      error: 'Failed to get conversation',
+    });
+  }
+};
+
+/**
+ * Delete (archive) an AI conversation
+ *
+ * DELETE /api/v1/ai/conversations/:conversationId
+ *
+ * @param req.params.conversationId - Conversation ID
+ * @param req.user.userId - User ID from auth middleware
+ * @param req.user.teamId - Team ID from auth middleware
+ * @returns Success message
+ */
+export const deleteAIConversation = async (
+  req: Request,
+  res: Response
+): Promise<void> => {
+  try {
+    const { conversationId } = req.params;
+    const userId = (req as any).user?.userId;
+    const teamId = (req as any).user?.teamId;
+
+    if (!userId || !teamId) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    if (!conversationId) {
+      res.status(400).json({ error: 'conversationId is required' });
+      return;
+    }
+
+    // Archive the conversation (soft delete)
+    await conversationService.deleteConversation(conversationId, userId, teamId);
+
+    res.status(200).json({
+      message: 'Conversation archived successfully',
+      conversationId,
+    });
+  } catch (error) {
+    console.error('Error deleting AI conversation:', error);
+    res.status(500).json({
+      error: 'Failed to delete conversation',
     });
   }
 };

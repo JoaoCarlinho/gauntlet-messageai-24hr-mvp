@@ -82,33 +82,8 @@ export async function startConversation(
     metadata,
   });
 
-  // Add initial system message based on mode
-  let initialMessage = '';
-
-  if (conversationMode === 'new_icp' && productName) {
-    initialMessage = `Perfect! Let's define a new Ideal Customer Profile for **${productName}**.
-
-Who specifically is this product for? Let's start with job titles - what roles do your ideal customers hold?`;
-  } else {
-    // Default to new product mode
-    initialMessage = `Hello! I'm here to help you define your product and identify your ideal customers.
-
-Let's start with your product. Could you tell me:
-1. What is the name of your product or service?
-2. What does it do or what problem does it solve?`;
-  }
-
-  // Don't add initial message here - it's handled by mobile app
+  // Initial messages are handled by mobile app
   // The mobile app adds the appropriate message based on mode selection
-  // await conversationService.addMessage(
-  //   conversation.id,
-  //   userId,
-  //   teamId,
-  //   {
-  //     role: 'assistant',
-  //     content: initialMessage,
-  //   }
-  // );
 
   return conversation.id;
 }
@@ -149,7 +124,7 @@ export async function processMessage(
     teamId
   );
 
-  const metadata = conversation?.metadata as any || {};
+  const metadata = (conversation as any)?.metadata || {};
   const mode = metadata.mode || 'new_product';
   const contextProductId = metadata.productId;
   const contextProductName = metadata.productName;
@@ -383,7 +358,7 @@ export async function getConversationSummary(
     teamId
   );
 
-  const metadata = conversation?.metadata as any || {};
+  const metadata = (conversation as any)?.metadata || {};
   const mode = metadata.mode || 'new_product';
 
   // For new_icp mode, return the productId from metadata (existing product)
@@ -398,5 +373,49 @@ export async function getConversationSummary(
     icpSaved: !!icpMessage,
     productId: productId,
     icpId: icpMessage?.metadata?.icpId,
+  };
+}
+
+/**
+ * Complete a product definer conversation
+ *
+ * Marks the conversation as completed. This is called when the user
+ * clicks "Complete & Save" button. The actual product/ICP saving happens
+ * via AI tool calls during the conversation, not here.
+ *
+ * @param conversationId - Conversation ID
+ * @param userId - User ID
+ * @param teamId - Team ID
+ * @returns Conversation summary with saved entity IDs
+ */
+export async function completeConversation(
+  conversationId: string,
+  userId: string,
+  teamId: string
+): Promise<{
+  status: string;
+  productSaved: boolean;
+  icpSaved: boolean;
+  productId?: string;
+  icpId?: string;
+}> {
+  // Mark conversation as completed
+  await conversationService.updateConversationStatus(
+    conversationId,
+    userId,
+    teamId,
+    'completed'
+  );
+
+  // Get and return summary
+  const summary = await getConversationSummary(
+    conversationId,
+    userId,
+    teamId
+  );
+
+  return {
+    ...summary,
+    status: 'completed',
   };
 }

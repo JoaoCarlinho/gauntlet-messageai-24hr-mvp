@@ -29,6 +29,7 @@ export default function ProductDefinerScreen() {
   const {
     // Existing state
     currentConversation,
+    currentConversationId,
     currentMessages,
     isStreaming,
     streamingMessage,
@@ -46,6 +47,7 @@ export default function ProductDefinerScreen() {
     // Existing actions
     startConversation,
     sendMessage,
+    sendMessageWithAutoStart,
     completeConversation,
     resetConversation,
     clearError,
@@ -99,11 +101,14 @@ export default function ProductDefinerScreen() {
 
   // Handle send message
   const handleSendMessage = useCallback(() => {
-    if (!inputText.trim() || !currentConversation) return;
+    if (!inputText.trim()) return;
 
-    sendMessage(currentConversation.id, inputText.trim());
+    const message = inputText.trim();
     setInputText('');
-  }, [inputText, currentConversation, sendMessage]);
+
+    // Use sendMessageWithAutoStart which handles both temp and real conversations
+    sendMessageWithAutoStart(message);
+  }, [inputText, sendMessageWithAutoStart]);
 
   // Handle complete conversation
   const handleCompleteConversation = useCallback(() => {
@@ -346,7 +351,7 @@ export default function ProductDefinerScreen() {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         {/* Messages List or Mode Selection */}
-        {currentConversation || (initialPromptShown && currentMessages.length > 0) ? (
+        {(currentConversationId && currentMessages.length > 0) ? (
           <>
             <FlatList
               ref={flatListRef}
