@@ -377,12 +377,12 @@ export const productDefinerLogic = kea<any>({
         // Validation
         if (!selectedMode) {
           actions.setError('Please select a mode');
-          return;
+          return null; // Return null to indicate failure
         }
 
         if (selectedMode === 'new_icp' && !selectedProductId) {
           actions.setError('Please select a product');
-          return;
+          return null; // Return null to indicate failure
         }
 
         actions.setLoading(true);
@@ -397,8 +397,12 @@ export const productDefinerLogic = kea<any>({
           apiParams.productId = selectedProductId;
         }
 
+        console.log('📞 Calling backend API to start conversation...', apiParams);
+
         // Call backend to start conversation with mode/productId
         const response: StartConversationResponse = await productDefinerAPI.startConversation(apiParams);
+
+        console.log('✅ Backend conversation created:', response.conversationId);
 
         // Create conversation object
         const conversation: AgentConversation = {
@@ -433,10 +437,14 @@ export const productDefinerLogic = kea<any>({
         }
 
         actions.setLoading(false);
+
+        // Return the conversation ID for chaining
+        return response.conversationId;
       } catch (error: any) {
-        console.error('Error proceeding with selection:', error);
+        console.error('❌ Error proceeding with selection:', error);
         actions.setError(error.message || 'Failed to start conversation');
         actions.setLoading(false);
+        return null; // Return null to indicate failure
       }
     },
 
@@ -450,37 +458,57 @@ export const productDefinerLogic = kea<any>({
 
     // Send message with auto-start backend conversation if needed
     sendMessageWithAutoStart: async ({ message }: any) => {
-      const { selectedMode, selectedProductId, conversations, currentConversationId } = values;
+      const { selectedMode, conversations, currentConversationId } = values;
+
+      console.log('🚀 sendMessageWithAutoStart called:', {
+        message: message.substring(0, 50),
+        selectedMode,
+        currentConversationId,
+        hasConversations: Object.keys(conversations).length,
+      });
 
       // Check if we have a real backend conversation
       const hasRealConversation = Object.keys(conversations).some(
         id => !id.startsWith('temp-')
       );
 
+      console.log('🔍 Conversation check:', {
+        hasRealConversation,
+        conversationIds: Object.keys(conversations),
+      });
+
       // If we already have a real conversation, just send the message
-      if (hasRealConversation && currentConversationId) {
+      if (hasRealConversation && currentConversationId && !currentConversationId.startsWith('temp-')) {
+        console.log('✅ Using existing real conversation:', currentConversationId);
         actions.sendMessage(currentConversationId, message);
         return;
       }
 
       // If we have a mode selected but no backend conversation, start it first
       if (selectedMode && !hasRealConversation) {
+        console.log('🔄 Starting backend conversation first...');
         try {
-          // Start backend conversation
-          await actions.proceedWithSelection();
+          // Start backend conversation and WAIT for the returned conversation ID
+          // This is a proper async/await pattern - no setTimeout needed!
+          const newConversationId = await actions.proceedWithSelection();
 
-          // Wait a moment for state to update
-          setTimeout(() => {
-            // Get the newly created conversation ID
-            const newConversationId = values.currentConversationId;
-            if (newConversationId && !newConversationId.startsWith('temp-')) {
-              actions.sendMessage(newConversationId, message);
-            }
-          }, 300);
-        } catch (error) {
-          console.error('Error starting conversation:', error);
-          actions.setError('Failed to start conversation');
+          console.log('📝 Received conversationId from proceedWithSelection:', newConversationId);
+
+          // Check if we got a valid conversation ID
+          if (newConversationId && !newConversationId.startsWith('temp-')) {
+            console.log('✅ Sending message to backend conversation:', newConversationId);
+            // Send the message to the newly created conversation
+            actions.sendMessage(newConversationId, message);
+          } else {
+            console.error('❌ Failed to get real conversation ID:', newConversationId);
+            actions.setError('Failed to create backend conversation');
+          }
+        } catch (error: any) {
+          console.error('❌ Error starting conversation:', error);
+          actions.setError(error.message || 'Failed to start conversation');
         }
+      } else {
+        console.warn('⚠️ No mode selected or already has real conversation but conditions not met');
       }
     },
 
