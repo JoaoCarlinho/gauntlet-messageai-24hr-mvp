@@ -103,4 +103,20 @@ router.post(
   aiAgentsController.getExecutiveSummary
 );
 
+// AI Conversation Management Routes
+router.get(
+  '/conversations',
+  aiAgentsController.listAIConversations
+);
+
+router.get(
+  '/conversations/:conversationId',
+  aiAgentsController.getAIConversation
+);
+
+router.delete(
+  '/conversations/:conversationId',
+  aiAgentsController.deleteAIConversation
+);
+
 export default router;

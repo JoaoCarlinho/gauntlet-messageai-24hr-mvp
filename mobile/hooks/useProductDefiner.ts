@@ -119,6 +119,7 @@ export const useProductDefiner = (): UseProductDefinerReturn => {
   const {
     startConversation: startConversationAction,
     sendMessage: sendMessageAction,
+    sendMessageWithAutoStart: sendMessageWithAutoStartAction,
     completeConversation: completeConversationAction,
     resetConversation: resetConversationAction,
     setError,
@@ -224,6 +225,7 @@ export const useProductDefiner = (): UseProductDefinerReturn => {
     // Existing actions
     startConversation,
     sendMessage,
+    sendMessageWithAutoStart: sendMessageWithAutoStartAction,
     completeConversation,
     resetConversation,
     clearError,

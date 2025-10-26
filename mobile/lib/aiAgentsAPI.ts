@@ -70,14 +70,74 @@ aiAgentsClient.interceptors.request.use(
   }
 );
 
-// Response interceptor for error handling
+// Response interceptor for error handling and token refresh
 aiAgentsClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
-      // Token expired, handled by main api.ts
-      console.error('Unauthorized AI agent request');
+    const originalRequest = error.config;
+
+    // Handle 401 errors with token refresh
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const refreshToken = await tokenManager.getRefreshToken();
+        if (!refreshToken) {
+          console.log('No refresh token available for AI agent request');
+          await tokenManager.clearTokens();
+          await tokenManager.clearUserData();
+
+          // Trigger logout event
+          try {
+            const { DeviceEventEmitter } = require('react-native');
+            DeviceEventEmitter.emit('auth:logout', { reason: 'No refresh token available' });
+          } catch (eventError) {
+            console.warn('Could not emit auth:logout event:', eventError);
+          }
+
+          return Promise.reject(error);
+        }
+
+        console.log('Refreshing token for AI agent request...');
+
+        // Refresh the token
+        const response = await axios.post(`${API_BASE_URL}/api/v1/auth/refresh`, {
+          refreshToken,
+        });
+
+        if (response.data.accessToken) {
+          const { accessToken } = response.data;
+
+          // Update the access token
+          await tokenManager.setTokens(accessToken, null);
+
+          console.log('Token refreshed successfully for AI agent request');
+
+          // Retry the original request with new token
+          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+          return aiAgentsClient(originalRequest);
+        } else {
+          console.error('Invalid refresh response:', response.data);
+          throw new Error('Invalid refresh response: missing access token');
+        }
+      } catch (refreshError) {
+        console.error('Token refresh failed for AI agent request:', refreshError);
+
+        // Clear tokens and trigger logout
+        await tokenManager.clearTokens();
+        await tokenManager.clearUserData();
+
+        try {
+          const { DeviceEventEmitter } = require('react-native');
+          DeviceEventEmitter.emit('auth:logout', { reason: 'Token refresh failed' });
+        } catch (eventError) {
+          console.warn('Could not emit auth:logout event:', eventError);
+        }
+
+        return Promise.reject(refreshError);
+      }
     }
+
     return Promise.reject(error);
   }
 );
@@ -108,27 +168,178 @@ export const productDefinerAPI = {
   /**
    * Send a message to the product definer agent (SSE streaming)
    * POST /ai/product-definer/message
-   * Returns EventSource for SSE streaming
+   * Returns an object with response stream reader and abort controller
    */
-  createMessageStream(
+  async sendMessage(
     conversationId: string,
-    message: string
-  ): EventSource {
-    const token = tokenManager.getAccessToken();
+    message: string,
+    onDelta: (text: string) => void,
+    onComplete: (fullText: string) => void,
+    onError: (error: string) => void
+  ): Promise<{ abort: () => void }> {
+    const token = await tokenManager.getAccessToken();
+    if (!token) {
+      onError('No access token available');
+      return { abort: () => {} };
+    }
+
     const url = `${API_BASE_URL}/api/v1/ai/product-definer/message`;
 
-    // Create EventSource with auth token
-    const eventSource = new EventSource(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ conversationId, message }),
-      method: 'POST',
-    } as any);
+    // Track the current XHR instance for abort support
+    let currentXhr: XMLHttpRequest | null = null;
 
-    return eventSource;
+    const makeRequest = (authToken: string) => {
+      return new Promise<void>((resolve, reject) => {
+        // Create a NEW XMLHttpRequest for each request (important for retries)
+        const xhr = new XMLHttpRequest();
+        currentXhr = xhr;  // Store reference for abort
+        let buffer = '';
+        let accumulatedText = '';  // Track accumulated text locally
+
+        xhr.open('POST', url, true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.setRequestHeader('Authorization', `Bearer ${authToken}`);
+        xhr.setRequestHeader('Accept', 'text/event-stream');
+
+        // Track if stream has completed via SSE event
+        let streamCompleted = false;
+
+        // Handle streaming response
+        xhr.onprogress = () => {
+          try {
+            // Get the response text so far
+            const responseText = xhr.responseText;
+
+            // Only process new data
+            const newData = responseText.substring(buffer.length);
+            buffer = responseText;
+
+            console.log('📥 XHR progress - new data length:', newData.length);
+
+            // Split by double newline to get complete SSE messages
+            const lines = newData.split('\n');
+
+            for (const line of lines) {
+              if (!line.trim()) continue;
+
+              // Parse SSE format: "event: delta" or "data: {...}"
+              if (line.startsWith('event: ')) {
+                const eventType = line.substring(7).trim();
+                console.log('📨 SSE event type:', eventType);
+                // Event type line - we'll process it with the next data line
+                continue;
+              } else if (line.startsWith('data: ')) {
+                const data = line.substring(6);
+
+                try {
+                  const parsed = JSON.parse(data);
+                  console.log('📊 SSE data parsed:', { type: parsed.type, hasData: !!parsed.delta });
+
+                  if (parsed.type === 'content' && parsed.delta) {
+                    console.log('✅ Calling onDelta with chunk length:', parsed.delta.length);
+                    accumulatedText += parsed.delta;  // Accumulate locally
+                    console.log('📚 Accumulated text length:', accumulatedText.length);
+                    onDelta(parsed.delta);
+                  } else if (parsed.type === 'complete') {
+                    console.log('🏁 Stream complete event received, accumulated length:', accumulatedText.length);
+                    streamCompleted = true;
+                    onComplete(accumulatedText);  // Pass accumulated text
+                  } else if (parsed.type === 'error') {
+                    console.error('❌ Stream error received:', parsed.error);
+                    onError(parsed.error || 'Unknown error');
+                  }
+                } catch (parseError) {
+                  // Skip unparseable data (comments, etc.)
+                  console.log('⏭️ Skipping unparseable SSE data:', data);
+                }
+              }
+            }
+          } catch (error: any) {
+            console.error('Error processing SSE stream:', error);
+          }
+        };
+
+        xhr.onload = () => {
+          console.log('🔚 XHR onload called, status:', xhr.status, 'streamCompleted:', streamCompleted);
+
+          if (xhr.status === 200) {
+            // Only call onComplete if we haven't already via SSE event
+            if (!streamCompleted) {
+              console.log('⚠️ Stream ended without complete event, calling onComplete with accumulated text:', accumulatedText.length);
+              onComplete(accumulatedText);  // Pass accumulated text
+            }
+            resolve();
+          } else if (xhr.status === 401) {
+            reject(new Error('Unauthorized'));
+          } else {
+            reject(new Error(`HTTP error! status: ${xhr.status}`));
+          }
+        };
+
+        xhr.onerror = () => {
+          reject(new Error('Network error'));
+        };
+
+        xhr.send(JSON.stringify({ conversationId, message }));
+      });
+    };
+
+    try {
+      await makeRequest(token);
+    } catch (error: any) {
+      // Handle 401 - token expired, try to refresh
+      if (error.message === 'Unauthorized') {
+        console.log('Token expired for message stream, attempting refresh...');
+
+        const refreshToken = await tokenManager.getRefreshToken();
+        if (!refreshToken) {
+          onError('No refresh token available');
+          return { abort: () => currentXhr?.abort() };
+        }
+
+        try {
+          // Refresh the token
+          const refreshResponse = await axios.post(`${API_BASE_URL}/api/v1/auth/refresh`, {
+            refreshToken,
+          });
+
+          if (refreshResponse.data.accessToken) {
+            const newToken = refreshResponse.data.accessToken;
+            await tokenManager.setTokens(newToken, null);
+            console.log('Token refreshed successfully for message stream');
+
+            // Retry with new token - will create a NEW xhr instance
+            await makeRequest(newToken);
+          } else {
+            throw new Error('Token refresh failed');
+          }
+        } catch (refreshError: any) {
+          console.error('Token refresh failed:', refreshError);
+          onError(refreshError.message || 'Token refresh failed');
+        }
+      } else {
+        console.error('Error creating message stream:', error);
+        onError(error.message || 'Failed to send message');
+      }
+    }
+
+    return {
+      abort: () => currentXhr?.abort(),
+    };
   },
+
+  // Legacy method - keeping for compatibility but not used
+  _oldSendMessage(
+    conversationId: string,
+    message: string,
+    onDelta: (text: string) => void,
+    onComplete: () => void,
+    onError: (error: string) => void
+  ): Promise<{ abort: () => void }> {
+    // This method uses fetch with ReadableStream which doesn't work in React Native
+    throw new Error('This method is not supported in React Native - use XMLHttpRequest version');
+  },
+
 
   /**
    * Complete a product definer conversation
@@ -184,11 +395,11 @@ export const campaignAdvisorAPI = {
   createMessageStream(
     conversationId: string,
     message: string
-  ): EventSource {
+  ): RNEventSource {
     const token = tokenManager.getAccessToken();
     const url = `${API_BASE_URL}/api/v1/ai/campaign-advisor/message`;
 
-    const eventSource = new EventSource(url, {
+    const eventSource = new RNEventSource(url, {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
@@ -397,10 +608,10 @@ export const discoveryBotAPI = {
    * POST /public/discovery/message
    * Returns EventSource for SSE streaming
    */
-  createMessageStream(sessionId: string, message: string): EventSource {
+  createMessageStream(sessionId: string, message: string): RNEventSource {
     const url = `${API_BASE_URL}/api/v1/public/discovery/message`;
 
-    const eventSource = new EventSource(url, {
+    const eventSource = new RNEventSource(url, {
       headers: {
         'Content-Type': 'application/json',
       },
@@ -427,6 +638,90 @@ export const discoveryBotAPI = {
 };
 
 // ============================================================================
+// AI Conversation Management API
+// ============================================================================
+
+export const conversationManagementAPI = {
+  /**
+   * List all AI conversations for the authenticated user
+   * GET /ai/conversations
+   * @param filters - Optional filters (agentType, status, limit)
+   */
+  async listConversations(filters?: {
+    agentType?: string;
+    status?: 'active' | 'completed' | 'archived';
+    limit?: number;
+  }): Promise<{
+    conversations: Array<{
+      id: string;
+      agentType: string;
+      status: string;
+      contextId: string | null;
+      metadata: Record<string, any>;
+      messageCount: number;
+      lastMessage: {
+        role: string;
+        content: string;
+        createdAt: string;
+      } | null;
+      createdAt: Date;
+      updatedAt: Date;
+    }>;
+    total: number;
+  }> {
+    const params = new URLSearchParams();
+    if (filters?.agentType) params.append('agentType', filters.agentType);
+    if (filters?.status) params.append('status', filters.status);
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+
+    const response = await aiAgentsClient.get(
+      `/ai/conversations?${params.toString()}`
+    );
+    return response.data;
+  },
+
+  /**
+   * Get a specific conversation with full message history
+   * GET /ai/conversations/:conversationId
+   */
+  async getConversation(conversationId: string): Promise<{
+    id: string;
+    agentType: string;
+    status: string;
+    contextId: string | null;
+    metadata: Record<string, any>;
+    messages: Array<{
+      id: string;
+      role: 'user' | 'assistant' | 'system';
+      content: string;
+      metadata?: Record<string, any>;
+      createdAt: string;
+    }>;
+    createdAt: Date;
+    updatedAt: Date;
+  }> {
+    const response = await aiAgentsClient.get(
+      `/ai/conversations/${conversationId}`
+    );
+    return response.data;
+  },
+
+  /**
+   * Delete (archive) a conversation
+   * DELETE /ai/conversations/:conversationId
+   */
+  async deleteConversation(conversationId: string): Promise<{
+    message: string;
+    conversationId: string;
+  }> {
+    const response = await aiAgentsClient.delete(
+      `/ai/conversations/${conversationId}`
+    );
+    return response.data;
+  },
+};
+
+// ============================================================================
 // Combined Export
 // ============================================================================
 
@@ -436,6 +731,7 @@ export const aiAgentsAPI = {
   contentGenerator: contentGeneratorAPI,
   performanceAnalyzer: performanceAnalyzerAPI,
   discoveryBot: discoveryBotAPI,
+  conversations: conversationManagementAPI,
 };
 
 export default aiAgentsAPI;

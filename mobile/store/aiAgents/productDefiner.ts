@@ -145,11 +145,12 @@ export const productDefinerLogic = kea<any>({
 
     // Message management
     sendMessage: (conversationId: string, message: string) => ({ conversationId, message }),
+    sendMessageWithAutoStart: (message: string) => ({ message }), // New action for auto-starting backend
     addMessage: (conversationId: string, message: AgentMessage) => ({ conversationId, message }),
 
     // Streaming management
     appendStreamChunk: (chunk: string) => ({ chunk }),
-    completeStream: (conversationId: string) => ({ conversationId }),
+    completeStream: (payload: { conversationId: string; fullText: string }) => payload,
     setStreaming: (isStreaming: boolean) => ({ isStreaming }),
     clearStreamingMessage: true,
 
@@ -184,6 +185,7 @@ export const productDefinerLogic = kea<any>({
         ...state,
         [conversation.id]: conversation,
       }),
+      resetConversation: () => ({}),
     },
 
     messages: {
@@ -198,6 +200,7 @@ export const productDefinerLogic = kea<any>({
         // This will be handled by the listener
         return state;
       },
+      resetConversation: () => ({}),
     },
 
     currentConversationId: {
@@ -290,6 +293,9 @@ export const productDefinerLogic = kea<any>({
       // Create a fake conversation ID for the initial prompt state
       const tempConversationId = `temp-${Date.now()}`;
 
+      // Set this as the current conversation ID so messages appear
+      actions.setCurrentConversationId(tempConversationId);
+
       // Add welcome message as an AI message
       const welcomeMessage: AgentMessage = {
         id: `msg-welcome-${Date.now()}`,
@@ -305,21 +311,25 @@ export const productDefinerLogic = kea<any>({
 
     // Select mode listener
     selectMode: async ({ mode }: any) => {
+      const currentConvId = values.currentConversationId;
+
       if (mode === 'new_icp') {
         // Automatically fetch existing products for ICP mode
         actions.fetchExistingProducts();
       } else if (mode === 'new_product') {
         // For new product, add the starting prompt and allow typing immediately
-        const tempConversationId = `temp-${Date.now()}`;
+        // Use existing temp conversation ID
+        const convId = currentConvId || `temp-${Date.now()}`;
+
         const startMessage: AgentMessage = {
           id: `msg-start-${Date.now()}`,
-          conversationId: tempConversationId,
+          conversationId: convId,
           role: 'assistant',
           content: INITIAL_PROMPTS.newProductStart,
           createdAt: new Date(),
         };
 
-        actions.addMessage(tempConversationId, startMessage);
+        actions.addMessage(convId, startMessage);
       }
     },
 
@@ -338,17 +348,19 @@ export const productDefinerLogic = kea<any>({
         if (products.length === 0) {
           actions.setProductsError('No products found. Please create a product first.');
         } else {
-          // Add the ICP start message
-          const tempConversationId = `temp-${Date.now()}`;
+          // Add the ICP start message using existing conversation ID
+          const currentConvId = values.currentConversationId;
+          const convId = currentConvId || `temp-${Date.now()}`;
+
           const icpStartMessage: AgentMessage = {
             id: `msg-icp-start-${Date.now()}`,
-            conversationId: tempConversationId,
+            conversationId: convId,
             role: 'assistant',
             content: INITIAL_PROMPTS.newICPStart,
             createdAt: new Date(),
           };
 
-          actions.addMessage(tempConversationId, icpStartMessage);
+          actions.addMessage(convId, icpStartMessage);
         }
       } catch (error: any) {
         console.error('Error fetching products:', error);
@@ -436,7 +448,43 @@ export const productDefinerLogic = kea<any>({
       actions.showInitialPrompt();
     },
 
-    // Send message listener with SSE streaming
+    // Send message with auto-start backend conversation if needed
+    sendMessageWithAutoStart: async ({ message }: any) => {
+      const { selectedMode, selectedProductId, conversations, currentConversationId } = values;
+
+      // Check if we have a real backend conversation
+      const hasRealConversation = Object.keys(conversations).some(
+        id => !id.startsWith('temp-')
+      );
+
+      // If we already have a real conversation, just send the message
+      if (hasRealConversation && currentConversationId) {
+        actions.sendMessage(currentConversationId, message);
+        return;
+      }
+
+      // If we have a mode selected but no backend conversation, start it first
+      if (selectedMode && !hasRealConversation) {
+        try {
+          // Start backend conversation
+          await actions.proceedWithSelection();
+
+          // Wait a moment for state to update
+          setTimeout(() => {
+            // Get the newly created conversation ID
+            const newConversationId = values.currentConversationId;
+            if (newConversationId && !newConversationId.startsWith('temp-')) {
+              actions.sendMessage(newConversationId, message);
+            }
+          }, 300);
+        } catch (error) {
+          console.error('Error starting conversation:', error);
+          actions.setError('Failed to start conversation');
+        }
+      }
+    },
+
+    // Send message listener with SSE streaming using fetch
     sendMessage: async ({ conversationId, message }: any) => {
       try {
         // Add user message to state
@@ -449,40 +497,32 @@ export const productDefinerLogic = kea<any>({
         };
         actions.addMessage(conversationId, userMessage);
 
-        // Create SSE stream
-        const eventSource = productDefinerAPI.createMessageStream(conversationId, message);
-
         actions.setStreaming(true);
         actions.clearStreamingMessage();
 
-        // Handle SSE events
-        eventSource.onmessage = (event: MessageEvent) => {
-          try {
-            const data = JSON.parse(event.data);
-
-            if (data.type === 'text' && data.content) {
-              // Accumulate text chunks
-              actions.appendStreamChunk(data.content);
-            } else if (data.type === 'complete') {
-              // Stream complete
-              actions.completeStream(conversationId);
-              eventSource.close();
-            } else if (data.type === 'error') {
-              actions.setError(data.error || 'Streaming error');
-              actions.setStreaming(false);
-              eventSource.close();
-            }
-          } catch (parseError) {
-            console.error('Error parsing SSE message:', parseError);
+        // Create SSE stream using XMLHttpRequest-based approach
+        const { abort } = await productDefinerAPI.sendMessage(
+          conversationId,
+          message,
+          // onDelta callback
+          (delta: string) => {
+            actions.appendStreamChunk(delta);
+          },
+          // onComplete callback - now receives full accumulated text
+          (fullText: string) => {
+            console.log('💾 onComplete called with fullText length:', fullText.length);
+            actions.completeStream({ conversationId, fullText });
+          },
+          // onError callback
+          (error: string) => {
+            console.error('SSE stream error:', error);
+            actions.setError(error || 'Streaming error');
+            actions.setStreaming(false);
           }
-        };
+        );
 
-        eventSource.onerror = (error: any) => {
-          console.error('SSE connection error:', error);
-          actions.setError('Connection error. Please try again.');
-          actions.setStreaming(false);
-          eventSource.close();
-        };
+        // Store abort function for cleanup if needed
+        // (Could add to state if we need to support canceling streams)
       } catch (error: any) {
         console.error('Error sending message:', error);
         actions.setError(error.message || 'Failed to send message');
@@ -491,24 +531,52 @@ export const productDefinerLogic = kea<any>({
     },
 
     // Complete stream listener
-    completeStream: ({ conversationId }: any) => {
-      const streamedText = values.streamingMessage;
+    completeStream: ({ conversationId, fullText }: any) => {
+      console.log('🔄 completeStream called:', {
+        conversationId,
+        fullTextLength: fullText?.length,
+        currentMessagesCount: values.messages[conversationId]?.length || 0,
+      });
 
-      if (streamedText) {
-        // Add assistant message with streamed content
+      if (fullText && fullText.trim()) {
+        // Add assistant message with the full accumulated text
         const assistantMessage: AgentMessage = {
           id: `msg-${Date.now()}`,
           conversationId,
           role: 'assistant',
-          content: streamedText,
+          content: fullText,
           createdAt: new Date(),
         };
 
+        console.log('✅ Adding assistant message to state:', {
+          messageId: assistantMessage.id,
+          contentLength: assistantMessage.content.length,
+          conversationId,
+        });
+
         actions.addMessage(conversationId, assistantMessage);
+
+        // Verify message was added
+        setTimeout(() => {
+          const messagesAfter = values.messages[conversationId] || [];
+          console.log('📊 Messages after addMessage:', {
+            conversationId,
+            messagesCount: messagesAfter.length,
+            lastMessage: messagesAfter[messagesAfter.length - 1],
+          });
+        }, 100);
+      } else {
+        console.warn('⚠️ No fullText to save!', { fullText });
       }
 
+      console.log('🧹 Clearing streaming message and setting streaming to false');
       actions.clearStreamingMessage();
       actions.setStreaming(false);
+    },
+
+    // Append stream chunk listener (for logging)
+    appendStreamChunk: ({ chunk }: any) => {
+      console.log('📝 appendStreamChunk called with chunk length:', chunk?.length, 'Current streamingMessage length:', values.streamingMessage.length);
     },
 
     // Complete conversation listener
@@ -637,26 +705,43 @@ export const productDefinerLogic = kea<any>({
 
     // Check if should show mode selection buttons
     shouldShowModeSelection: [
-      (s) => [s.initialPromptShown, s.selectedMode, s.currentConversationId],
-      (initialPromptShown, selectedMode, currentConversationId) => {
-        return initialPromptShown && !selectedMode && !currentConversationId;
+      (s) => [s.initialPromptShown, s.selectedMode, s.conversations],
+      (initialPromptShown, selectedMode, conversations) => {
+        // Show if initial prompt shown, no mode selected, and no real conversation
+        // Real conversations have IDs that don't start with "temp-"
+        const hasRealConversation = Object.keys(conversations).some(
+          id => !id.startsWith('temp-')
+        );
+        return initialPromptShown && !selectedMode && !hasRealConversation;
       },
     ],
 
     // Check if should show product selection
     shouldShowProductSelection: [
-      (s) => [s.selectedMode, s.currentConversationId, s.isLoadingProducts],
-      (selectedMode, currentConversationId, isLoadingProducts) => {
-        return selectedMode === 'new_icp' && !currentConversationId && !isLoadingProducts;
+      (s) => [s.selectedMode, s.conversations, s.isLoadingProducts],
+      (selectedMode, conversations, isLoadingProducts) => {
+        // Show product selection if:
+        // 1. User selected new_icp mode
+        // 2. No real backend conversation exists yet
+        // 3. Not currently loading products
+        const hasRealConversation = Object.keys(conversations).some(
+          id => !id.startsWith('temp-')
+        );
+        return selectedMode === 'new_icp' && !hasRealConversation && !isLoadingProducts;
       },
     ],
 
     // Check if text input should be enabled
     isInputEnabled: [
-      (s) => [s.selectedMode, s.currentConversationId],
-      (selectedMode, currentConversationId) => {
-        // Enable input if mode is selected OR if conversation has started
-        return selectedMode === 'new_product' || currentConversationId !== null;
+      (s) => [s.selectedMode, s.conversations],
+      (selectedMode, conversations) => {
+        // Enable input if:
+        // 1. User selected new_product mode (can type immediately)
+        // 2. OR a real backend conversation has started
+        const hasRealConversation = Object.keys(conversations).some(
+          id => !id.startsWith('temp-')
+        );
+        return selectedMode === 'new_product' || hasRealConversation;
       },
     ],
   },
