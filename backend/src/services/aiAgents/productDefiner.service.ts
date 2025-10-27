@@ -1,4 +1,4 @@
-import { streamText, tool } from 'ai';
+import { streamText } from 'ai';
 import { z } from 'zod';
 import { openai, AI_CONFIG } from '../../config/openai';
 import { PRODUCT_DEFINER_SYSTEM_PROMPT, AgentType } from '../../utils/prompts';
@@ -94,11 +94,14 @@ export async function startConversation(
  *
  * These tools allow the AI to save structured product and ICP data
  * to the database during the conversation.
+ *
+ * Note: Tools are defined as plain objects matching the Vercel AI SDK format.
+ * Tool execution happens in the onFinish callback.
  */
 const productDefinerTools = {
-  save_product: tool({
+  save_product: {
     description: 'Save a product definition to the database. Call this when you have gathered comprehensive product information including name, description, features, pricing, and unique selling propositions.',
-    schema: z.object({
+    inputSchema: z.object({
       name: z.string().describe('Product name'),
       description: z.string().describe('Detailed product description'),
       features: z.array(z.string()).describe('List of key product features'),
@@ -108,10 +111,10 @@ const productDefinerTools = {
       }).describe('Pricing structure'),
       usps: z.array(z.string()).describe('Unique selling propositions that differentiate this product'),
     }),
-  }),
-  save_icp: tool({
+  },
+  save_icp: {
     description: 'Save an Ideal Customer Profile (ICP) to the database. Call this when you have gathered comprehensive information about the target customer including demographics, firmographics, psychographics, and behaviors.',
-    schema: z.object({
+    inputSchema: z.object({
       productId: z.string().describe('ID of the product this ICP is for'),
       name: z.string().describe('Name/title for this ICP'),
       demographics: z.object({
@@ -141,7 +144,7 @@ const productDefinerTools = {
         influencers: z.array(z.string()).optional().describe('Who or what influences their decisions'),
       }).optional().describe('Behavioral patterns'),
     }),
-  }),
+  },
 };
 
 /**
@@ -224,7 +227,7 @@ Do NOT ask about product details - the product already exists. Focus ONLY on def
     model: openai(AI_CONFIG.model),
     messages: messages as any,
     temperature: AI_CONFIG.temperature.balanced,
-    tools: productDefinerTools,
+    tools: productDefinerTools as any,
     onFinish: async (event: any) => {
       const { text, toolCalls } = event;
       // Save assistant's response to conversation
