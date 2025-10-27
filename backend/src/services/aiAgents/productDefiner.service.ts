@@ -101,7 +101,7 @@ export async function startConversation(
 const productDefinerTools = {
   save_product: {
     description: 'Save a product definition to the database. Call this when you have gathered comprehensive product information including name, description, features, pricing, and unique selling propositions.',
-    inputSchema: z.object({
+    parameters: z.object({
       name: z.string().describe('Product name'),
       description: z.string().describe('Detailed product description'),
       features: z.array(z.string()).describe('List of key product features'),
@@ -111,10 +111,16 @@ const productDefinerTools = {
       }).describe('Pricing structure'),
       usps: z.array(z.string()).describe('Unique selling propositions that differentiate this product'),
     }),
+    execute: async (args: any) => {
+      // Actual execution happens in onFinish callback
+      // This is just a placeholder to satisfy the SDK
+      console.log('save_product tool called with:', args);
+      return { success: true, productId: 'pending' };
+    },
   },
   save_icp: {
     description: 'Save an Ideal Customer Profile (ICP) to the database. Call this when you have gathered comprehensive information about the target customer including demographics, firmographics, psychographics, and behaviors.',
-    inputSchema: z.object({
+    parameters: z.object({
       productId: z.string().describe('ID of the product this ICP is for'),
       name: z.string().describe('Name/title for this ICP'),
       demographics: z.object({
@@ -144,6 +150,12 @@ const productDefinerTools = {
         influencers: z.array(z.string()).optional().describe('Who or what influences their decisions'),
       }).optional().describe('Behavioral patterns'),
     }),
+    execute: async (args: any) => {
+      // Actual execution happens in onFinish callback
+      // This is just a placeholder to satisfy the SDK
+      console.log('save_icp tool called with:', args);
+      return { success: true, icpId: 'pending' };
+    },
   },
 };
 
