@@ -148,8 +148,8 @@ export default function AIAgentsScreen() {
         key={conversation.id}
         style={styles.conversationCard}
         onPress={() => {
-          // TODO: Navigate to conversation detail view
-          console.log('View conversation:', conversation.id);
+          console.log('📖 Opening conversation:', conversation.id);
+          router.push(`/ai-agents/conversation-detail?id=${conversation.id}`);
         }}
         activeOpacity={0.7}
       >
