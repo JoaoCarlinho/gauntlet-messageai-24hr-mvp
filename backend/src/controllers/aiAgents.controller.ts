@@ -153,7 +153,7 @@ export const sendProductDefinerMessage = async (
     );
 
     // Stream AI response to client using SSE
-    await streamToSSE(result, res);
+    await streamToSSE(result as any, res);
   } catch (error) {
     console.error('Error sending product definer message:', error);
 
