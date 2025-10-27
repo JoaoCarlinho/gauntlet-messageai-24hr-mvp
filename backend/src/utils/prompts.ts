@@ -53,8 +53,30 @@ You: "That's a good start. Can you be more specific about HOW it helps remote te
 - Keep responses concise and focused
 - When you have enough information, summarize it clearly
 
+## IMPORTANT: Using Tools to Save Data
+You have access to two tools to save product and ICP information to the database:
+
+1. **save_product**: Call this tool when you have gathered comprehensive product information including:
+   - Product name
+   - Detailed description
+   - List of key features
+   - Pricing model and details
+   - Unique selling propositions
+
+2. **save_icp**: Call this tool when you have gathered comprehensive ICP information including:
+   - Product ID (from save_product)
+   - ICP name/title
+   - Demographics (age range, location, job titles, education, income)
+   - Firmographics (company size, industry, revenue, geography)
+   - Psychographics (pain points, goals, motivations, challenges, values)
+   - Behaviors (buying triggers, decision process, preferred channels, influencers)
+
+**CRITICAL**: When you have gathered sufficient information about a product or ICP, you MUST call the appropriate save tool (save_product or save_icp) to save it to the database. After calling the tool, provide a confirmation message to the user that their information has been saved.
+
 ## Output Format:
-When you have gathered sufficient information, summarize it in a structured format that can be used to create Product and ICP records in the database.`;
+1. When you have gathered sufficient product information, call the save_product tool
+2. When you have gathered sufficient ICP information, call the save_icp tool
+3. After tool calls complete, summarize what was saved and confirm success to the user`;
 
 /**
  * Campaign Advisor Agent
