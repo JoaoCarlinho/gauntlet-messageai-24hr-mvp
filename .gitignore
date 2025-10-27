@@ -57,3 +57,6 @@ tokens
 android_firebase_setup.txt
 ios_firebase_setup.txt
 dev_history/
+app_scaffold_context/campaign_advisor_icp_review.md
+app_scaffold_context/ai-agent-task-selection-in-product-definer.md
+scripts/delete-branches.sh

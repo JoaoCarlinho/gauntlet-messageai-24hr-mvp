@@ -1,11 +1,11 @@
-import { streamText } from 'ai';
 import { z } from 'zod';
-import { openai, AI_CONFIG } from '../../config/openai';
+import { getOpenAIClient, AI_CONFIG } from '../../config/openai';
 import { PRODUCT_DEFINER_SYSTEM_PROMPT, AgentType } from '../../utils/prompts';
 import * as conversationService from '../aiConversations.service';
 import * as productService from '../products.service';
 import * as icpService from '../icps.service';
 import prisma from '../../config/database';
+import type { Response } from 'express';
 
 /**
  * Product Definer AI Agent Service
@@ -95,69 +95,119 @@ export async function startConversation(
  * These tools allow the AI to save structured product and ICP data
  * to the database during the conversation.
  *
- * Note: Tools are defined as plain objects matching the Vercel AI SDK format.
- * Tool execution happens in the onFinish callback.
+ * Defined using OpenAI's function calling format (JSON Schema)
  */
-const productDefinerTools = {
-  save_product: {
-    description: 'Save a product definition to the database. Call this when you have gathered comprehensive product information including name, description, features, pricing, and unique selling propositions.',
-    parameters: z.object({
-      name: z.string().describe('Product name'),
-      description: z.string().describe('Detailed product description'),
-      features: z.array(z.string()).describe('List of key product features'),
-      pricing: z.object({
-        model: z.string().describe('Pricing model (e.g., subscription, one-time, usage-based)'),
-        details: z.string().describe('Pricing details and structure'),
-      }).describe('Pricing structure'),
-      usps: z.array(z.string()).describe('Unique selling propositions that differentiate this product'),
-    }),
-    execute: async (args: any) => {
-      // Actual execution happens in onFinish callback
-      // This is just a placeholder to satisfy the SDK
-      console.log('save_product tool called with:', args);
-      return { success: true, productId: 'pending' };
+const productDefinerTools = [
+  {
+    type: 'function' as const,
+    function: {
+      name: 'save_product',
+      description: 'Save a product definition to the database. Call this when you have gathered comprehensive product information including name, description, features, pricing, and unique selling propositions.',
+      parameters: {
+        type: 'object',
+        properties: {
+          name: {
+            type: 'string',
+            description: 'Product name',
+          },
+          description: {
+            type: 'string',
+            description: 'Detailed product description',
+          },
+          features: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'List of key product features',
+          },
+          pricing: {
+            type: 'object',
+            properties: {
+              model: {
+                type: 'string',
+                description: 'Pricing model (e.g., subscription, one-time, usage-based)',
+              },
+              details: {
+                type: 'string',
+                description: 'Pricing details and structure',
+              },
+            },
+            required: ['model', 'details'],
+            description: 'Pricing structure',
+          },
+          usps: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Unique selling propositions that differentiate this product',
+          },
+        },
+        required: ['name', 'description', 'features', 'pricing', 'usps'],
+      },
     },
   },
-  save_icp: {
-    description: 'Save an Ideal Customer Profile (ICP) to the database. Call this when you have gathered comprehensive information about the target customer including demographics, firmographics, psychographics, and behaviors.',
-    parameters: z.object({
-      productId: z.string().describe('ID of the product this ICP is for'),
-      name: z.string().describe('Name/title for this ICP'),
-      demographics: z.object({
-        ageRange: z.string().optional().describe('Age range of target customers'),
-        location: z.string().optional().describe('Geographic location'),
-        jobTitles: z.array(z.string()).optional().describe('Common job titles'),
-        education: z.string().optional().describe('Education level'),
-        income: z.string().optional().describe('Income level or range'),
-      }).optional().describe('Demographic characteristics'),
-      firmographics: z.object({
-        companySize: z.string().optional().describe('Company size range'),
-        industry: z.array(z.string()).optional().describe('Target industries'),
-        revenue: z.string().optional().describe('Company revenue range'),
-        geography: z.string().optional().describe('Geographic market'),
-      }).optional().describe('Firmographic characteristics (for B2B)'),
-      psychographics: z.object({
-        painPoints: z.array(z.string()).optional().describe('Key pain points and challenges'),
-        goals: z.array(z.string()).optional().describe('Goals and objectives'),
-        motivations: z.array(z.string()).optional().describe('Buying motivations'),
-        challenges: z.array(z.string()).optional().describe('Challenges they face'),
-        values: z.array(z.string()).optional().describe('Core values'),
-      }).optional().describe('Psychographic characteristics'),
-      behaviors: z.object({
-        buyingTriggers: z.array(z.string()).optional().describe('Events that trigger buying decisions'),
-        decisionProcess: z.string().optional().describe('How they make buying decisions'),
-        preferredChannels: z.array(z.string()).optional().describe('Preferred communication and buying channels'),
-        influencers: z.array(z.string()).optional().describe('Who or what influences their decisions'),
-      }).optional().describe('Behavioral patterns'),
-    }),
-    execute: async (args: any) => {
-      // Actual execution happens in onFinish callback
-      // This is just a placeholder to satisfy the SDK
-      console.log('save_icp tool called with:', args);
-      return { success: true, icpId: 'pending' };
+  {
+    type: 'function' as const,
+    function: {
+      name: 'save_icp',
+      description: 'Save an Ideal Customer Profile (ICP) to the database. Call this when you have gathered comprehensive information about the target customer including demographics, firmographics, psychographics, and behaviors.',
+      parameters: {
+        type: 'object',
+        properties: {
+          productId: {
+            type: 'string',
+            description: 'ID of the product this ICP is for',
+          },
+          name: {
+            type: 'string',
+            description: 'Name/title for this ICP',
+          },
+          demographics: {
+            type: 'object',
+            properties: {
+              ageRange: { type: 'string', description: 'Age range of target customers' },
+              location: { type: 'string', description: 'Geographic location' },
+              jobTitles: { type: 'array', items: { type: 'string' }, description: 'Common job titles' },
+              education: { type: 'string', description: 'Education level' },
+              income: { type: 'string', description: 'Income level or range' },
+            },
+            description: 'Demographic characteristics',
+          },
+          firmographics: {
+            type: 'object',
+            properties: {
+              companySize: { type: 'string', description: 'Company size range' },
+              industry: { type: 'array', items: { type: 'string' }, description: 'Target industries' },
+              revenue: { type: 'string', description: 'Company revenue range' },
+              geography: { type: 'string', description: 'Geographic market' },
+            },
+            description: 'Firmographic characteristics (for B2B)',
+          },
+          psychographics: {
+            type: 'object',
+            properties: {
+              painPoints: { type: 'array', items: { type: 'string' }, description: 'Key pain points and challenges' },
+              goals: { type: 'array', items: { type: 'string' }, description: 'Goals and objectives' },
+              motivations: { type: 'array', items: { type: 'string' }, description: 'Buying motivations' },
+              challenges: { type: 'array', items: { type: 'string' }, description: 'Challenges they face' },
+              values: { type: 'array', items: { type: 'string' }, description: 'Core values' },
+            },
+            description: 'Psychographic characteristics',
+          },
+          behaviors: {
+            type: 'object',
+            properties: {
+              buyingTriggers: { type: 'array', items: { type: 'string' }, description: 'Events that trigger buying decisions' },
+              decisionProcess: { type: 'string', description: 'How they make buying decisions' },
+              preferredChannels: { type: 'array', items: { type: 'string' }, description: 'Preferred communication and buying channels' },
+              influencers: { type: 'array', items: { type: 'string' }, description: 'Who or what influences their decisions' },
+            },
+            description: 'Behavioral patterns',
+          },
+        },
+        required: ['productId', 'name'],
+      },
     },
   },
-};
+];
 
 /**
  * Process a user message in the product definition conversation
@@ -169,14 +219,17 @@ const productDefinerTools = {
  * @param userId - User ID
  * @param teamId - Team ID
  * @param userMessage - User's message
- * @returns Streaming AI response
+ * @param res - Express Response object for streaming
  */
 export async function processMessage(
   conversationId: string,
   userId: string,
   teamId: string,
-  userMessage: string
+  userMessage: string,
+  res: Response
 ) {
+  const openaiClient = getOpenAIClient();
+
   // Add user message to conversation history
   await conversationService.addMessage(
     conversationId,
@@ -234,157 +287,235 @@ Do NOT ask about product details - the product already exists. Focus ONLY on def
     20 // Last 20 messages for context
   );
 
-  // Stream AI response with function calling
-  const result = streamText({
-    model: openai(AI_CONFIG.model),
-    messages: messages as any,
-    temperature: AI_CONFIG.temperature.balanced,
-    tools: productDefinerTools as any,
-    onFinish: async (event: any) => {
-      const { text, toolCalls } = event;
-      // Save assistant's response to conversation
-      await conversationService.addMessage(
-        conversationId,
-        userId,
-        teamId,
-        {
-          role: 'assistant',
-          content: text,
-          metadata: {
-            toolCalls: toolCalls?.map((tc: any) => ({
-              name: tc.toolName,
-              args: tc.args,
-            })),
-          },
-        }
-      );
+  // Set up SSE headers
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
 
-      // Handle tool calls and save to database
-      if (toolCalls && toolCalls.length > 0) {
-        for (const toolCall of toolCalls) {
-          const tc = toolCall as any;
+  try {
+    // Call OpenAI streaming API with function calling
+    const stream = await openaiClient.chat.completions.create({
+      model: AI_CONFIG.model,
+      messages: messages as any,
+      temperature: AI_CONFIG.temperature.balanced,
+      tools: productDefinerTools,
+      tool_choice: 'auto',
+      stream: true,
+    });
 
-          // Save product
-          if (tc.toolName === 'save_product') {
-            try {
-              const product = await productService.createProduct(
-                teamId,
-                {
-                  name: tc.args.name,
-                  description: tc.args.description,
-                  features: tc.args.features,
-                  pricing: tc.args.pricing,
-                  usps: tc.args.usps,
-                }
-              );
+    let fullText = '';
+    let toolCalls: any[] = [];
+    let currentToolCall: any = null;
 
-              // Store product ID in conversation context for ICP creation
-              await conversationService.addMessage(
-                conversationId,
-                userId,
-                teamId,
-                {
-                  role: 'system',
-                  content: `Product saved with ID: ${product.id}`,
-                  metadata: { productId: product.id },
-                }
-              );
-            } catch (error) {
-              console.error('Error saving product:', error);
-              await conversationService.addMessage(
-                conversationId,
-                userId,
-                teamId,
-                {
-                  role: 'system',
-                  content: 'Error saving product. Please try again.',
-                }
-              );
-            }
-          }
+    // Process the stream
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta;
 
-          // Save ICP
-          if (tc.toolName === 'save_icp') {
-            try {
-              const icp = await icpService.createICP(
-                tc.args.productId,
-                teamId,
-                {
-                  name: tc.args.name,
-                  demographics: tc.args.demographics,
-                  firmographics: tc.args.firmographics,
-                  psychographics: tc.args.psychographics,
-                  behaviors: tc.args.behaviors,
-                }
-              );
+      // Handle text content
+      if (delta?.content) {
+        fullText += delta.content;
+        // Send text chunk to client
+        res.write(`data: ${JSON.stringify({ type: 'text', content: delta.content })}\n\n`);
+      }
 
-              await conversationService.addMessage(
-                conversationId,
-                userId,
-                teamId,
-                {
-                  role: 'system',
-                  content: `ICP saved with ID: ${icp.id}`,
-                  metadata: { icpId: icp.id },
-                }
-              );
-
-              // Mark conversation as completed
-              await conversationService.updateConversationStatus(
-                conversationId,
-                userId,
-                teamId,
-                'completed'
-              );
-            } catch (error) {
-              console.error('Error saving ICP:', error);
-              await conversationService.addMessage(
-                conversationId,
-                userId,
-                teamId,
-                {
-                  role: 'system',
-                  content: 'Error saving ICP. Please try again.',
-                }
-              );
-            }
-          }
-
-          // Search similar products
-          if (tc.toolName === 'search_similar_products') {
-            try {
-              const results = await productService.searchProducts(
-                teamId,
-                tc.args.query,
-                3
-              );
-
-              // Add search results as system message for context
-              await conversationService.addMessage(
-                conversationId,
-                userId,
-                teamId,
-                {
-                  role: 'system',
-                  content: `Search results: ${JSON.stringify(
-                    results.map((r) => ({
-                      name: r.product.name,
-                      description: r.product.description,
-                    }))
-                  )}`,
-                  metadata: { searchResults: results },
-                }
-              );
-            } catch (error) {
-              console.error('Error searching products:', error);
+      // Handle tool calls
+      if (delta?.tool_calls) {
+        for (const toolCallDelta of delta.tool_calls) {
+          if (toolCallDelta.index !== undefined) {
+            // New tool call or continuing existing one
+            if (!currentToolCall || currentToolCall.index !== toolCallDelta.index) {
+              if (currentToolCall) {
+                toolCalls.push(currentToolCall);
+              }
+              currentToolCall = {
+                index: toolCallDelta.index,
+                id: toolCallDelta.id || '',
+                type: 'function',
+                function: {
+                  name: toolCallDelta.function?.name || '',
+                  arguments: toolCallDelta.function?.arguments || '',
+                },
+              };
+            } else {
+              // Accumulate arguments
+              if (toolCallDelta.function?.arguments) {
+                currentToolCall.function.arguments += toolCallDelta.function.arguments;
+              }
+              if (toolCallDelta.function?.name) {
+                currentToolCall.function.name = toolCallDelta.function.name;
+              }
             }
           }
         }
       }
-    },
-  });
 
-  return result;
+      // Check if stream is done
+      if (chunk.choices[0]?.finish_reason) {
+        if (currentToolCall) {
+          toolCalls.push(currentToolCall);
+        }
+        break;
+      }
+    }
+
+    // Save assistant's response to conversation
+    await conversationService.addMessage(
+      conversationId,
+      userId,
+      teamId,
+      {
+        role: 'assistant',
+        content: fullText,
+        metadata: {
+          toolCalls: toolCalls.map((tc: any) => ({
+            name: tc.function.name,
+            args: JSON.parse(tc.function.arguments || '{}'),
+          })),
+        },
+      }
+    );
+
+    // Handle tool calls and save to database
+    if (toolCalls.length > 0) {
+      for (const toolCall of toolCalls) {
+        const functionName = toolCall.function.name;
+        const functionArgs = JSON.parse(toolCall.function.arguments || '{}');
+
+        console.log(`🔧 Tool call: ${functionName}`, functionArgs);
+
+        // Save product
+        if (functionName === 'save_product') {
+          try {
+            const product = await productService.createProduct(
+              teamId,
+              {
+                name: functionArgs.name,
+                description: functionArgs.description,
+                features: functionArgs.features,
+                pricing: functionArgs.pricing,
+                usps: functionArgs.usps,
+              }
+            );
+
+            console.log('✅ Product saved:', product.id);
+
+            // Store product ID in conversation context for ICP creation
+            await conversationService.addMessage(
+              conversationId,
+              userId,
+              teamId,
+              {
+                role: 'system',
+                content: `Product saved with ID: ${product.id}`,
+                metadata: { productId: product.id },
+              }
+            );
+
+            // Send tool result to client
+            res.write(`data: ${JSON.stringify({
+              type: 'tool_result',
+              tool: 'save_product',
+              success: true,
+              productId: product.id
+            })}\n\n`);
+          } catch (error) {
+            console.error('❌ Error saving product:', error);
+            await conversationService.addMessage(
+              conversationId,
+              userId,
+              teamId,
+              {
+                role: 'system',
+                content: 'Error saving product. Please try again.',
+              }
+            );
+
+            res.write(`data: ${JSON.stringify({
+              type: 'tool_result',
+              tool: 'save_product',
+              success: false,
+              error: 'Failed to save product'
+            })}\n\n`);
+          }
+        }
+
+        // Save ICP
+        if (functionName === 'save_icp') {
+          try {
+            const icp = await icpService.createICP(
+              functionArgs.productId,
+              teamId,
+              {
+                name: functionArgs.name,
+                demographics: functionArgs.demographics,
+                firmographics: functionArgs.firmographics,
+                psychographics: functionArgs.psychographics,
+                behaviors: functionArgs.behaviors,
+              }
+            );
+
+            console.log('✅ ICP saved:', icp.id);
+
+            await conversationService.addMessage(
+              conversationId,
+              userId,
+              teamId,
+              {
+                role: 'system',
+                content: `ICP saved with ID: ${icp.id}`,
+                metadata: { icpId: icp.id },
+              }
+            );
+
+            // Mark conversation as completed
+            await conversationService.updateConversationStatus(
+              conversationId,
+              userId,
+              teamId,
+              'completed'
+            );
+
+            // Send tool result to client
+            res.write(`data: ${JSON.stringify({
+              type: 'tool_result',
+              tool: 'save_icp',
+              success: true,
+              icpId: icp.id
+            })}\n\n`);
+          } catch (error) {
+            console.error('❌ Error saving ICP:', error);
+            await conversationService.addMessage(
+              conversationId,
+              userId,
+              teamId,
+              {
+                role: 'system',
+                content: 'Error saving ICP. Please try again.',
+              }
+            );
+
+            res.write(`data: ${JSON.stringify({
+              type: 'tool_result',
+              tool: 'save_icp',
+              success: false,
+              error: 'Failed to save ICP'
+            })}\n\n`);
+          }
+        }
+      }
+    }
+
+    // Send done event
+    res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+    res.end();
+  } catch (error) {
+    console.error('❌ Error in processMessage:', error);
+    res.write(`data: ${JSON.stringify({
+      type: 'error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    })}\n\n`);
+    res.end();
+  }
 }
 
 /**

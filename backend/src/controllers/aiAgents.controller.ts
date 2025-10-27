@@ -134,33 +134,22 @@ export const sendProductDefinerMessage = async (
       return;
     }
 
-    // Initialize SSE connection
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no');
-
-    // Send initial connection message
-    res.write(': SSE connection established\n\n');
-    res.flushHeaders();
-
-    // Process message and get streaming result
-    const result = await productDefinerService.processMessage(
+    // Process message - service will handle SSE streaming directly
+    await productDefinerService.processMessage(
       conversationId,
       userId,
       teamId,
-      message
+      message,
+      res
     );
-
-    // Stream AI response to client using SSE
-    await streamToSSE(result as any, res);
   } catch (error) {
     console.error('Error sending product definer message:', error);
 
     // Send error event if SSE not yet ended
     if (!res.writableEnded) {
       res.write(
-        `event: error\ndata: ${JSON.stringify({
+        `data: ${JSON.stringify({
+          type: 'error',
           error: 'Failed to process message',
         })}\n\n`
       );
