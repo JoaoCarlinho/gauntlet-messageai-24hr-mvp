@@ -56,6 +56,7 @@ export default function ProductDefinerScreen() {
     selectProduct,
     proceedWithSelection,
     resetToInitialPrompt,
+    loadPastConversations,
     // New selectors
     selectedProduct,
     hasExistingProducts,
@@ -148,8 +149,13 @@ export default function ProductDefinerScreen() {
   // Handle success modal close
   const handleSuccessModalClose = useCallback(() => {
     setShowSuccessModal(false);
-    // Optionally navigate to campaign advisor or products screen
-  }, []);
+
+    // Load past conversations to refresh the list
+    loadPastConversations();
+
+    // Navigate to AI Agents tab to show the conversation in Recent Conversations
+    router.push('/(tabs)/ai-agents');
+  }, [loadPastConversations]);
 
   // Render message bubble
   const renderMessage = useCallback(({ item }: { item: AgentMessage }) => {

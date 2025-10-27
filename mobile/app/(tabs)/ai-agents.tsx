@@ -5,17 +5,19 @@
  * Shows agent cards and recent conversations
  */
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useProductDefiner } from '../../hooks/useProductDefiner';
 
 interface AgentCard {
   id: string;
@@ -76,6 +78,20 @@ const AGENT_CARDS: AgentCard[] = [
 ];
 
 export default function AIAgentsScreen() {
+  // Get conversation history from Product Definer hook
+  const {
+    pastConversations,
+    isLoadingHistory,
+    historyError,
+    loadPastConversations,
+  } = useProductDefiner();
+
+  // Load past conversations on mount
+  useEffect(() => {
+    loadPastConversations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Empty array = run only once on mount
+
   const handleAgentPress = (agent: AgentCard) => {
     if (!agent.enabled) {
       return; // Discovery Bot is not user-initiated
@@ -111,6 +127,58 @@ export default function AIAgentsScreen() {
               <Ionicons name="arrow-forward" size={16} color={agent.color} />
             </View>
           )}
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderConversationCard = (conversation: any) => {
+    const formattedDate = new Date(conversation.updatedAt).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+
+    const agentTypeLabel = conversation.agentType === 'product_definer'
+      ? 'Product Definer'
+      : conversation.agentType;
+
+    return (
+      <TouchableOpacity
+        key={conversation.id}
+        style={styles.conversationCard}
+        onPress={() => {
+          // TODO: Navigate to conversation detail view
+          console.log('View conversation:', conversation.id);
+        }}
+        activeOpacity={0.7}
+      >
+        <View style={styles.conversationHeader}>
+          <View style={styles.conversationIconContainer}>
+            <Ionicons name="chatbubble-outline" size={20} color="#007AFF" />
+          </View>
+          <View style={styles.conversationInfo}>
+            <Text style={styles.conversationAgent}>{agentTypeLabel}</Text>
+            <Text style={styles.conversationDate}>{formattedDate}</Text>
+          </View>
+          <View style={styles.conversationStatus}>
+            <View style={[
+              styles.statusBadge,
+              conversation.status === 'completed' ? styles.statusCompleted : styles.statusActive
+            ]}>
+              <Text style={styles.statusText}>
+                {conversation.status === 'completed' ? 'Completed' : 'Active'}
+              </Text>
+            </View>
+          </View>
+        </View>
+        {conversation.metadata?.productName && (
+          <Text style={styles.conversationProduct}>
+            Product: {conversation.metadata.productName}
+          </Text>
+        )}
+        <View style={styles.conversationFooter}>
+          <Ionicons name="arrow-forward" size={16} color="#8E8E93" />
         </View>
       </TouchableOpacity>
     );
@@ -152,16 +220,49 @@ export default function AIAgentsScreen() {
           </View>
         </View>
 
-        {/* Recent Conversations Section (Placeholder) */}
+        {/* Recent Conversations Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recent Conversations</Text>
-          <View style={styles.emptyState}>
-            <Ionicons name="chatbubbles-outline" size={48} color="#C7C7CC" />
-            <Text style={styles.emptyText}>No recent conversations</Text>
-            <Text style={styles.emptySubtext}>
-              Start a conversation with an AI agent to see it here
-            </Text>
-          </View>
+
+          {/* Loading State */}
+          {isLoadingHistory && (
+            <View style={styles.loadingState}>
+              <ActivityIndicator size="large" color="#007AFF" />
+              <Text style={styles.loadingText}>Loading conversations...</Text>
+            </View>
+          )}
+
+          {/* Error State */}
+          {historyError && !isLoadingHistory && (
+            <View style={styles.errorState}>
+              <Ionicons name="alert-circle-outline" size={48} color="#FF3B30" />
+              <Text style={styles.errorText}>{historyError}</Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={loadPastConversations}
+              >
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Conversations List */}
+          {!isLoadingHistory && !historyError && pastConversations.length > 0 && (
+            <View>
+              {pastConversations.map(renderConversationCard)}
+            </View>
+          )}
+
+          {/* Empty State */}
+          {!isLoadingHistory && !historyError && pastConversations.length === 0 && (
+            <View style={styles.emptyState}>
+              <Ionicons name="chatbubbles-outline" size={48} color="#C7C7CC" />
+              <Text style={styles.emptyText}>No recent conversations</Text>
+              <Text style={styles.emptySubtext}>
+                Start a conversation with an AI agent to see it here
+              </Text>
+            </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -306,5 +407,105 @@ const styles = StyleSheet.create({
     color: '#C7C7CC',
     marginTop: 4,
     textAlign: 'center',
+  },
+  // Loading state styles
+  loadingState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#8E8E93',
+    marginTop: 12,
+  },
+  // Error state styles
+  errorState: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#FF3B30',
+    marginTop: 12,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 16,
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  // Conversation card styles
+  conversationCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  conversationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  conversationIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#E8F4FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  conversationInfo: {
+    flex: 1,
+  },
+  conversationAgent: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 2,
+  },
+  conversationDate: {
+    fontSize: 13,
+    color: '#8E8E93',
+  },
+  conversationStatus: {
+    marginLeft: 8,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  statusCompleted: {
+    backgroundColor: '#E8F7ED',
+  },
+  statusActive: {
+    backgroundColor: '#FFF4E6',
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#34C759',
+  },
+  conversationProduct: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  conversationFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
   },
 });
