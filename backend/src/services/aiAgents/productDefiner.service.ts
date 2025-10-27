@@ -108,11 +108,6 @@ const productDefinerTools = {
       }).describe('Pricing structure'),
       usps: z.array(z.string()).describe('Unique selling propositions that differentiate this product'),
     }),
-    execute: async (args) => {
-      // Execution handled in onFinish callback
-      // Return empty object to satisfy type requirements
-      return { success: true, args };
-    },
   }),
   save_icp: tool({
     description: 'Save an Ideal Customer Profile (ICP) to the database. Call this when you have gathered comprehensive information about the target customer including demographics, firmographics, psychographics, and behaviors.',
@@ -146,11 +141,6 @@ const productDefinerTools = {
         influencers: z.array(z.string()).optional().describe('Who or what influences their decisions'),
       }).optional().describe('Behavioral patterns'),
     }),
-    execute: async (args) => {
-      // Execution handled in onFinish callback
-      // Return empty object to satisfy type requirements
-      return { success: true, args };
-    },
   }),
 };
 
