@@ -98,7 +98,7 @@ export async function startConversation(
 const productDefinerTools = {
   save_product: tool({
     description: 'Save a product definition to the database. Call this when you have gathered comprehensive product information including name, description, features, pricing, and unique selling propositions.',
-    parameters: z.object({
+    schema: z.object({
       name: z.string().describe('Product name'),
       description: z.string().describe('Detailed product description'),
       features: z.array(z.string()).describe('List of key product features'),
@@ -111,7 +111,7 @@ const productDefinerTools = {
   }),
   save_icp: tool({
     description: 'Save an Ideal Customer Profile (ICP) to the database. Call this when you have gathered comprehensive information about the target customer including demographics, firmographics, psychographics, and behaviors.',
-    parameters: z.object({
+    schema: z.object({
       productId: z.string().describe('ID of the product this ICP is for'),
       name: z.string().describe('Name/title for this ICP'),
       demographics: z.object({
