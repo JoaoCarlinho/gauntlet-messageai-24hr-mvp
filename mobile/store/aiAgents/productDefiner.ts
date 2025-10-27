@@ -6,7 +6,7 @@
  */
 
 import { kea } from 'kea';
-import { productDefinerAPI } from '../../lib/aiAgentsAPI';
+import { productDefinerAPI, aiAgentsAPI } from '../../lib/aiAgentsAPI';
 import api from '../../lib/api';
 import {
   AgentConversation,
@@ -70,6 +70,11 @@ interface ProductDefinerState {
   selectedProductId: string | null;
   isLoadingProducts: boolean;
   productsError: string | null;
+
+  // Past conversations (conversation history)
+  pastConversations: any[];
+  isLoadingHistory: boolean;
+  historyError: string | null;
 }
 
 // Actions interface
@@ -135,6 +140,11 @@ export const productDefinerLogic = kea<any>({
     selectedProductId: null,
     isLoadingProducts: false,
     productsError: null,
+
+    // Past conversations (conversation history)
+    pastConversations: [],
+    isLoadingHistory: false,
+    historyError: null,
   },
 
   actions: {
@@ -177,6 +187,11 @@ export const productDefinerLogic = kea<any>({
     selectProduct: (productId: string) => ({ productId }),
     proceedWithSelection: true,
     resetToInitialPrompt: true,
+
+    // Conversation history actions
+    loadPastConversations: true,
+    setPastConversations: (conversations: any[]) => ({ conversations }),
+    setHistoryError: (error: string | null) => ({ error }),
   },
 
   reducers: {
@@ -279,6 +294,24 @@ export const productDefinerLogic = kea<any>({
       fetchExistingProducts: () => null,
       resetConversation: () => null,
       resetToInitialPrompt: () => null,
+    },
+
+    // Past conversations reducers
+    pastConversations: {
+      setPastConversations: (_, { conversations }) => conversations,
+      resetConversation: () => [],
+    },
+
+    isLoadingHistory: {
+      loadPastConversations: () => true,
+      setPastConversations: () => false,
+      setHistoryError: () => false,
+    },
+
+    historyError: {
+      setHistoryError: (_, { error }) => error,
+      loadPastConversations: () => null,
+      setPastConversations: () => null,
     },
   },
 
@@ -488,24 +521,79 @@ export const productDefinerLogic = kea<any>({
       if (selectedMode && !hasRealConversation) {
         console.log('🔄 Starting backend conversation first...');
         try {
-          // Start backend conversation and WAIT for the returned conversation ID
-          // This is a proper async/await pattern - no setTimeout needed!
-          const newConversationId = await actions.proceedWithSelection();
+          // Directly call the API instead of going through action wrapper
+          // This way we get the return value properly
+          const { selectedMode: mode, selectedProductId, existingProducts } = values;
 
-          console.log('📝 Received conversationId from proceedWithSelection:', newConversationId);
-
-          // Check if we got a valid conversation ID
-          if (newConversationId && !newConversationId.startsWith('temp-')) {
-            console.log('✅ Sending message to backend conversation:', newConversationId);
-            // Send the message to the newly created conversation
-            actions.sendMessage(newConversationId, message);
-          } else {
-            console.error('❌ Failed to get real conversation ID:', newConversationId);
-            actions.setError('Failed to create backend conversation');
+          // Validation
+          if (!mode) {
+            actions.setError('Please select a mode');
+            return;
           }
+
+          if (mode === 'new_icp' && !selectedProductId) {
+            actions.setError('Please select a product');
+            return;
+          }
+
+          actions.setLoading(true);
+          actions.clearError();
+
+          // Prepare API call parameters
+          const apiParams: any = { mode };
+          if (mode === 'new_icp' && selectedProductId) {
+            apiParams.productId = selectedProductId;
+          }
+
+          console.log('📞 Calling backend API to start conversation...', apiParams);
+
+          // Call backend to start conversation
+          const response = await productDefinerAPI.startConversation(apiParams);
+          const newConversationId = response.conversationId;
+
+          console.log('✅ Backend conversation created:', newConversationId);
+
+          // Create conversation object and update state
+          const conversation: AgentConversation = {
+            id: newConversationId,
+            userId: '',
+            teamId: '',
+            agentType: 'product_definer',
+            status: 'active',
+            messages: [],
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          };
+
+          actions.setConversation(conversation);
+          actions.setCurrentConversationId(newConversationId);
+
+          // Add starting message if needed
+          if (mode === 'new_icp' && selectedProductId) {
+            const selectedProduct = existingProducts.find((p: Product) => p.id === selectedProductId);
+            const productName = selectedProduct?.name || 'your product';
+
+            const icpAfterSelectionMessage: AgentMessage = {
+              id: `msg-icp-after-${Date.now()}`,
+              conversationId: newConversationId,
+              role: 'assistant',
+              content: INITIAL_PROMPTS.newICPAfterSelection(productName),
+              createdAt: new Date(),
+            };
+
+            actions.addMessage(newConversationId, icpAfterSelectionMessage);
+          }
+
+          actions.setLoading(false);
+
+          // Now send the message with the new conversation ID
+          console.log('📝 Sending message to conversation:', newConversationId);
+          actions.sendMessage(newConversationId, message);
+
         } catch (error: any) {
           console.error('❌ Error starting conversation:', error);
           actions.setError(error.message || 'Failed to start conversation');
+          actions.setLoading(false);
         }
       } else {
         console.warn('⚠️ No mode selected or already has real conversation but conditions not met');
@@ -610,7 +698,16 @@ export const productDefinerLogic = kea<any>({
     // Complete conversation listener
     completeConversation: async ({ conversationId }: any) => {
       try {
+        console.log('🎯 Completing conversation:', conversationId);
         const response: CompleteConversationResponse = await productDefinerAPI.completeConversation(conversationId);
+
+        console.log('✅ Complete response:', {
+          status: response.status,
+          productSaved: response.productSaved,
+          icpSaved: response.icpSaved,
+          productId: response.productId,
+          icpId: response.icpId,
+        });
 
         // Create summary
         const summary: ProductDefinerSummary = {
@@ -625,8 +722,10 @@ export const productDefinerLogic = kea<any>({
         actions.setSummary(summary);
         actions.setLoading(false);
         actions.clearError();
+
+        console.log('💾 Summary set, hasSavedProduct should now be:', summary.productSaved || summary.icpSaved);
       } catch (error: any) {
-        console.error('Error completing conversation:', error);
+        console.error('❌ Error completing conversation:', error);
         actions.setError(error.message || 'Failed to complete conversation');
         actions.setLoading(false);
       }
@@ -644,6 +743,26 @@ export const productDefinerLogic = kea<any>({
         console.error('Error loading conversation status:', error);
         actions.setError(error.message || 'Failed to load conversation status');
         actions.setLoading(false);
+      }
+    },
+
+    // Load past conversations from backend
+    loadPastConversations: async () => {
+      try {
+        console.log('📚 Loading past conversations...');
+
+        const response = await aiAgentsAPI.conversations.listConversations({
+          agentType: 'product_definer',
+          status: 'completed',
+          limit: 20,
+        });
+
+        console.log('✅ Loaded conversations:', response.conversations.length);
+
+        actions.setPastConversations(response.conversations);
+      } catch (error: any) {
+        console.error('❌ Error loading past conversations:', error);
+        actions.setHistoryError(error.message || 'Failed to load conversation history');
       }
     },
   }),
@@ -681,11 +800,12 @@ export const productDefinerLogic = kea<any>({
       },
     ],
 
-    // Check if product was saved
+    // Check if product or ICP was saved
     hasSavedProduct: [
       (s) => [s.summary],
       (summary) => {
-        return summary ? summary.productSaved : false;
+        // Return true if either product or ICP was saved
+        return summary ? (summary.productSaved || summary.icpSaved) : false;
       },
     ],
 

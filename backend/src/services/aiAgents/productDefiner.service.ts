@@ -1,4 +1,5 @@
-import { streamText } from 'ai';
+import { streamText, tool } from 'ai';
+import { z } from 'zod';
 import { openai, AI_CONFIG } from '../../config/openai';
 import { PRODUCT_DEFINER_SYSTEM_PROMPT, AgentType } from '../../utils/prompts';
 import * as conversationService from '../aiConversations.service';
@@ -89,6 +90,71 @@ export async function startConversation(
 }
 
 /**
+ * AI Tools for Product Definer
+ *
+ * These tools allow the AI to save structured product and ICP data
+ * to the database during the conversation.
+ */
+const productDefinerTools = {
+  save_product: tool({
+    description: 'Save a product definition to the database. Call this when you have gathered comprehensive product information including name, description, features, pricing, and unique selling propositions.',
+    parameters: z.object({
+      name: z.string().describe('Product name'),
+      description: z.string().describe('Detailed product description'),
+      features: z.array(z.string()).describe('List of key product features'),
+      pricing: z.object({
+        model: z.string().describe('Pricing model (e.g., subscription, one-time, usage-based)'),
+        details: z.string().describe('Pricing details and structure'),
+      }).describe('Pricing structure'),
+      usps: z.array(z.string()).describe('Unique selling propositions that differentiate this product'),
+    }),
+    execute: async (args) => {
+      // Execution handled in onFinish callback
+      // Return empty object to satisfy type requirements
+      return { success: true, args };
+    },
+  }),
+  save_icp: tool({
+    description: 'Save an Ideal Customer Profile (ICP) to the database. Call this when you have gathered comprehensive information about the target customer including demographics, firmographics, psychographics, and behaviors.',
+    parameters: z.object({
+      productId: z.string().describe('ID of the product this ICP is for'),
+      name: z.string().describe('Name/title for this ICP'),
+      demographics: z.object({
+        ageRange: z.string().optional().describe('Age range of target customers'),
+        location: z.string().optional().describe('Geographic location'),
+        jobTitles: z.array(z.string()).optional().describe('Common job titles'),
+        education: z.string().optional().describe('Education level'),
+        income: z.string().optional().describe('Income level or range'),
+      }).optional().describe('Demographic characteristics'),
+      firmographics: z.object({
+        companySize: z.string().optional().describe('Company size range'),
+        industry: z.array(z.string()).optional().describe('Target industries'),
+        revenue: z.string().optional().describe('Company revenue range'),
+        geography: z.string().optional().describe('Geographic market'),
+      }).optional().describe('Firmographic characteristics (for B2B)'),
+      psychographics: z.object({
+        painPoints: z.array(z.string()).optional().describe('Key pain points and challenges'),
+        goals: z.array(z.string()).optional().describe('Goals and objectives'),
+        motivations: z.array(z.string()).optional().describe('Buying motivations'),
+        challenges: z.array(z.string()).optional().describe('Challenges they face'),
+        values: z.array(z.string()).optional().describe('Core values'),
+      }).optional().describe('Psychographic characteristics'),
+      behaviors: z.object({
+        buyingTriggers: z.array(z.string()).optional().describe('Events that trigger buying decisions'),
+        decisionProcess: z.string().optional().describe('How they make buying decisions'),
+        preferredChannels: z.array(z.string()).optional().describe('Preferred communication and buying channels'),
+        influencers: z.array(z.string()).optional().describe('Who or what influences their decisions'),
+      }).optional().describe('Behavioral patterns'),
+    }),
+    execute: async (args) => {
+      // Execution handled in onFinish callback
+      // Return empty object to satisfy type requirements
+      return { success: true, args };
+    },
+  }),
+};
+
+/**
  * Process a user message in the product definition conversation
  *
  * Handles the conversational flow, calls AI with function calling,
@@ -168,7 +234,7 @@ Do NOT ask about product details - the product already exists. Focus ONLY on def
     model: openai(AI_CONFIG.model),
     messages: messages as any,
     temperature: AI_CONFIG.temperature.balanced,
-    // Tools will be added in Task 10.2 when we integrate with controller
+    tools: productDefinerTools,
     onFinish: async (event: any) => {
       const { text, toolCalls } = event;
       // Save assistant's response to conversation

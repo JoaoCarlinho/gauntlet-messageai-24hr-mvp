@@ -54,9 +54,15 @@ interface UseProductDefinerReturn {
   isLoadingProducts: boolean;
   productsError: string | null;
 
+  // Past conversations (conversation history)
+  pastConversations: any[];
+  isLoadingHistory: boolean;
+  historyError: string | null;
+
   // Existing actions
   startConversation: () => void;
   sendMessage: (conversationId: string, message: string) => void;
+  sendMessageWithAutoStart: (message: string) => void;
   completeConversation: (conversationId: string) => void;
   resetConversation: () => void;
   clearError: () => void;
@@ -67,6 +73,9 @@ interface UseProductDefinerReturn {
   selectProduct: (productId: string) => void;
   proceedWithSelection: () => void;
   resetToInitialPrompt: () => void;
+
+  // Conversation history actions
+  loadPastConversations: () => void;
 
   // New selectors
   selectedProduct: Product | null;
@@ -99,6 +108,10 @@ export const useProductDefiner = (): UseProductDefinerReturn => {
     selectedProductId,
     isLoadingProducts,
     productsError,
+    // Past conversations (conversation history)
+    pastConversations,
+    isLoadingHistory,
+    historyError,
   } = useValues(productDefinerLogic);
 
   // Get selectors
@@ -129,6 +142,8 @@ export const useProductDefiner = (): UseProductDefinerReturn => {
     selectProduct: selectProductAction,
     proceedWithSelection: proceedWithSelectionAction,
     resetToInitialPrompt: resetToInitialPromptAction,
+    // Conversation history actions
+    loadPastConversations: loadPastConversationsAction,
   } = useActions(productDefinerLogic);
 
   // Wrapper functions with additional functionality
@@ -200,6 +215,12 @@ export const useProductDefiner = (): UseProductDefinerReturn => {
     resetToInitialPromptAction();
   };
 
+  const loadPastConversations = () => {
+    // Clear any existing errors
+    setError(null);
+    loadPastConversationsAction();
+  };
+
   return {
     // Existing state
     conversations,
@@ -222,6 +243,11 @@ export const useProductDefiner = (): UseProductDefinerReturn => {
     isLoadingProducts,
     productsError,
 
+    // Past conversations (conversation history)
+    pastConversations,
+    isLoadingHistory,
+    historyError,
+
     // Existing actions
     startConversation,
     sendMessage,
@@ -236,6 +262,9 @@ export const useProductDefiner = (): UseProductDefinerReturn => {
     selectProduct,
     proceedWithSelection,
     resetToInitialPrompt,
+
+    // Conversation history actions
+    loadPastConversations,
 
     // New selectors
     selectedProduct: getSelectedProduct,
