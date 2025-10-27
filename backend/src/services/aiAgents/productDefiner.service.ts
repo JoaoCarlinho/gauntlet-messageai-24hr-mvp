@@ -314,8 +314,8 @@ Do NOT ask about product details - the product already exists. Focus ONLY on def
       // Handle text content
       if (delta?.content) {
         fullText += delta.content;
-        // Send text chunk to client
-        res.write(`data: ${JSON.stringify({ type: 'text', content: delta.content })}\n\n`);
+        // Send text chunk to client (use 'content' type and 'delta' field for mobile compatibility)
+        res.write(`data: ${JSON.stringify({ type: 'content', delta: delta.content })}\n\n`);
       }
 
       // Handle tool calls
@@ -505,8 +505,8 @@ Do NOT ask about product details - the product already exists. Focus ONLY on def
       }
     }
 
-    // Send done event
-    res.write(`data: ${JSON.stringify({ type: 'done' })}\n\n`);
+    // Send complete event (mobile expects 'complete' type, not 'done')
+    res.write(`data: ${JSON.stringify({ type: 'complete' })}\n\n`);
     res.end();
   } catch (error) {
     console.error('❌ Error in processMessage:', error);
