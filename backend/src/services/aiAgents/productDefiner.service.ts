@@ -227,7 +227,7 @@ Do NOT ask about product details - the product already exists. Focus ONLY on def
     model: openai(AI_CONFIG.model),
     messages: messages as any,
     temperature: AI_CONFIG.temperature.balanced,
-    tools: productDefinerTools,
+    tools: productDefinerTools as any,
     onFinish: async (event: any) => {
       const { text, toolCalls } = event;
       // Save assistant's response to conversation
