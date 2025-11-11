@@ -16,6 +16,7 @@ import productsRoutes from './routes/products.routes';
 import icpsRoutes from './routes/icps.routes';
 import campaignsRoutes from './routes/campaigns.routes';
 import aiAgentsRoutes from './routes/aiAgents.routes';
+import discoveryBotRoutes from './routes/discoveryBot.routes';
 import publicRoutes from './routes/public.routes';
 import { initializeSocketServer } from './socket';
 import logger from './utils/logger';
@@ -184,6 +185,7 @@ app.use('/api/v1/products', productsRoutes);
 app.use('/api/v1/icps', icpsRoutes);
 app.use('/api/v1/campaigns', campaignsRoutes);
 app.use('/api/v1/ai', aiAgentsRoutes);
+app.use('/api/v1/discovery-bot', discoveryBotRoutes);
 
 // Public routes (no authentication required)
 app.use('/api/v1/public', publicRoutes);

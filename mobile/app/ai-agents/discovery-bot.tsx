@@ -15,6 +15,7 @@ import {
   TextInput,
   ActivityIndicator,
   Alert,
+  Switch,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -25,6 +26,14 @@ export default function DiscoveryBotScreen() {
   const [profileUrl, setProfileUrl] = useState('');
   const [isScrapingProfile, setIsScrapingProfile] = useState(false);
   const [scrapingError, setScrapingError] = useState<string | null>(null);
+
+  // Advanced options state
+  const [useLinkedInAuth, setUseLinkedInAuth] = useState(false);
+  const [linkedInEmail, setLinkedInEmail] = useState('');
+  const [linkedInPassword, setLinkedInPassword] = useState('');
+  const [useFacebookGraphAPI, setUseFacebookGraphAPI] = useState(false);
+  const [facebookAccessToken, setFacebookAccessToken] = useState('');
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
 
   // Handle back navigation
   const handleBackPress = useCallback(() => {
@@ -66,9 +75,48 @@ export default function DiscoveryBotScreen() {
       return;
     }
 
+    // Validate LinkedIn auth requirements
+    if (useLinkedInAuth && platform === 'linkedin' && (!linkedInEmail || !linkedInPassword)) {
+      Alert.alert(
+        'LinkedIn Authentication Required',
+        'Please enter your LinkedIn email and password to use authenticated scraping.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    // Validate Facebook Graph API requirements
+    if (useFacebookGraphAPI && platform === 'facebook' && !facebookAccessToken) {
+      Alert.alert(
+        'Facebook Access Token Required',
+        'Please enter your Facebook access token to use the Graph API.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     setIsScrapingProfile(true);
 
     try {
+      // Build request body with advanced options
+      const requestBody: any = {
+        profileUrl: profileUrl.trim(),
+        platform,
+      };
+
+      // Add LinkedIn auth if enabled
+      if (useLinkedInAuth && platform === 'linkedin') {
+        requestBody.useLinkedInAuth = true;
+        requestBody.linkedInEmail = linkedInEmail;
+        requestBody.linkedInPassword = linkedInPassword;
+      }
+
+      // Add Facebook Graph API if enabled
+      if (useFacebookGraphAPI && platform === 'facebook') {
+        requestBody.useFacebookGraphAPI = true;
+        requestBody.facebookAccessToken = facebookAccessToken;
+      }
+
       // Call backend API to scrape profile and create lead
       const response = await fetch(
         `${process.env.EXPO_PUBLIC_API_URL}/api/v1/discovery-bot/capture-profile`,
@@ -77,10 +125,7 @@ export default function DiscoveryBotScreen() {
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            profileUrl: profileUrl.trim(),
-            platform,
-          }),
+          body: JSON.stringify(requestBody),
         }
       );
 
@@ -120,7 +165,7 @@ export default function DiscoveryBotScreen() {
     } finally {
       setIsScrapingProfile(false);
     }
-  }, [profileUrl]);
+  }, [profileUrl, useLinkedInAuth, linkedInEmail, linkedInPassword, useFacebookGraphAPI, facebookAccessToken]);
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
@@ -310,6 +355,100 @@ export default function DiscoveryBotScreen() {
               <View style={styles.errorBanner}>
                 <Ionicons name="alert-circle-outline" size={16} color="#FF3B30" />
                 <Text style={styles.errorText}>{scrapingError}</Text>
+              </View>
+            )}
+
+            {/* Advanced Options Toggle */}
+            <TouchableOpacity
+              style={styles.advancedOptionsToggle}
+              onPress={() => setShowAdvancedOptions(!showAdvancedOptions)}
+            >
+              <Text style={styles.advancedOptionsText}>Advanced Options</Text>
+              <Ionicons
+                name={showAdvancedOptions ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color="#007AFF"
+              />
+            </TouchableOpacity>
+
+            {/* Advanced Options Panel */}
+            {showAdvancedOptions && (
+              <View style={styles.advancedOptionsPanel}>
+                {/* LinkedIn Authentication */}
+                <View style={styles.optionSection}>
+                  <View style={styles.optionHeader}>
+                    <Ionicons name="logo-linkedin" size={20} color="#0077B5" />
+                    <Text style={styles.optionTitle}>LinkedIn Authentication</Text>
+                  </View>
+                  <Text style={styles.optionDescription}>
+                    Login with your LinkedIn account to access private profiles and get more complete information.
+                  </Text>
+                  <View style={styles.switchRow}>
+                    <Text style={styles.switchLabel}>Use LinkedIn Login</Text>
+                    <Switch
+                      value={useLinkedInAuth}
+                      onValueChange={setUseLinkedInAuth}
+                      trackColor={{ false: '#E5E5EA', true: '#34C759' }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                  {useLinkedInAuth && (
+                    <View style={styles.authInputs}>
+                      <TextInput
+                        style={styles.authInput}
+                        value={linkedInEmail}
+                        onChangeText={setLinkedInEmail}
+                        placeholder="LinkedIn email"
+                        placeholderTextColor="#C7C7CC"
+                        autoCapitalize="none"
+                        keyboardType="email-address"
+                        editable={!isScrapingProfile}
+                      />
+                      <TextInput
+                        style={styles.authInput}
+                        value={linkedInPassword}
+                        onChangeText={setLinkedInPassword}
+                        placeholder="LinkedIn password"
+                        placeholderTextColor="#C7C7CC"
+                        secureTextEntry
+                        editable={!isScrapingProfile}
+                      />
+                    </View>
+                  )}
+                </View>
+
+                {/* Facebook Graph API */}
+                <View style={styles.optionSection}>
+                  <View style={styles.optionHeader}>
+                    <Ionicons name="logo-facebook" size={20} color="#1877F2" />
+                    <Text style={styles.optionTitle}>Facebook Graph API</Text>
+                  </View>
+                  <Text style={styles.optionDescription}>
+                    Use Facebook's official Graph API for more reliable data retrieval (requires access token).
+                  </Text>
+                  <View style={styles.switchRow}>
+                    <Text style={styles.switchLabel}>Use Graph API</Text>
+                    <Switch
+                      value={useFacebookGraphAPI}
+                      onValueChange={setUseFacebookGraphAPI}
+                      trackColor={{ false: '#E5E5EA', true: '#34C759' }}
+                      thumbColor="#fff"
+                    />
+                  </View>
+                  {useFacebookGraphAPI && (
+                    <View style={styles.authInputs}>
+                      <TextInput
+                        style={styles.authInput}
+                        value={facebookAccessToken}
+                        onChangeText={setFacebookAccessToken}
+                        placeholder="Facebook access token"
+                        placeholderTextColor="#C7C7CC"
+                        autoCapitalize="none"
+                        editable={!isScrapingProfile}
+                      />
+                    </View>
+                  )}
+                </View>
               </View>
             )}
           </View>
@@ -594,6 +733,68 @@ const styles = StyleSheet.create({
   platformText: {
     fontSize: 14,
     fontWeight: '500',
+    color: '#000',
+  },
+  // Advanced Options Styles
+  advancedOptionsToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    marginTop: 16,
+  },
+  advancedOptionsText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#007AFF',
+  },
+  advancedOptionsPanel: {
+    marginTop: 16,
+    backgroundColor: '#F9F9F9',
+    borderRadius: 12,
+    padding: 16,
+    gap: 20,
+  },
+  optionSection: {
+    gap: 12,
+  },
+  optionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  optionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+  },
+  optionDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: '#666',
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  switchLabel: {
+    fontSize: 15,
+    color: '#000',
+  },
+  authInputs: {
+    gap: 12,
+    marginTop: 8,
+  },
+  authInput: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 15,
     color: '#000',
   },
 });
