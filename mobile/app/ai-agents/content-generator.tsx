@@ -5,7 +5,7 @@
  * Tab-based UI for different content types
  */
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useContentGenerator } from '../../hooks/useContentGenerator';
 import { Platform, ContentType } from '../../types/aiAgents';
@@ -45,6 +46,11 @@ export default function ContentGeneratorScreen() {
   const [campaignId, setCampaignId] = useState('');
   const [variations, setVariations] = useState('3');
   const [concept, setConcept] = useState('');
+
+  // Handle back navigation
+  const handleBackPress = useCallback(() => {
+    router.push('/(tabs)/ai-agents');
+  }, []);
 
   // Handle platform selection
   const handlePlatformSelect = (platform: Platform) => {
@@ -239,6 +245,14 @@ export default function ContentGeneratorScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      {/* Back Button Header */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
+          <Ionicons name="arrow-back" size={24} color="#007AFF" />
+          <Text style={styles.backButtonText}>AI Agents</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Tabs */}
       <View style={styles.tabsContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -320,6 +334,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F2F2F7',
+  },
+  header: {
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  backButtonText: {
+    fontSize: 17,
+    color: '#007AFF',
+    fontWeight: '600',
   },
   tabsContainer: {
     backgroundColor: '#fff',

@@ -5,7 +5,7 @@
  * 4 sections: Campaign Analysis, Recommendations, Comparison, Executive Summary
  */
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { usePerformanceAnalyzer } from '../../hooks/usePerformanceAnalyzer';
 import { PerformanceMetric } from '../../types/aiAgents';
@@ -46,6 +47,11 @@ export default function PerformanceAnalyzerScreen() {
   const [campaignIds, setCampaignIds] = useState('');
   const [teamId, setTeamId] = useState('');
   const [dateRange, setDateRange] = useState<'7' | '30' | '90'>('30');
+
+  // Handle back navigation
+  const handleBackPress = useCallback(() => {
+    router.push('/(tabs)/ai-agents');
+  }, []);
 
   // Handle analyze campaign
   const handleAnalyzeCampaign = () => {
@@ -324,6 +330,14 @@ export default function PerformanceAnalyzerScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      {/* Back Button Header */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
+          <Ionicons name="arrow-back" size={24} color="#007AFF" />
+          <Text style={styles.backButtonText}>AI Agents</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Section Tabs */}
       <View style={styles.tabsContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -405,6 +419,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F2F2F7',
+  },
+  header: {
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  backButtonText: {
+    fontSize: 17,
+    color: '#007AFF',
+    fontWeight: '600',
   },
   tabsContainer: {
     backgroundColor: '#fff',

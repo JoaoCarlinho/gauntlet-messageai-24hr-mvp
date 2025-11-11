@@ -95,6 +95,11 @@ export default function ProductDefinerScreen() {
     }
   }, [error, clearError]);
 
+  // Handle back navigation
+  const handleBackPress = useCallback(() => {
+    router.push('/(tabs)/ai-agents');
+  }, []);
+
   // Handle start conversation
   const handleStartConversation = useCallback(() => {
     startConversation();
@@ -351,6 +356,14 @@ export default function ProductDefinerScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      {/* Back Button Header */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
+          <Ionicons name="arrow-back" size={24} color="#007AFF" />
+          <Text style={styles.backButtonText}>AI Agents</Text>
+        </TouchableOpacity>
+      </View>
+
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -489,6 +502,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F2F2F7',
+  },
+  header: {
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  backButtonText: {
+    fontSize: 17,
+    color: '#007AFF',
+    fontWeight: '600',
   },
   keyboardContainer: {
     flex: 1,
