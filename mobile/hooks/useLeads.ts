@@ -12,6 +12,21 @@ import { socketManager } from '../lib/socket';
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'unqualified' | 'converted';
 export type LeadScore = 'hot' | 'warm' | 'cold';
 
+/**
+ * Derive LeadScore from qualificationScore (0-100)
+ * - hot: 70-100
+ * - warm: 40-69
+ * - cold: 0-39
+ */
+const deriveScoreFromQualification = (qualificationScore?: number | null): LeadScore | undefined => {
+  if (qualificationScore === null || qualificationScore === undefined) {
+    return undefined;
+  }
+  if (qualificationScore >= 70) return 'hot';
+  if (qualificationScore >= 40) return 'warm';
+  return 'cold';
+};
+
 export interface Lead {
   id: string;
   name: string;
@@ -20,7 +35,8 @@ export interface Lead {
   company?: string;
   jobTitle?: string;
   status: LeadStatus;
-  score: LeadScore;
+  score?: LeadScore; // Optional: derived from qualificationScore or not yet calculated
+  qualificationScore?: number; // 0-100 score from backend
   source: string;
   discoverySessionId?: string;
   discoverySessionSummary?: string;
@@ -62,9 +78,15 @@ export const useLeads = (): UseLeadsReturn => {
       setIsLoading(true);
       setError(null);
 
-      const leads = await api.leads.getLeads();
+      const rawLeads = await api.leads.getLeads();
 
-      setLeads(leads);
+      // Transform leads: derive score from qualificationScore if not present
+      const transformedLeads = rawLeads.map((lead: any) => ({
+        ...lead,
+        score: lead.score || deriveScoreFromQualification(lead.qualificationScore),
+      }));
+
+      setLeads(transformedLeads);
     } catch (err: any) {
       console.error('Error fetching leads:', err);
       setError(err.message || 'Failed to fetch leads');
