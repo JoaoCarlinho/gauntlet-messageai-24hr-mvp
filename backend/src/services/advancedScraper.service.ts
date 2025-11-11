@@ -72,7 +72,7 @@ class AdvancedScraperService {
     }
 
     this.browser = await puppeteerExtra.launch({
-      headless: headless ? 'new' : false,
+      headless: headless,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
@@ -147,11 +147,15 @@ class AdvancedScraperService {
 
       // Extract profile data
       const profileData = await page.evaluate(() => {
+        // @ts-expect-error - Running in browser context with DOM API
         const name = document.querySelector('h1.text-heading-xlarge, h1.top-card-layout__title')?.textContent?.trim() || '';
+        // @ts-expect-error - Running in browser context with DOM API
         const headline = document.querySelector('div.text-body-medium, div.top-card-layout__headline')?.textContent?.trim() || '';
+        // @ts-expect-error - Running in browser context with DOM API
         const location = document.querySelector('span.text-body-small.inline.t-black--light.break-words, div.top-card__subline-item:nth-child(1)')?.textContent?.trim() || '';
 
         // Extract experience
+        // @ts-expect-error - Running in browser context with DOM API
         const experienceSection = document.querySelector('#experience');
         let currentCompany = '';
         if (experienceSection) {
@@ -160,6 +164,7 @@ class AdvancedScraperService {
         }
 
         // Extract bio/about
+        // @ts-expect-error - Running in browser context with DOM API
         const aboutSection = document.querySelector('#about');
         const bio = aboutSection?.parentElement?.querySelector('div.display-flex span[aria-hidden="true"]')?.textContent?.trim() || '';
 
@@ -249,14 +254,18 @@ class AdvancedScraperService {
 
       // Extract profile data
       const profileData = await page.evaluate(() => {
+        // @ts-expect-error - Running in browser context with DOM API
         const name = document.querySelector('h1')?.textContent?.trim() || '';
+        // @ts-expect-error - Running in browser context with DOM API
         const bio = document.querySelector('[data-ad-comet-preview="message"]')?.textContent?.trim() || '';
 
         // Try to find work/location info
         let work = '';
         let location = '';
+        // @ts-expect-error - Running in browser context with DOM API
         const infoElements = document.querySelectorAll('span.x193iq5w');
-        infoElements.forEach(el => {
+        // @ts-expect-error - Element type available in browser context
+        infoElements.forEach((el: Element) => {
           const text = el.textContent?.trim() || '';
           if (text.includes('Works at') || text.includes('Work')) {
             work = text.replace(/Works at|Work/gi, '').trim();

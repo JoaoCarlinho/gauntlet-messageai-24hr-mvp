@@ -203,13 +203,17 @@ export const listCampaignProspects = async (req: Request, res: Response) => {
 
     // Build orderBy
     const validSorts = ['icpMatchScore', 'discoveredAt', 'name', 'qualityScore'];
-    const sortField = validSorts.includes(sort as string) ? sort : 'icpMatchScore';
+    const sortField = validSorts.includes(sort as string) ? (sort as string) : 'icpMatchScore';
     const sortOrder = order === 'asc' ? 'asc' : 'desc';
+
+    // Build orderBy object
+    const orderBy: Record<string, 'asc' | 'desc'> = {};
+    orderBy[sortField] = sortOrder;
 
     // Query prospects
     const prospects = await prisma.prospect.findMany({
       where,
-      orderBy: { [sortField]: sortOrder },
+      orderBy,
       take: limitNum,
       skip,
       select: {

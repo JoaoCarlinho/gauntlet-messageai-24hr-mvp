@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
 import { scoreProspectHandler } from '../controllers/prospectScoring.controller';
 import {
   batchScoreProspectsHandler
@@ -18,7 +18,7 @@ const router = Router();
  */
 
 // All routes require authentication
-router.use(authenticateToken);
+router.use(authenticate);
 
 /**
  * Batch score prospects from CSV upload

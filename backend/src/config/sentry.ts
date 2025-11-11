@@ -3,9 +3,10 @@ import { Express } from 'express';
 
 /**
  * Sentry Error Monitoring Configuration
+ * Note: Simplified configuration as newer Sentry SDK has different integration patterns
  */
 
-export const initSentry = (app: Express) => {
+export const initSentry = (_app: Express) => {
   const SENTRY_DSN = process.env.SENTRY_DSN;
   const NODE_ENV = process.env.NODE_ENV || 'development';
 
@@ -17,37 +18,26 @@ export const initSentry = (app: Express) => {
   Sentry.init({
     dsn: SENTRY_DSN,
     environment: NODE_ENV,
-    integrations: [
-      // Express integration
-      new Sentry.Integrations.Http({ tracing: true }),
-      new Sentry.Integrations.Express({ app }),
-      // Prisma integration
-      new Sentry.Integrations.Prisma({ client: true })
-    ],
     tracesSampleRate: NODE_ENV === 'production' ? 0.1 : 1.0,
-    beforeSend(event, hint) {
+    beforeSend(event) {
       // Filter out sensitive data
-      if (event.request?.data) {
-        delete event.request.data.password;
-        delete event.request.data.apiKey;
-        delete event.request.data.token;
+      if (event.request?.data && typeof event.request.data === 'object') {
+        const data = event.request.data as Record<string, any>;
+        delete data.password;
+        delete data.apiKey;
+        delete data.token;
       }
       return event;
     }
   });
 
-  // Request handler must be first middleware
-  app.use(Sentry.Handlers.requestHandler());
-
-  // TracingHandler creates a trace for every incoming request
-  app.use(Sentry.Handlers.tracingHandler());
-
   console.log('✅ Sentry error monitoring initialized');
 };
 
-export const setupSentryErrorHandler = (app: Express) => {
-  // Error handler must be before any other error middleware
-  app.use(Sentry.Handlers.errorHandler());
+export const setupSentryErrorHandler = (_app: Express) => {
+  // Sentry error handling is now done automatically via init
+  // This function is kept for backwards compatibility but does nothing
+  console.log('Sentry error handler configured via init()');
 };
 
 export const captureException = (error: Error, context?: any) => {

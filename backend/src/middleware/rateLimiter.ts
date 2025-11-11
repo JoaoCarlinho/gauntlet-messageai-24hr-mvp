@@ -35,8 +35,8 @@ export const enrichmentRateLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 10,
   message: 'Enrichment rate limit exceeded. Please slow down.',
-  keyGenerator: (req: Request) => {
-    return req.user?.teamId || req.ip;
+  keyGenerator: (req: Request): string => {
+    return req.user?.teamId || req.ip || 'unknown';
   }
 });
 

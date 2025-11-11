@@ -26,11 +26,21 @@ export const exportUserData = async (req: Request, res: Response) => {
     const userData = await prisma.user.findUnique({
       where: { id: userId },
       include: {
-        team: true,
-        conversations: {
-          include: { messages: true }
+        teamMemberships: {
+          include: {
+            team: true
+          }
         },
-        leads: true
+        conversations: {
+          include: {
+            conversation: {
+              include: {
+                messages: true
+              }
+            }
+          }
+        },
+        assignedLeads: true
       }
     });
 
@@ -48,12 +58,12 @@ export const exportUserData = async (req: Request, res: Response) => {
       user: {
         id: userData?.id,
         email: userData?.email,
-        name: userData?.name,
+        displayName: userData?.displayName,
         createdAt: userData?.createdAt
       },
-      team: userData?.team,
-      conversations: userData?.conversations,
-      leads: userData?.leads,
+      teams: userData?.teamMemberships.map(tm => tm.team),
+      conversations: userData?.conversations.map(cm => cm.conversation),
+      assignedLeads: userData?.assignedLeads,
       prospects,
       campaigns,
       exportDate: new Date().toISOString()
@@ -98,14 +108,29 @@ export const deleteUserData = async (req: Request, res: Response) => {
 
     // Use transaction for atomic deletion
     await prisma.$transaction(async (tx) => {
-      // Delete messages
+      // Get user's conversation IDs
+      const userConversations = await tx.conversationMember.findMany({
+        where: { userId },
+        select: { conversationId: true }
+      });
+      const conversationIds = userConversations.map(c => c.conversationId);
+
+      // Delete messages in user's conversations
       await tx.message.deleteMany({
-        where: { conversation: { userId } }
+        where: { conversationId: { in: conversationIds } }
       });
 
-      // Delete conversations
-      await tx.conversation.deleteMany({
+      // Delete conversation memberships
+      await tx.conversationMember.deleteMany({
         where: { userId }
+      });
+
+      // Delete conversations where user was the only member
+      await tx.conversation.deleteMany({
+        where: {
+          id: { in: conversationIds },
+          members: { none: {} }
+        }
       });
 
       // Delete leads

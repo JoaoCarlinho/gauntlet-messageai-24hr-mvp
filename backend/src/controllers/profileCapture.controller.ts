@@ -13,7 +13,7 @@
  */
 
 import { Request, Response } from 'express';
-import { prisma } from '../config/database';
+import prisma from '../config/database';
 import advancedScraperService from '../services/advancedScraper.service';
 
 interface CaptureProfileRequest {
@@ -116,25 +116,35 @@ export async function captureProfile(req: Request, res: Response) {
       });
     }
 
+    // Parse name into first and last name
+    const nameParts = profileData.name.split(' ');
+    const firstName = nameParts[0] || '';
+    const lastName = nameParts.slice(1).join(' ') || '';
+
     // Create lead in database
     const lead = await prisma.lead.create({
       data: {
-        name: profileData.name,
-        title: profileData.title || '',
+        firstName,
+        lastName,
+        jobTitle: profileData.title || '',
         company: profileData.company || '',
-        location: profileData.location || '',
-        profileUrl: profileData.profileUrl,
         source: `manual_${platform}${useFacebookGraphAPI ? '_graph_api' : ''}${useLinkedInAuth ? '_auth' : ''}`,
         status: 'new',
         // Add teamId if provided
-        ...(teamId && { teamId }),
-        // Add metadata
-        metadata: {
+        teamId: teamId || '',
+        // Store additional profile data in rawData
+        rawData: {
           platform: profileData.platform,
           capturedAt: new Date().toISOString(),
           captureMethod: useFacebookGraphAPI ? 'graph_api' : useLinkedInAuth ? 'authenticated_scraping' : 'puppeteer_scraping',
           bio: profileData.bio || '',
+          location: profileData.location || '',
+          profileUrl: profileData.profileUrl,
           ...(profileData.additionalData && { additionalData: profileData.additionalData }),
+        },
+        // Store social profile URLs
+        socialProfiles: {
+          [platform]: profileData.profileUrl,
         },
       },
     });
@@ -153,8 +163,10 @@ export async function captureProfile(req: Request, res: Response) {
       success: true,
       lead: {
         id: lead.id,
-        name: lead.name,
-        title: lead.title,
+        name: `${lead.firstName || ''} ${lead.lastName || ''}`.trim(),
+        firstName: lead.firstName,
+        lastName: lead.lastName,
+        jobTitle: lead.jobTitle,
         company: lead.company,
         platform: profileData.platform,
       },
@@ -192,14 +204,28 @@ export async function checkProfileStatus(req: Request, res: Response) {
       });
     }
 
-    // Check if lead with this profile URL already exists
+    // Check if lead with this profile URL already exists in socialProfiles JSON field
     const existingLead = await prisma.lead.findFirst({
       where: {
-        profileUrl,
+        OR: [
+          {
+            socialProfiles: {
+              path: ['linkedin'],
+              equals: profileUrl,
+            },
+          },
+          {
+            socialProfiles: {
+              path: ['facebook'],
+              equals: profileUrl,
+            },
+          },
+        ],
       },
       select: {
         id: true,
-        name: true,
+        firstName: true,
+        lastName: true,
         createdAt: true,
         status: true,
       },

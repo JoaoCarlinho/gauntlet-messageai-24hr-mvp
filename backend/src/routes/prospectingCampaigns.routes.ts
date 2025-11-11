@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticateToken } from '../middleware/auth';
+import { authenticate } from '../middleware/auth';
 import { scoreCampaignBatch } from '../controllers/batchScoring.controller';
 import { getCampaignStatus, listCampaignProspects } from '../controllers/campaignDashboard.controller';
 
@@ -11,7 +11,7 @@ const router = Router();
  */
 
 // All routes require authentication
-router.use(authenticateToken);
+router.use(authenticate);
 
 /**
  * Get campaign status with funnel metrics
