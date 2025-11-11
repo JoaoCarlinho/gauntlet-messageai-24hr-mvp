@@ -12,8 +12,12 @@
 import { Router } from 'express';
 import { captureProfile, checkProfileStatus } from '../controllers/profileCapture.controller';
 import { profileCaptureLimiter } from '../middleware/scraperRateLimiter';
+import { authenticate } from '../middleware/auth';
 
 const router = Router();
+
+// All routes require authentication
+router.use(authenticate);
 
 /**
  * POST /api/discovery-bot/capture-profile

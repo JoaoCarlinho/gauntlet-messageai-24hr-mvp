@@ -54,6 +54,22 @@ export async function captureProfile(req: Request, res: Response) {
       facebookAccessToken,
     }: CaptureProfileRequest = req.body;
 
+    // Get teamId from authenticated user if not provided in request
+    const resolvedTeamId = teamId || req.user?.teamId;
+
+    // Validate authentication and teamId
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+      });
+    }
+
+    if (!resolvedTeamId) {
+      return res.status(400).json({
+        error: 'Team ID is required. Please ensure your user is associated with a team.',
+      });
+    }
+
     // Validate input
     if (!profileUrl || !platform) {
       return res.status(400).json({
@@ -130,8 +146,7 @@ export async function captureProfile(req: Request, res: Response) {
         company: profileData.company || '',
         source: `manual_${platform}${useFacebookGraphAPI ? '_graph_api' : ''}${useLinkedInAuth ? '_auth' : ''}`,
         status: 'new',
-        // Add teamId if provided
-        teamId: teamId || '',
+        teamId: resolvedTeamId,
         // Store additional profile data in rawData
         rawData: {
           platform: profileData.platform,
