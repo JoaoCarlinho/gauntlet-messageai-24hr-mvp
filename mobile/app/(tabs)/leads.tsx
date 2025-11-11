@@ -170,13 +170,13 @@ export default function LeadsScreen() {
         {/* Contact Info */}
         <View style={styles.contactInfo}>
           {item.email && (
-            <View style={styles.contactItem}>
+            <View key="email-contact" style={styles.contactItem}>
               <Ionicons name="mail-outline" size={14} color="#666" />
               <Text style={styles.contactText}>{item.email}</Text>
             </View>
           )}
           {item.company && (
-            <View style={styles.contactItem}>
+            <View key="company-contact" style={styles.contactItem}>
               <Ionicons name="business-outline" size={14} color="#666" />
               <Text style={styles.contactText}>{item.company}</Text>
             </View>
@@ -185,12 +185,12 @@ export default function LeadsScreen() {
 
         {/* Source & Discovery Session */}
         <View style={styles.metadata}>
-          <View style={styles.metadataItem}>
+          <View key="source-metadata" style={styles.metadataItem}>
             <Ionicons name="compass-outline" size={14} color="#8E8E93" />
             <Text style={styles.metadataText}>Source: {item.source}</Text>
           </View>
           {item.discoverySessionId && (
-            <View style={styles.metadataItem}>
+            <View key="discovery-metadata" style={styles.metadataItem}>
               <Ionicons name="chatbubbles-outline" size={14} color="#8E8E93" />
               <Text style={styles.metadataText}>Discovery Session</Text>
             </View>
