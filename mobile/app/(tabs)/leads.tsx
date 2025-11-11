@@ -142,7 +142,7 @@ export default function LeadsScreen() {
             <View style={styles.badges}>
               {item.score && (
                 <View
-                  key="score-badge"
+                  key={`${item.id}-score-badge`}
                   style={[
                     styles.scoreBadge,
                     { backgroundColor: getScoreBgColor(item.score) },
@@ -158,7 +158,7 @@ export default function LeadsScreen() {
                   </Text>
                 </View>
               )}
-              <View key="status-badge" style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
+              <View key={`${item.id}-status-badge`} style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
                 <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
                   {getStatusLabel(item.status)}
                 </Text>
@@ -170,13 +170,13 @@ export default function LeadsScreen() {
         {/* Contact Info */}
         <View style={styles.contactInfo}>
           {item.email && (
-            <View key="email-contact" style={styles.contactItem}>
+            <View key={`${item.id}-email-contact`} style={styles.contactItem}>
               <Ionicons name="mail-outline" size={14} color="#666" />
               <Text style={styles.contactText}>{item.email}</Text>
             </View>
           )}
           {item.company && (
-            <View key="company-contact" style={styles.contactItem}>
+            <View key={`${item.id}-company-contact`} style={styles.contactItem}>
               <Ionicons name="business-outline" size={14} color="#666" />
               <Text style={styles.contactText}>{item.company}</Text>
             </View>
@@ -185,12 +185,12 @@ export default function LeadsScreen() {
 
         {/* Source & Discovery Session */}
         <View style={styles.metadata}>
-          <View key="source-metadata" style={styles.metadataItem}>
+          <View key={`${item.id}-source-metadata`} style={styles.metadataItem}>
             <Ionicons name="compass-outline" size={14} color="#8E8E93" />
             <Text style={styles.metadataText}>Source: {item.source}</Text>
           </View>
           {item.discoverySessionId && (
-            <View key="discovery-metadata" style={styles.metadataItem}>
+            <View key={`${item.id}-discovery-metadata`} style={styles.metadataItem}>
               <Ionicons name="chatbubbles-outline" size={14} color="#8E8E93" />
               <Text style={styles.metadataText}>Discovery Session</Text>
             </View>
