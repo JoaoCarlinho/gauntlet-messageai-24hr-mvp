@@ -290,29 +290,28 @@ export const updateLeadStatus = async (
  */
 export const claimLead = async (
   leadId: string,
-  userId: string,
-  teamId: string
+  userId: string
 ): Promise<Lead> => {
   try {
-    // Verify lead belongs to team
-    const lead = await prisma.lead.findFirst({
-      where: { id: leadId, teamId },
+    // First, find the lead by ID only
+    const lead = await prisma.lead.findUnique({
+      where: { id: leadId },
     });
 
     if (!lead) {
-      throw new Error('Lead not found or access denied');
+      throw new Error('Lead not found');
     }
 
-    // Verify user is member of team
+    // Verify user is member of the lead's team (not the provided teamId)
     const teamMember = await prisma.teamMember.findFirst({
       where: {
-        teamId,
+        teamId: lead.teamId,
         userId,
       },
     });
 
     if (!teamMember) {
-      throw new Error('User is not a member of this team');
+      throw new Error('User is not a member of this lead\'s team');
     }
 
     // Assign lead to user
