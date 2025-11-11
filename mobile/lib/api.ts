@@ -881,7 +881,7 @@ export const leadsAPI = {
     const effectiveTeamId = await getEffectiveTeamId(teamId);
     if (!effectiveTeamId) throw new Error('No team available');
 
-    await apiClient.patch(`/leads/${leadId}/status`, { status, teamId: effectiveTeamId });
+    await apiClient.put(`/leads/${leadId}/status`, { status, teamId: effectiveTeamId });
   },
 
   async claimLead(leadId: string, teamId?: string): Promise<Lead> {
