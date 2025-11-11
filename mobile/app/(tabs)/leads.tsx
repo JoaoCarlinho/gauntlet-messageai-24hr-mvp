@@ -109,19 +109,21 @@ export default function LeadsScreen() {
   const handleUpdateStatus = (lead: Lead) => {
     const statuses: LeadStatus[] = ['new', 'contacted', 'qualified', 'unqualified', 'converted'];
 
+    const statusButtons = statuses.map((status) => ({
+      text: getStatusLabel(status),
+      onPress: async () => {
+        try {
+          await updateLeadStatus(lead.id, status);
+        } catch (err: any) {
+          Alert.alert('Error', err.message || 'Failed to update status');
+        }
+      },
+    }));
+
     Alert.alert(
       'Update Lead Status',
       `Select new status for ${lead.name}`,
-      statuses.map((status) => ({
-        text: getStatusLabel(status),
-        onPress: async () => {
-          try {
-            await updateLeadStatus(lead.id, status);
-          } catch (err: any) {
-            Alert.alert('Error', err.message || 'Failed to update status');
-          }
-        },
-      })).concat([{ text: 'Cancel', style: 'cancel' }])
+      [...statusButtons, { text: 'Cancel', style: 'cancel' as const }]
     );
   };
 
@@ -140,6 +142,7 @@ export default function LeadsScreen() {
             <View style={styles.badges}>
               {item.score && (
                 <View
+                  key="score-badge"
                   style={[
                     styles.scoreBadge,
                     { backgroundColor: getScoreBgColor(item.score) },
@@ -155,7 +158,7 @@ export default function LeadsScreen() {
                   </Text>
                 </View>
               )}
-              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
+              <View key="status-badge" style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
                 <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
                   {getStatusLabel(item.status)}
                 </Text>
