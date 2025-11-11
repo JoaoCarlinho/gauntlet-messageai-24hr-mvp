@@ -245,7 +245,6 @@ export const updateStatus = async (req: Request, res: Response) => {
 export const claimLeadById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { teamId } = req.body;
 
     // Get userId from authenticated user
     const userId = req.user?.id;
@@ -256,17 +255,8 @@ export const claimLeadById = async (req: Request, res: Response) => {
       });
     }
 
-    // Use teamId from request or from user's team
-    const effectiveTeamId = teamId || req.user?.teamId;
-
-    if (!effectiveTeamId) {
-      return res.status(400).json({
-        error: 'Validation failed',
-        details: ['teamId is required'],
-      });
-    }
-
-    const lead = await claimLead(id, userId, effectiveTeamId);
+    // The service will verify the user is a member of the lead's team
+    const lead = await claimLead(id, userId);
 
     res.status(200).json({
       message: 'Lead claimed successfully',
