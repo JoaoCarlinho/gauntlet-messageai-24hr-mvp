@@ -1,0 +1,316 @@
+import dns from 'dns';
+import net from 'net';
+import {
+  validateEmail,
+  batchValidateEmails,
+} from '../../services/emailValidation.service';
+
+// Import test helpers
+import {
+  createMockProspect,
+  createMockCampaign,
+  createMockLead,
+  createMockICP,
+} from '../setup';
+
+jest.mock('dns');
+jest.mock('net');
+
+describe('Email Validation Service', () => {
+  describe('validateEmail', () => {
+    it('should validate a syntactically valid email with MX records', async () => {
+      const email = 'test@example.com';
+
+      // Mock MX record lookup
+      (dns.resolveMx as unknown as jest.Mock) = jest.fn((domain, callback) => {
+        callback(null, [{ exchange: 'mail.example.com', priority: 10 }]);
+      });
+
+      const result = await validateEmail(email);
+
+      expect(result.email).toBe(email);
+      expect(result.isValid).toBe(true);
+      expect(result.isSyntaxValid).toBe(true);
+      expect(result.hasMxRecords).toBe(true);
+      expect(result.confidence).toBeGreaterThan(0.5);
+    });
+
+    it('should reject email with invalid syntax', async () => {
+      const invalidEmails = [
+        'notanemail',
+        '@example.com',
+        'test@',
+        'test @example.com',
+        'test..test@example.com',
+      ];
+
+      for (const email of invalidEmails) {
+        const result = await validateEmail(email);
+
+        expect(result.email).toBe(email);
+        expect(result.isValid).toBe(false);
+        expect(result.isSyntaxValid).toBe(false);
+        expect(result.hasMxRecords).toBe(false);
+        expect(result.reason).toBe('Invalid email syntax');
+        expect(result.confidence).toBe(1.0);
+      }
+    });
+
+    it('should accept various valid email formats', async () => {
+      const validEmails = [
+        'simple@example.com',
+        'firstname.lastname@example.com',
+        'email+tag@example.co.uk',
+        'user_name@example-domain.com',
+        '1234567890@example.com',
+      ];
+
+      // Mock MX records exist
+      (dns.resolveMx as jest.Mock) = jest.fn((domain, callback) => {
+        callback(null, [{ exchange: 'mail.example.com', priority: 10 }]);
+      });
+
+      for (const email of validEmails) {
+        const result = await validateEmail(email);
+
+        expect(result.isSyntaxValid).toBe(true);
+        expect(result.email).toBe(email);
+      }
+    });
+
+    it('should reject email with no MX records', async () => {
+      const email = 'test@nonexistent-domain-12345.com';
+
+      // Mock no MX records
+      (dns.resolveMx as jest.Mock) = jest.fn((domain, callback) => {
+        callback(new Error('ENOTFOUND'), null);
+      });
+
+      const result = await validateEmail(email);
+
+      expect(result.isValid).toBe(false);
+      expect(result.isSyntaxValid).toBe(true);
+      expect(result.hasMxRecords).toBe(false);
+      expect(result.reason).toBe('No MX records found for domain');
+      expect(result.confidence).toBe(0.9);
+    });
+
+    it('should skip SMTP check for common email providers', async () => {
+      const commonProviders = [
+        'test@gmail.com',
+        'test@yahoo.com',
+        'test@outlook.com',
+        'test@hotmail.com',
+        'test@icloud.com',
+      ];
+
+      // Mock MX records exist
+      (dns.resolveMx as jest.Mock) = jest.fn((domain, callback) => {
+        callback(null, [{ exchange: 'mail.gmail.com', priority: 10 }]);
+      });
+
+      for (const email of commonProviders) {
+        const result = await validateEmail(email);
+
+        expect(result.isValid).toBe(true);
+        expect(result.isDeliverable).toBeUndefined();
+      }
+    });
+
+    it('should handle validation errors gracefully', async () => {
+      const email = 'test@example.com';
+
+      // Mock MX lookup throws unexpected error
+      (dns.resolveMx as jest.Mock) = jest.fn(() => {
+        throw new Error('DNS service unavailable');
+      });
+
+      const result = await validateEmail(email);
+
+      expect(result.isValid).toBe(false);
+      expect(result.reason).toBe('Validation error');
+      expect(result.confidence).toBe(0);
+    });
+
+    it('should extract domain correctly from email', async () => {
+      const email = 'user@subdomain.example.com';
+
+      // Mock MX records
+      (dns.resolveMx as jest.Mock) = jest.fn((domain, callback) => {
+        expect(domain).toBe('subdomain.example.com');
+        callback(null, [{ exchange: 'mail.example.com', priority: 10 }]);
+      });
+
+      const result = await validateEmail(email);
+
+      expect(result.hasMxRecords).toBe(true);
+    });
+
+    it('should return appropriate confidence levels', async () => {
+      // Case 1: Invalid syntax (100% confidence it's invalid)
+      const invalidResult = await validateEmail('notanemail');
+      expect(invalidResult.confidence).toBe(1.0);
+
+      // Case 2: Valid syntax but no MX (90% confidence it's invalid)
+      (dns.resolveMx as jest.Mock) = jest.fn((domain, callback) => {
+        callback(new Error('ENOTFOUND'), null);
+      });
+      const noMxResult = await validateEmail('test@invalid.com');
+      expect(noMxResult.confidence).toBe(0.9);
+
+      // Case 3: Valid with MX but no deliverability check (70% confidence)
+      (dns.resolveMx as jest.Mock) = jest.fn((domain, callback) => {
+        callback(null, [{ exchange: 'mail.example.com', priority: 10 }]);
+      });
+      const validResult = await validateEmail('test@business.com');
+      expect(validResult.confidence).toBeGreaterThanOrEqual(0.7);
+    });
+
+    it('should handle RFC 5322 compliant email formats', async () => {
+      const rfc5322Emails = [
+        'user@example.com',
+        'user.name@example.com',
+        'user+tag@example.com',
+        'user_name@example.com',
+        'user-name@example.com',
+        '123@example.com',
+      ];
+
+      (dns.resolveMx as jest.Mock) = jest.fn((domain, callback) => {
+        callback(null, [{ exchange: 'mail.example.com', priority: 10 }]);
+      });
+
+      for (const email of rfc5322Emails) {
+        const result = await validateEmail(email);
+        expect(result.isSyntaxValid).toBe(true);
+      }
+    });
+
+    it('should reject emails with special characters not in RFC 5322', async () => {
+      const invalidEmails = [
+        'user name@example.com', // space
+        'user@exam ple.com', // space in domain
+        'user@@example.com', // double @
+        'user@example..com', // double dot
+      ];
+
+      for (const email of invalidEmails) {
+        const result = await validateEmail(email);
+        expect(result.isSyntaxValid).toBe(false);
+      }
+    });
+  });
+
+  describe('batchValidateEmails', () => {
+    it('should validate multiple emails in batch', async () => {
+      const emails = [
+        'valid1@example.com',
+        'valid2@example.com',
+        'invalid',
+      ];
+
+      // Mock MX records for valid domains
+      (dns.resolveMx as jest.Mock) = jest.fn((domain, callback) => {
+        if (domain === 'example.com') {
+          callback(null, [{ exchange: 'mail.example.com', priority: 10 }]);
+        } else {
+          callback(new Error('ENOTFOUND'), null);
+        }
+      });
+
+      const results = await batchValidateEmails(emails);
+
+      expect(results).toHaveLength(3);
+      expect(results[0].isValid).toBe(true);
+      expect(results[1].isValid).toBe(true);
+      expect(results[2].isValid).toBe(false);
+    });
+
+    it('should process empty array', async () => {
+      const results = await batchValidateEmails([]);
+
+      expect(results).toHaveLength(0);
+    });
+
+    it('should handle mixed valid and invalid emails', async () => {
+      const emails = [
+        'valid@example.com',
+        'notanemail',
+        'test@nonexistent.com',
+        'another@example.com',
+      ];
+
+      (dns.resolveMx as jest.Mock) = jest.fn((domain, callback) => {
+        if (domain === 'example.com') {
+          callback(null, [{ exchange: 'mail.example.com', priority: 10 }]);
+        } else {
+          callback(new Error('ENOTFOUND'), null);
+        }
+      });
+
+      const results = await batchValidateEmails(emails);
+
+      expect(results).toHaveLength(4);
+
+      // First email: valid
+      expect(results[0].isValid).toBe(true);
+      expect(results[0].email).toBe('valid@example.com');
+
+      // Second email: invalid syntax
+      expect(results[1].isValid).toBe(false);
+      expect(results[1].isSyntaxValid).toBe(false);
+
+      // Third email: no MX records
+      expect(results[2].isValid).toBe(false);
+      expect(results[2].isSyntaxValid).toBe(true);
+      expect(results[2].hasMxRecords).toBe(false);
+
+      // Fourth email: valid
+      expect(results[3].isValid).toBe(true);
+      expect(results[3].email).toBe('another@example.com');
+    });
+
+    it('should process all emails even if some fail', async () => {
+      const emails = [
+        'test1@example.com',
+        'test2@example.com',
+        'test3@example.com',
+      ];
+
+      // Mock: first call succeeds, second throws error, third succeeds
+      let callCount = 0;
+      (dns.resolveMx as jest.Mock) = jest.fn((domain, callback) => {
+        callCount++;
+        if (callCount === 2) {
+          throw new Error('DNS error');
+        }
+        callback(null, [{ exchange: 'mail.example.com', priority: 10 }]);
+      });
+
+      const results = await batchValidateEmails(emails);
+
+      expect(results).toHaveLength(3);
+      expect(results[0].isValid).toBe(true);
+      expect(results[1].isValid).toBe(false); // DNS error
+      expect(results[2].isValid).toBe(true);
+    });
+
+    it('should preserve email order in results', async () => {
+      const emails = [
+        'alpha@example.com',
+        'beta@example.com',
+        'gamma@example.com',
+      ];
+
+      (dns.resolveMx as jest.Mock) = jest.fn((domain, callback) => {
+        callback(null, [{ exchange: 'mail.example.com', priority: 10 }]);
+      });
+
+      const results = await batchValidateEmails(emails);
+
+      expect(results[0].email).toBe('alpha@example.com');
+      expect(results[1].email).toBe('beta@example.com');
+      expect(results[2].email).toBe('gamma@example.com');
+    });
+  });
+});
