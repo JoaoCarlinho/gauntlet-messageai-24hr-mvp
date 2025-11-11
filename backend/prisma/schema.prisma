@@ -109,6 +109,7 @@ model Team {
   campaigns   Campaign[]
   leads       Lead[]
   webhookLogs WebhookLog[]
+  prospectingCampaigns ProspectingCampaign[]
 
   @@index([slug])
   @@index([deletedAt])
@@ -162,9 +163,84 @@ model ICP {
 
   product         Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   campaigns       Campaign[]
+  prospectingCampaigns ProspectingCampaign[]
 
   @@index([productId])
   @@index([name])
+}
+
+model ProspectingCampaign {
+  id              String   @id @default(uuid())
+  teamId          String
+  icpId           String
+  name            String
+  platforms       String[] // ["linkedin", "facebook", "twitter", "csv"]
+  searchCriteria  Json     // Platform-specific search params
+  status          String   // "running", "paused", "completed", "failed"
+  discoveredCount Int      @default(0) // Total prospects found across all platforms
+  qualifiedCount  Int      @default(0) // Prospects with ICP score >= 0.75
+  convertedCount  Int      @default(0) // Prospects converted to Leads
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+
+  team            Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  icp             ICP @relation(fields: [icpId], references: [id], onDelete: Cascade)
+  prospects       Prospect[]
+
+  @@index([teamId])
+  @@index([icpId])
+  @@index([status])
+}
+
+model Prospect {
+  id                String   @id @default(uuid())
+  campaignId        String
+  platform          String   // "linkedin", "facebook", "twitter", "csv"
+  platformProfileId String   // External platform ID
+  profileUrl        String
+  name              String?
+  headline          String?
+  location          String?
+  companyName       String?
+  companyUrl        String?
+  contactInfo       Json?    // Email, phone if available
+  profileData       Json     // Full scraped/API data
+  enrichmentData    Json?    // Data from Apollo/Hunter
+  icpMatchScore     Float    @default(0) // Cosine similarity score (0.0-1.0)
+  qualityScore      Float    @default(0) // Enrichment data completeness (0-100)
+  status            String   @default("new") // "new", "enriched", "qualified", "converted", "rejected"
+  convertedToLeadId String?  // Reference to Lead if converted
+  discoveredAt      DateTime @default(now())
+  enrichedAt        DateTime?
+  updatedAt         DateTime @updatedAt
+
+  campaign          ProspectingCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@unique([platform, platformProfileId])
+  @@index([campaignId])
+  @@index([status])
+  @@index([icpMatchScore])
+}
+
+model EnrichmentLog {
+  id            String   @id @default(uuid())
+  teamId        String   // Foreign key without relation for audit integrity
+  provider      String   // "apollo", "hunter", "clearbit"
+  endpoint      String   // API endpoint called
+  prospectId    String?  // Nullable foreign key without relation
+  leadId        String?  // Nullable foreign key without relation
+  requestData   Json     // Request parameters
+  responseData  Json?    // API response (nullable in case of failure)
+  creditsUsed   Int      @default(0) // Credits consumed by this request
+  cost          Float    @default(0) // For future paid tiers
+  status        String   // "success", "failed", "rate_limited"
+  errorMessage  String?  // Error message if failed
+  createdAt     DateTime @default(now())
+
+  @@index([teamId])
+  @@index([provider])
+  @@index([createdAt])
+  @@index([status])
 }
 
 model Campaign {
@@ -226,10 +302,17 @@ model Lead {
   lastName          String?
   company           String?
   jobTitle          String?
-  source            String   // "facebook", "linkedin", "tiktok", "x", "manual"
+  source            String   // "facebook", "linkedin", "tiktok", "x", "manual", "csv", "twitter"
   status            String   @default("new") // "new", "contacted", "qualified", "proposal", "closed_won", "closed_lost"
   qualificationScore Int?    // 0-100
   rawData           Json?    // Original webhook payload
+
+  // Social prospecting fields (added in Epic 2, Story 2.4)
+  prospectId        String?  // Link to original Prospect record
+  socialProfiles    Json?    // {linkedin: url, facebook: url, twitter: url}
+  enrichmentScore   Float?   // Quality of enriched data (0-100)
+  lastEnrichedAt    DateTime? // Last enrichment timestamp
+
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

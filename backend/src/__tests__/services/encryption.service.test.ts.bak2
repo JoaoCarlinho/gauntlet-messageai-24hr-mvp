@@ -1,0 +1,493 @@
+import crypto from 'crypto';
+import {
+  encrypt,
+  decrypt,
+  hash,
+  encryptFields,
+  decryptFields,
+} from '../../services/encryption.service';
+
+// Import test helpers
+import {
+  createMockProspect,
+  createMockCampaign,
+  createMockLead,
+  createMockICP,
+} from '../setup';
+
+describe('Encryption Service', () => {
+  describe('encrypt', () => {
+    it('should encrypt plain text', () => {
+      const plainText = 'sensitive-data@example.com';
+
+      const encrypted = encrypt(plainText);
+
+      expect(encrypted).toBeDefined();
+      expect(encrypted).not.toBe(plainText);
+      expect(typeof encrypted).toBe('string');
+    });
+
+    it('should produce different outputs for same input (due to random IV)', () => {
+      const plainText = 'test@example.com';
+
+      const encrypted1 = encrypt(plainText);
+      const encrypted2 = encrypt(plainText);
+
+      expect(encrypted1).not.toBe(encrypted2);
+    });
+
+    it('should include IV, auth tag, and ciphertext in output', () => {
+      const plainText = 'test-data';
+
+      const encrypted = encrypt(plainText);
+      const parts = encrypted.split(':');
+
+      expect(parts).toHaveLength(3);
+      expect(parts[0]).toBeTruthy(); // IV
+      expect(parts[1]).toBeTruthy(); // Auth tag
+      expect(parts[2]).toBeTruthy(); // Encrypted data
+    });
+
+    it('should encrypt empty strings', () => {
+      const encrypted = encrypt('');
+
+      expect(encrypted).toBeDefined();
+      expect(encrypted.split(':')).toHaveLength(3);
+    });
+
+    it('should encrypt long strings', () => {
+      const longText = 'a'.repeat(10000);
+
+      const encrypted = encrypt(longText);
+
+      expect(encrypted).toBeDefined();
+      expect(encrypted.length).toBeGreaterThan(longText.length);
+    });
+
+    it('should encrypt strings with special characters', () => {
+      const specialChars = 'user+tag@example.com!@#$%^&*(){}[]';
+
+      const encrypted = encrypt(specialChars);
+
+      expect(encrypted).toBeDefined();
+      expect(encrypted).not.toBe(specialChars);
+    });
+
+    it('should encrypt unicode characters', () => {
+      const unicode = 'Hello World 123';
+
+      const encrypted = encrypt(unicode);
+
+      expect(encrypted).toBeDefined();
+      expect(encrypted).not.toContain(unicode);
+    });
+  });
+
+  describe('decrypt', () => {
+    it('should decrypt encrypted text back to original', () => {
+      const plainText = 'john@acme.com';
+
+      const encrypted = encrypt(plainText);
+      const decrypted = decrypt(encrypted);
+
+      expect(decrypted).toBe(plainText);
+    });
+
+    it('should decrypt various data types correctly', () => {
+      const testCases = [
+        'simple@example.com',
+        '+1-234-567-8900',
+        '123 Main Street, San Francisco, CA 94105',
+        'Credit Card: 1234-5678-9012-3456',
+      ];
+
+      for (const plainText of testCases) {
+        const encrypted = encrypt(plainText);
+        const decrypted = decrypt(encrypted);
+
+        expect(decrypted).toBe(plainText);
+      }
+    });
+
+    it('should decrypt empty strings', () => {
+      const encrypted = encrypt('');
+      const decrypted = decrypt(encrypted);
+
+      expect(decrypted).toBe('');
+    });
+
+    it('should decrypt long strings', () => {
+      const longText = 'The quick brown fox jumps over the lazy dog. '.repeat(100);
+
+      const encrypted = encrypt(longText);
+      const decrypted = decrypt(encrypted);
+
+      expect(decrypted).toBe(longText);
+    });
+
+    it('should decrypt unicode characters correctly', () => {
+      const unicode = '`}L < E1-('';
+
+      const encrypted = encrypt(unicode);
+      const decrypted = decrypt(encrypted);
+
+      expect(decrypted).toBe(unicode);
+    });
+
+    it('should throw error for invalid encrypted format', () => {
+      const invalidFormats = [
+        'invalid',
+        'only:two:parts',
+        'too:many:parts:here:error',
+        '',
+      ];
+
+      for (const invalid of invalidFormats) {
+        expect(() => decrypt(invalid)).toThrow('Failed to decrypt data');
+      }
+    });
+
+    it('should throw error for tampered ciphertext', () => {
+      const plainText = 'test@example.com';
+      const encrypted = encrypt(plainText);
+
+      // Tamper with the ciphertext
+      const parts = encrypted.split(':');
+      parts[2] = parts[2].substring(0, parts[2].length - 4) + 'FFFF';
+      const tampered = parts.join(':');
+
+      expect(() => decrypt(tampered)).toThrow('Failed to decrypt data');
+    });
+
+    it('should throw error for wrong auth tag', () => {
+      const plainText = 'test@example.com';
+      const encrypted = encrypt(plainText);
+
+      // Tamper with the auth tag
+      const parts = encrypted.split(':');
+      parts[1] = '0'.repeat(32);
+      const tampered = parts.join(':');
+
+      expect(() => decrypt(tampered)).toThrow('Failed to decrypt data');
+    });
+
+    it('should throw error for wrong IV', () => {
+      const plainText = 'test@example.com';
+      const encrypted = encrypt(plainText);
+
+      // Tamper with the IV
+      const parts = encrypted.split(':');
+      parts[0] = '0'.repeat(32);
+      const tampered = parts.join(':');
+
+      expect(() => decrypt(tampered)).toThrow('Failed to decrypt data');
+    });
+  });
+
+  describe('hash', () => {
+    it('should hash text to SHA-256', () => {
+      const plainText = 'password123';
+
+      const hashed = hash(plainText);
+
+      expect(hashed).toBeDefined();
+      expect(hashed).not.toBe(plainText);
+      expect(hashed.length).toBe(64); // SHA-256 produces 64 hex characters
+    });
+
+    it('should produce same hash for same input', () => {
+      const plainText = 'consistent-data';
+
+      const hash1 = hash(plainText);
+      const hash2 = hash(plainText);
+
+      expect(hash1).toBe(hash2);
+    });
+
+    it('should produce different hashes for different inputs', () => {
+      const hash1 = hash('input1');
+      const hash2 = hash('input2');
+
+      expect(hash1).not.toBe(hash2);
+    });
+
+    it('should be one-way (cannot decrypt hashes)', () => {
+      const plainText = 'secret-password';
+      const hashed = hash(plainText);
+
+      // Attempting to decrypt a hash should fail
+      expect(() => decrypt(hashed)).toThrow();
+    });
+
+    it('should hash empty strings', () => {
+      const hashed = hash('');
+
+      expect(hashed).toBeDefined();
+      expect(hashed.length).toBe(64);
+    });
+
+    it('should hash long strings consistently', () => {
+      const longText = 'a'.repeat(10000);
+
+      const hashed = hash(longText);
+
+      expect(hashed.length).toBe(64); // SHA-256 always produces same length
+    });
+  });
+
+  describe('encryptFields', () => {
+    it('should encrypt specified fields in an object', () => {
+      const obj = {
+        email: 'john@acme.com',
+        phone: '+1234567890',
+        name: 'John Doe',
+        company: 'Acme Corp',
+      };
+
+      const encrypted = encryptFields(obj, ['email', 'phone']);
+
+      expect(encrypted.email).not.toBe(obj.email);
+      expect(encrypted.phone).not.toBe(obj.phone);
+      expect(encrypted.name).toBe(obj.name);
+      expect(encrypted.company).toBe(obj.company);
+    });
+
+    it('should not modify original object', () => {
+      const original = {
+        email: 'test@example.com',
+        name: 'Test User',
+      };
+
+      const copy = { ...original };
+      const encrypted = encryptFields(original, ['email']);
+
+      expect(original).toEqual(copy);
+    });
+
+    it('should handle nested objects with field-level encryption', () => {
+      const obj = {
+        user: {
+          email: 'test@example.com',
+          password: 'secret123',
+        },
+        metadata: {
+          created: new Date(),
+        },
+      };
+
+      // Note: This service encrypts top-level fields only
+      const encrypted = encryptFields(obj.user, ['email', 'password']);
+
+      expect(encrypted.email).not.toBe('test@example.com');
+      expect(encrypted.password).not.toBe('secret123');
+    });
+
+    it('should skip null or undefined fields', () => {
+      const obj = {
+        email: 'test@example.com',
+        phone: null,
+        address: undefined,
+      };
+
+      const encrypted = encryptFields(obj, ['email', 'phone', 'address']);
+
+      expect(encrypted.email).not.toBe(obj.email);
+      expect(encrypted.phone).toBeNull();
+      expect(encrypted.address).toBeUndefined();
+    });
+
+    it('should encrypt array of objects', () => {
+      const users = [
+        { email: 'user1@example.com', name: 'User 1' },
+        { email: 'user2@example.com', name: 'User 2' },
+      ];
+
+      const encrypted = users.map(user => encryptFields(user, ['email']));
+
+      expect(encrypted[0].email).not.toBe('user1@example.com');
+      expect(encrypted[1].email).not.toBe('user2@example.com');
+      expect(encrypted[0].name).toBe('User 1');
+      expect(encrypted[1].name).toBe('User 2');
+    });
+
+    it('should handle empty fields array', () => {
+      const obj = {
+        email: 'test@example.com',
+        name: 'Test',
+      };
+
+      const encrypted = encryptFields(obj, []);
+
+      expect(encrypted).toEqual(obj);
+    });
+  });
+
+  describe('decryptFields', () => {
+    it('should decrypt previously encrypted fields', () => {
+      const original = {
+        email: 'john@acme.com',
+        phone: '+1234567890',
+        name: 'John Doe',
+      };
+
+      const encrypted = encryptFields(original, ['email', 'phone']);
+      const decrypted = decryptFields(encrypted, ['email', 'phone']);
+
+      expect(decrypted.email).toBe(original.email);
+      expect(decrypted.phone).toBe(original.phone);
+      expect(decrypted.name).toBe(original.name);
+    });
+
+    it('should handle decryption errors gracefully', () => {
+      const obj = {
+        email: 'invalid-encrypted-data',
+        name: 'Test User',
+      };
+
+      const decrypted = decryptFields(obj, ['email']);
+
+      expect(decrypted.email).toBeNull();
+      expect(decrypted.name).toBe('Test User');
+    });
+
+    it('should not modify original object', () => {
+      const original = {
+        email: 'test@example.com',
+        name: 'Test',
+      };
+
+      const encrypted = encryptFields(original, ['email']);
+      const encryptedCopy = { ...encrypted };
+      const decrypted = decryptFields(encrypted, ['email']);
+
+      expect(encrypted).toEqual(encryptedCopy);
+    });
+
+    it('should handle null or undefined encrypted fields', () => {
+      const obj = {
+        email: null,
+        phone: undefined,
+        name: 'Test',
+      };
+
+      const decrypted = decryptFields(obj, ['email', 'phone']);
+
+      expect(decrypted.email).toBeNull();
+      expect(decrypted.phone).toBeUndefined();
+    });
+
+    it('should decrypt multiple fields correctly', () => {
+      const original = {
+        email: 'john@acme.com',
+        phone: '+1234567890',
+        ssn: '123-45-6789',
+        creditCard: '1234-5678-9012-3456',
+        name: 'John Doe',
+      };
+
+      const sensitiveFields = ['email', 'phone', 'ssn', 'creditCard'];
+      const encrypted = encryptFields(original, sensitiveFields);
+      const decrypted = decryptFields(encrypted, sensitiveFields);
+
+      expect(decrypted.email).toBe(original.email);
+      expect(decrypted.phone).toBe(original.phone);
+      expect(decrypted.ssn).toBe(original.ssn);
+      expect(decrypted.creditCard).toBe(original.creditCard);
+      expect(decrypted.name).toBe(original.name);
+    });
+  });
+
+  describe('Round-trip encryption/decryption', () => {
+    it('should maintain data integrity through multiple encrypt/decrypt cycles', () => {
+      const plainText = 'sensitive-data@example.com';
+
+      let data = plainText;
+      for (let i = 0; i < 5; i++) {
+        data = encrypt(data);
+      }
+
+      for (let i = 0; i < 5; i++) {
+        data = decrypt(data);
+      }
+
+      expect(data).toBe(plainText);
+    });
+
+    it('should work with prospect contactInfo encryption', () => {
+      const prospect = createMockProspect({
+        contactInfo: {
+          email: 'john@acme.com',
+          phone: '+1234567890',
+        },
+      });
+
+      // Encrypt contact info
+      const encryptedEmail = encrypt(prospect.contactInfo.email);
+      const encryptedPhone = encrypt(prospect.contactInfo.phone);
+
+      // Store encrypted
+      const stored = {
+        ...prospect,
+        contactInfo: {
+          email: encryptedEmail,
+          phone: encryptedPhone,
+        },
+      };
+
+      // Decrypt when retrieving
+      const retrieved = {
+        ...stored,
+        contactInfo: {
+          email: decrypt(stored.contactInfo.email),
+          phone: decrypt(stored.contactInfo.phone),
+        },
+      };
+
+      expect(retrieved.contactInfo.email).toBe('john@acme.com');
+      expect(retrieved.contactInfo.phone).toBe('+1234567890');
+    });
+
+    it('should work with lead PII encryption', () => {
+      const lead = createMockLead({
+        email: 'jane@startup.com',
+        phone: '+19876543210',
+        firstName: 'Jane',
+        lastName: 'Doe',
+      });
+
+      const sensitiveFields = ['email', 'phone', 'firstName', 'lastName'];
+      const encrypted = encryptFields(lead, sensitiveFields);
+      const decrypted = decryptFields(encrypted, sensitiveFields);
+
+      expect(decrypted.email).toBe(lead.email);
+      expect(decrypted.phone).toBe(lead.phone);
+      expect(decrypted.firstName).toBe(lead.firstName);
+      expect(decrypted.lastName).toBe(lead.lastName);
+    });
+  });
+
+  describe('Performance', () => {
+    it('should encrypt 1000 items in reasonable time', () => {
+      const items = Array.from({ length: 1000 }, (_, i) => `email${i}@example.com`);
+
+      const start = Date.now();
+      const encrypted = items.map(item => encrypt(item));
+      const duration = Date.now() - start;
+
+      expect(encrypted).toHaveLength(1000);
+      expect(duration).toBeLessThan(5000); // Should complete in under 5 seconds
+    });
+
+    it('should decrypt 1000 items in reasonable time', () => {
+      const items = Array.from({ length: 1000 }, (_, i) => `email${i}@example.com`);
+      const encrypted = items.map(item => encrypt(item));
+
+      const start = Date.now();
+      const decrypted = encrypted.map(item => decrypt(item));
+      const duration = Date.now() - start;
+
+      expect(decrypted).toHaveLength(1000);
+      expect(duration).toBeLessThan(5000);
+    });
+  });
+});

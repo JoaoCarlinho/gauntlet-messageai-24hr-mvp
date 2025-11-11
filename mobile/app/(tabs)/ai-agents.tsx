@@ -69,11 +69,11 @@ const AGENT_CARDS: AgentCard[] = [
   {
     id: 'discovery-bot',
     name: 'Discovery Bot',
-    description: 'Public-facing bot that qualifies leads through conversational discovery (view only)',
+    description: 'Public-facing bot that qualifies leads through conversational discovery (info only)',
     icon: 'compass-outline',
     color: '#AF52DE',
-    route: '',
-    enabled: false, // Info only - not user-initiated
+    route: '/ai-agents/discovery-bot',
+    enabled: true, // Info screen - shows how Discovery Bot works
   },
 ];
 
