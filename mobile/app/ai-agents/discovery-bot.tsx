@@ -20,6 +20,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { tokenManager } from '../../lib/api';
 
 export default function DiscoveryBotScreen() {
   // State for manual lead capture
@@ -117,6 +118,18 @@ export default function DiscoveryBotScreen() {
         requestBody.facebookAccessToken = facebookAccessToken;
       }
 
+      // Get authentication token
+      const token = await tokenManager.getAccessToken();
+      if (!token) {
+        Alert.alert(
+          'Authentication Required',
+          'Please log in to capture profiles.',
+          [{ text: 'OK' }]
+        );
+        setIsScrapingProfile(false);
+        return;
+      }
+
       // Call backend API to scrape profile and create lead
       const response = await fetch(
         `${process.env.EXPO_PUBLIC_API_URL}/api/v1/discovery-bot/capture-profile`,
@@ -124,6 +137,7 @@ export default function DiscoveryBotScreen() {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify(requestBody),
         }
