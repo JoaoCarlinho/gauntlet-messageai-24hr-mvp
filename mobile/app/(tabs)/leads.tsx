@@ -138,21 +138,23 @@ export default function LeadsScreen() {
           <View style={styles.leadInfo}>
             <Text style={styles.leadName}>{item.name}</Text>
             <View style={styles.badges}>
-              <View
-                style={[
-                  styles.scoreBadge,
-                  { backgroundColor: getScoreBgColor(item.score) },
-                ]}
-              >
-                <Ionicons
-                  name="flame"
-                  size={12}
-                  color={getScoreColor(item.score)}
-                />
-                <Text style={[styles.scoreText, { color: getScoreColor(item.score) }]}>
-                  {item.score.toUpperCase()}
-                </Text>
-              </View>
+              {item.score && (
+                <View
+                  style={[
+                    styles.scoreBadge,
+                    { backgroundColor: getScoreBgColor(item.score) },
+                  ]}
+                >
+                  <Ionicons
+                    name="flame"
+                    size={12}
+                    color={getScoreColor(item.score)}
+                  />
+                  <Text style={[styles.scoreText, { color: getScoreColor(item.score) }]}>
+                    {item.score.toUpperCase()}
+                  </Text>
+                </View>
+              )}
               <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
                 <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
                   {getStatusLabel(item.status)}
