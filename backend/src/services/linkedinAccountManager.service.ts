@@ -292,15 +292,45 @@ export class LinkedInAccountManager {
       ? (health.checkpointCount / health.totalRequests) * 100
       : 0;
 
+    const isOnCooldown = health.cooldownUntil ? health.cooldownUntil > new Date() : false;
+
     return {
       totalRequests: health.totalRequests,
       successfulRequests: health.successfulRequests,
       failedRequests: health.failedRequests,
       checkpointCount: health.checkpointCount,
+      consecutiveFailures: 0, // Track consecutive failures in a future enhancement
       successRate,
       checkpointRate,
       isActive: health.isActive,
+      isOnCooldown,
       cooldownUntil: health.cooldownUntil,
+      lastRequestAt: health.lastRequestAt,
+      lastSuccessAt: health.lastSuccessAt,
+      lastFailureAt: null, // Not tracked in current schema
+      createdAt: health.createdAt,
+      updatedAt: health.updatedAt,
     };
+  }
+
+  static async getRequestHistory(userId: string, hours: number = 24) {
+    const since = new Date(Date.now() - hours * 3600000);
+
+    return prisma.linkedInRequestLog.findMany({
+      where: {
+        userId,
+        requestTime: { gte: since },
+      },
+      orderBy: { requestTime: 'desc' },
+      select: {
+        id: true,
+        profileUrl: true,
+        requestTime: true,
+        success: true,
+        responseTimeMs: true,
+        checkpointTriggered: true,
+        errorMessage: true,
+      },
+    });
   }
 }

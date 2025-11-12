@@ -5,7 +5,7 @@ const REDIS_PASSWORD = process.env.REDIS_PASSWORD;
 
 export const redisClient = new Redis(REDIS_URL, {
   password: REDIS_PASSWORD,
-  retryStrategy(times) {
+  retryStrategy(times: number) {
     const delay = Math.min(times * 50, 2000);
     return delay;
   },
@@ -18,7 +18,7 @@ redisClient.on('connect', () => {
   console.log('[Redis] Connected successfully');
 });
 
-redisClient.on('error', (err) => {
+redisClient.on('error', (err: Error) => {
   console.error('[Redis] Connection error:', err);
 });
 

@@ -37,15 +37,18 @@ export class HumanBehaviorSimulator {
 
   static async simulateScrolling(page: Page): Promise<void> {
     await page.evaluate(async () => {
+      // @ts-ignore - Running in browser context
       const scrolls = Math.floor(Math.random() * 3) + 2;
 
       for (let i = 0; i < scrolls; i++) {
         const scrollAmount = Math.floor(Math.random() * 300) + 200;
+        // @ts-ignore - Running in browser context
         window.scrollBy({ top: scrollAmount, behavior: 'smooth' });
         await new Promise((r) => setTimeout(r, Math.random() * 500 + 300));
       }
 
       if (Math.random() > 0.5) {
+        // @ts-ignore - Running in browser context
         window.scrollBy({ top: -150, behavior: 'smooth' });
         await new Promise((r) => setTimeout(r, 200));
       }

@@ -354,11 +354,11 @@ export async function getLinkedInRateLimits(req: Request, res: Response) {
     const oneDayAgo = now - 86400000;
 
     const requestsLastHour = recentRequests.filter(
-      (r) => new Date(r.requestedAt).getTime() > oneHourAgo
+      (r: any) => new Date(r.requestTime).getTime() > oneHourAgo
     ).length;
 
     const requestsToday = recentRequests.filter(
-      (r) => new Date(r.requestedAt).getTime() > oneDayAgo
+      (r: any) => new Date(r.requestTime).getTime() > oneDayAgo
     ).length;
 
     return res.json({
@@ -422,7 +422,7 @@ export async function getLinkedInAccountHealth(req: Request, res: Response) {
       success: true,
       health: {
         hasCredentials: !!credentials,
-        isActive: credentials?.isActive || false,
+        isActive: health.isActive,
         accountStatus: health.isOnCooldown ? 'cooldown' : 'active',
         metrics: {
           totalRequests: health.totalRequests,

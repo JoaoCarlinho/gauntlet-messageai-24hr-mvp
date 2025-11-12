@@ -83,23 +83,29 @@ class AdvancedScraperService {
 
     // Enhanced anti-detection measures
     await page.evaluateOnNewDocument(() => {
+      // @ts-ignore - Running in browser context
       // Override navigator.webdriver
       Object.defineProperty(navigator, 'webdriver', {
         get: () => undefined,
       });
 
+      // @ts-ignore - Running in browser context
       // Randomize plugins
       Object.defineProperty(navigator, 'plugins', {
         get: () => [1, 2, 3, 4, 5],
       });
 
+      // @ts-ignore - Running in browser context
       // Override permissions
       const originalQuery = window.navigator.permissions.query;
-      window.navigator.permissions.query = (parameters) =>
+      // @ts-ignore - Running in browser context
+      window.navigator.permissions.query = (parameters: any) =>
         parameters.name === 'notifications'
-          ? Promise.resolve({ state: Notification.permission } as PermissionStatus)
+          // @ts-ignore - Running in browser context
+          ? Promise.resolve({ state: Notification.permission })
           : originalQuery(parameters);
 
+      // @ts-ignore - Running in browser context
       // Mock languages
       Object.defineProperty(navigator, 'languages', {
         get: () => ['en-US', 'en'],
@@ -169,7 +175,7 @@ class AdvancedScraperService {
         // Save session after successful login
         const credentialRecord = await LinkedInAccountManager.getCredentials(userId);
         if (credentialRecord) {
-          await LinkedInSessionManager.saveSession(page, email, credentialRecord.id);
+          await LinkedInSessionManager.saveSession(page, email, credentialRecord.credentialId);
           LinkedInLogger.logSessionAction('created', emailHash);
         }
 
@@ -367,18 +373,16 @@ class AdvancedScraperService {
     options: ScraperOptions = {}
   ): Promise<ScrapedProfile> {
     const browser = await this.initBrowser(options.headless !== false);
-    const page = await browser.newPage();
+    const page = await this.createStealthPage(browser);
 
     try {
-      await this.setupPage(page);
-
       // Navigate to profile
       await page.goto(profileUrl, {
         waitUntil: 'networkidle2',
         timeout: options.timeout || 30000,
       });
 
-      await randomDelay(2000, 3000);
+      await new Promise((r) => setTimeout(r, 2000 + Math.random() * 1000));
 
       // Extract profile data
       const profileData = await page.evaluate(() => {
