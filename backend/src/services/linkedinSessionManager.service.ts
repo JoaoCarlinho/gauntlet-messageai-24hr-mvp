@@ -40,8 +40,11 @@ export class LinkedInSessionManager {
         expiresAt: new Date(Date.now() + linkedInRateLimits.cookieMaxAge).toISOString(),
       };
 
-      const redisKey = `${this.REDIS_KEY_PREFIX}${emailHash}`;
-      await redisClient.setex(redisKey, 86400, JSON.stringify(sessionData));
+      // Save to Redis if available
+      if (redisClient) {
+        const redisKey = `${this.REDIS_KEY_PREFIX}${emailHash}`;
+        await redisClient.setex(redisKey, 86400, JSON.stringify(sessionData));
+      }
 
       const encrypted = encrypt(JSON.stringify(sessionData));
       await prisma.linkedInUserSession.create({
@@ -73,12 +76,15 @@ export class LinkedInSessionManager {
     const redisKey = `${this.REDIS_KEY_PREFIX}${emailHash}`;
 
     try {
-      const cached = await redisClient.get(redisKey);
+      // Try Redis first if available
+      if (redisClient) {
+        const cached = await redisClient.get(redisKey);
 
-      if (cached) {
-        const sessionData = JSON.parse(cached);
-        LinkedInLogger.logSessionAction('reused', emailHash, { source: 'redis' });
-        return sessionData;
+        if (cached) {
+          const sessionData = JSON.parse(cached);
+          LinkedInLogger.logSessionAction('reused', emailHash, { source: 'redis' });
+          return sessionData;
+        }
       }
 
       const credentialRecord = await prisma.linkedInUserCredential.findFirst({
@@ -108,7 +114,11 @@ export class LinkedInSessionManager {
       });
       const sessionData: SessionData = JSON.parse(decrypted);
 
-      await redisClient.setex(redisKey, 86400, decrypted);
+      // Restore to Redis if available
+      if (redisClient) {
+        await redisClient.setex(redisKey, 86400, decrypted);
+      }
+
       await prisma.linkedInUserSession.update({
         where: { id: dbSession.id },
         data: { lastUsedAt: new Date() },
@@ -127,7 +137,10 @@ export class LinkedInSessionManager {
     const redisKey = `${this.REDIS_KEY_PREFIX}${emailHash}`;
 
     try {
-      await redisClient.del(redisKey);
+      // Clear from Redis if available
+      if (redisClient) {
+        await redisClient.del(redisKey);
+      }
 
       const credentialRecord = await prisma.linkedInUserCredential.findFirst({
         where: { emailHash },
