@@ -6,35 +6,23 @@
  * - Anti-detection measures (stealth plugin, user agent rotation)
  * - Support for authenticated and unauthenticated scraping
  * - Facebook Graph API integration
+ * - LinkedIn session management and rate limiting
  */
 
 import puppeteer, { Browser, Page } from 'puppeteer';
 import puppeteerExtra from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import axios from 'axios';
+import { LinkedInSessionManager } from './linkedinSessionManager.service';
+import { LinkedInAccountManager } from './linkedinAccountManager.service';
+import { HumanBehaviorSimulator } from '../utils/human-behavior.util';
+import { BROWSER_ARGS, getRandomViewport, getRandomUserAgent } from '../config/puppeteer-stealth.config';
+import { LinkedInErrors } from '../types/linkedin-errors';
+import { LinkedInLogger } from '../utils/linkedin-logger.util';
+import { hashEmail } from '../utils/encryption.util';
 
 // Add stealth plugin to avoid detection
 puppeteerExtra.use(StealthPlugin());
-
-// User agents for rotation
-const USER_AGENTS = [
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2.1 Safari/605.1.15',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0',
-];
-
-// Get random user agent
-function getRandomUserAgent(): string {
-  return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
-}
-
-// Random delay to appear more human-like
-function randomDelay(min: number = 1000, max: number = 3000): Promise<void> {
-  const delay = Math.floor(Math.random() * (max - min + 1)) + min;
-  return new Promise(resolve => setTimeout(resolve, delay));
-}
 
 export interface ScrapedProfile {
   name: string;
@@ -53,6 +41,7 @@ export interface ScraperOptions {
   password?: string;
   headless?: boolean;
   timeout?: number;
+  userId?: string; // Required for rate limiting and session management
 }
 
 export interface FacebookGraphAPIOptions {
@@ -64,7 +53,7 @@ class AdvancedScraperService {
   private browser: Browser | null = null;
 
   /**
-   * Initialize browser instance
+   * Initialize browser instance with enhanced anti-detection
    */
   private async initBrowser(headless: boolean = true): Promise<Browser> {
     if (this.browser && this.browser.isConnected()) {
@@ -73,38 +62,47 @@ class AdvancedScraperService {
 
     this.browser = await puppeteerExtra.launch({
       headless: headless,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--disable-gpu',
-        '--window-size=1920x1080',
-        '--disable-blink-features=AutomationControlled',
-      ],
+      args: BROWSER_ARGS,
     });
 
     return this.browser;
   }
 
   /**
-   * Setup page with anti-detection measures
+   * Create stealth page with randomized fingerprinting
    */
-  private async setupPage(page: Page): Promise<void> {
-    // Set random user agent
-    await page.setUserAgent(getRandomUserAgent());
+  private async createStealthPage(browser: Browser): Promise<Page> {
+    const page = await browser.newPage();
 
-    // Set viewport
-    await page.setViewport({
-      width: 1920,
-      height: 1080,
-      deviceScaleFactor: 1,
-    });
+    // Set random user agent and viewport
+    const userAgent = getRandomUserAgent();
+    const viewport = getRandomViewport();
 
-    // Remove webdriver property
+    await page.setUserAgent(userAgent);
+    await page.setViewport(viewport);
+
+    // Enhanced anti-detection measures
     await page.evaluateOnNewDocument(() => {
+      // Override navigator.webdriver
       Object.defineProperty(navigator, 'webdriver', {
         get: () => undefined,
+      });
+
+      // Randomize plugins
+      Object.defineProperty(navigator, 'plugins', {
+        get: () => [1, 2, 3, 4, 5],
+      });
+
+      // Override permissions
+      const originalQuery = window.navigator.permissions.query;
+      window.navigator.permissions.query = (parameters) =>
+        parameters.name === 'notifications'
+          ? Promise.resolve({ state: Notification.permission } as PermissionStatus)
+          : originalQuery(parameters);
+
+      // Mock languages
+      Object.defineProperty(navigator, 'languages', {
+        get: () => ['en-US', 'en'],
       });
     });
 
@@ -116,34 +114,101 @@ class AdvancedScraperService {
       'Connection': 'keep-alive',
       'Upgrade-Insecure-Requests': '1',
     });
+
+    return page;
   }
 
   /**
-   * Scrape LinkedIn profile with Puppeteer
+   * Scrape LinkedIn profile with authentication, rate limiting, and session management
    */
   async scrapeLinkedInProfile(
     profileUrl: string,
     options: ScraperOptions = {}
   ): Promise<ScrapedProfile> {
+    const startTime = Date.now();
+    const { userId, email, password } = options;
+
+    // Validate required parameters
+    if (!userId || !email || !password) {
+      throw LinkedInErrors.NO_CREDENTIALS();
+    }
+
+    // Check rate limits BEFORE scraping
+    const rateLimitCheck = await LinkedInAccountManager.canMakeRequest(userId);
+    if (!rateLimitCheck.allowed) {
+      throw LinkedInErrors.RATE_LIMIT_EXCEEDED(
+        rateLimitCheck.waitTimeMs || 0,
+        rateLimitCheck.reason || 'Rate limit exceeded'
+      );
+    }
+
     const browser = await this.initBrowser(options.headless !== false);
-    const page = await browser.newPage();
+    const page = await this.createStealthPage(browser);
+    const emailHash = hashEmail(email);
+
+    let sessionType: 'cached' | 'fresh' = 'cached';
 
     try {
-      await this.setupPage(page);
+      // Try to load existing session
+      const existingSession = await LinkedInSessionManager.loadSession(email);
 
-      // If authentication is required
-      if (options.useAuthentication && options.email && options.password) {
-        await this.loginToLinkedIn(page, options.email, options.password);
-        await randomDelay(2000, 4000);
+      if (existingSession) {
+        console.log('[LinkedIn] Reusing cached session');
+        LinkedInLogger.logSessionAction('reused', emailHash);
+
+        // Set cookies from cached session
+        await page.setCookie(...existingSession.cookies);
+        await page.setUserAgent(existingSession.userAgent);
+      } else {
+        console.log('[LinkedIn] No cached session, performing login');
+        sessionType = 'fresh';
+
+        // Perform login and save session
+        await this.loginToLinkedIn(page, email, password, userId);
+
+        // Save session after successful login
+        const credentialRecord = await LinkedInAccountManager.getCredentials(userId);
+        if (credentialRecord) {
+          await LinkedInSessionManager.saveSession(page, email, credentialRecord.id);
+          LinkedInLogger.logSessionAction('created', emailHash);
+        }
+
+        // Apply 90-150 second delay after login
+        await HumanBehaviorSimulator.randomDelay();
       }
 
-      // Navigate to profile
+      // Navigate to profile with human-like behavior
+      await HumanBehaviorSimulator.hesitate();
       await page.goto(profileUrl, {
         waitUntil: 'networkidle2',
         timeout: options.timeout || 30000,
       });
 
-      await randomDelay(1500, 2500);
+      // Simulate reading page title
+      const pageTitle = await page.title();
+      await HumanBehaviorSimulator.simulateReading(pageTitle.length);
+
+      // Check for checkpoint challenge
+      const currentUrl = page.url();
+      if (currentUrl.includes('/checkpoint') || currentUrl.includes('/challenge')) {
+        await LinkedInSessionManager.invalidateSession(email);
+        LinkedInLogger.logCheckpoint(userId, emailHash, profileUrl);
+
+        await LinkedInAccountManager.logRequest(
+          userId,
+          email,
+          profileUrl,
+          false,
+          Date.now() - startTime,
+          'Checkpoint challenge triggered'
+        );
+
+        throw LinkedInErrors.CHECKPOINT_REQUIRED();
+      }
+
+      // Simulate human scrolling and mouse movement
+      await HumanBehaviorSimulator.simulateMouseMovement(page);
+      await HumanBehaviorSimulator.simulateScrolling(page);
 
       // Extract profile data
       const profileData = await page.evaluate(() => {
@@ -179,6 +244,18 @@ class AdvancedScraperService {
 
       await page.close();
 
+      // Log successful request
+      const responseTime = Date.now() - startTime;
+      await LinkedInAccountManager.logRequest(
+        userId,
+        email,
+        profileUrl,
+        true,
+        responseTime
+      );
+
+      LinkedInLogger.logScrapingAttempt(profileUrl, userId, true, responseTime, sessionType);
+
       return {
         name: profileData.name || 'Unknown',
         title: profileData.headline || '',
@@ -190,44 +267,95 @@ class AdvancedScraperService {
       };
     } catch (error) {
       await page.close();
-      throw new Error(`Failed to scrape LinkedIn profile: ${error instanceof Error ? error.message : 'Unknown error'}`);
+
+      // Log failed request
+      const responseTime = Date.now() - startTime;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      await LinkedInAccountManager.logRequest(
+        userId,
+        email,
+        profileUrl,
+        false,
+        responseTime,
+        errorMessage
+      );
+
+      LinkedInLogger.logScrapingAttempt(profileUrl, userId, false, responseTime, sessionType);
+
+      // Re-throw LinkedIn-specific errors
+      if (error instanceof Error && error.name === 'LinkedInAuthError') {
+        throw error;
+      }
+
+      throw LinkedInErrors.SCRAPING_FAILED(errorMessage);
     }
   }
 
   /**
-   * Login to LinkedIn
+   * Login to LinkedIn with human-like behavior
    */
-  private async loginToLinkedIn(page: Page, email: string, password: string): Promise<void> {
+  private async loginToLinkedIn(page: Page, email: string, password: string, userId: string): Promise<void> {
+    const emailHash = hashEmail(email);
+
     try {
+      // Navigate to login page
       await page.goto('https://www.linkedin.com/login', {
         waitUntil: 'networkidle2',
       });
 
-      await randomDelay(1000, 2000);
+      // Simulate reading the page
+      await HumanBehaviorSimulator.simulateReading(200);
 
-      // Fill in email
-      await page.type('#username', email, { delay: 100 });
-      await randomDelay(500, 1000);
+      // Random mouse movements before interacting
+      await HumanBehaviorSimulator.simulateMouseMovement(page, 2);
 
-      // Fill in password
-      await page.type('#password', password, { delay: 100 });
-      await randomDelay(500, 1000);
+      // Hesitate before typing
+      await HumanBehaviorSimulator.hesitate();
+
+      // Type email with human-like delays
+      await HumanBehaviorSimulator.typeHumanLike(page, '#username', email);
+      await HumanBehaviorSimulator.hesitate();
+
+      // Type password with human-like delays
+      await HumanBehaviorSimulator.typeHumanLike(page, '#password', password);
+
+      // Simulate reading button text
+      await HumanBehaviorSimulator.simulateReading(20);
+      await HumanBehaviorSimulator.hesitate();
 
       // Click login button
       await Promise.all([
-        page.waitForNavigation({ waitUntil: 'networkidle2' }),
+        page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 30000 }),
         page.click('button[type="submit"]'),
       ]);
 
-      await randomDelay(2000, 3000);
+      // Wait for page to settle
+      await HumanBehaviorSimulator.simulateReading(100);
 
       // Check if login was successful
       const currentUrl = page.url();
-      if (currentUrl.includes('/login') || currentUrl.includes('/checkpoint')) {
-        throw new Error('LinkedIn login failed or requires additional verification');
+      if (currentUrl.includes('/login')) {
+        LinkedInLogger.logAuthAttempt(userId, emailHash, false, 'Login failed - still on login page');
+        throw LinkedInErrors.LOGIN_FAILED();
       }
+
+      if (currentUrl.includes('/checkpoint') || currentUrl.includes('/challenge')) {
+        LinkedInLogger.logAuthAttempt(userId, emailHash, false, 'Checkpoint challenge triggered');
+        await LinkedInSessionManager.invalidateSession(email);
+        throw LinkedInErrors.CHECKPOINT_REQUIRED();
+      }
+
+      LinkedInLogger.logAuthAttempt(userId, emailHash, true);
+      console.log('[LinkedIn] Login successful');
     } catch (error) {
-      throw new Error(`LinkedIn authentication failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      if (error instanceof Error && error.name === 'LinkedInAuthError') {
+        throw error;
+      }
+
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      LinkedInLogger.logAuthAttempt(userId, emailHash, false, errorMessage);
+      throw LinkedInErrors.LOGIN_FAILED();
     }
   }
 

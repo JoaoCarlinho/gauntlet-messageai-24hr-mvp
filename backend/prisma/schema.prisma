@@ -31,6 +31,11 @@ model User {
   aiConversations   AIAgentConversation[]
   leadActivities    LeadActivity[]
   assignedLeads     Lead[]
+
+  // LinkedIn Authentication Relations
+  linkedInCredential    LinkedInUserCredential?
+  linkedInRequestLogs   LinkedInRequestLog[]
+  linkedInAccountHealth LinkedInAccountHealth[]
 }
 
 model Conversation {
@@ -446,4 +451,85 @@ model ContentLibrary {
   @@index([platform])
   @@index([status])
   @@index([createdAt])
+}
+
+// ===== LINKEDIN AUTHENTICATION MODELS =====
+
+model LinkedInUserCredential {
+  id                  String   @id @default(uuid())
+  userId              String   @unique
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailHash           String   @db.VarChar(64)
+  encryptedEmail      String   @db.Text
+  encryptedPassword   String   @db.Text
+  encryptionIv        String   @db.Text
+  encryptionAuthTag   String   @db.Text
+  isActive            Boolean  @default(true)
+  lastValidatedAt     DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  sessions            LinkedInUserSession[]
+
+  @@index([emailHash])
+  @@index([isActive, userId])
+  @@map("linkedin_user_credentials")
+}
+
+model LinkedInUserSession {
+  id                  String   @id @default(uuid())
+  credentialId        String
+  credential          LinkedInUserCredential @relation(fields: [credentialId], references: [id], onDelete: Cascade)
+  encryptedCookies    String   @db.Text
+  encryptionIv        String   @db.Text
+  encryptionAuthTag   String   @db.Text
+  userAgent           String   @db.VarChar(255)
+  expiresAt           DateTime
+  isValid             Boolean  @default(true)
+  lastUsedAt          DateTime?
+  createdAt           DateTime @default(now())
+
+  @@index([credentialId, isValid, expiresAt(sort: Desc)])
+  @@index([expiresAt])
+  @@map("linkedin_user_sessions")
+}
+
+model LinkedInRequestLog {
+  id                  String   @id @default(uuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountEmailHash    String   @db.VarChar(64)
+  profileUrl          String   @db.VarChar(500)
+  requestTime         DateTime @default(now())
+  responseTimeMs      Int?
+  success             Boolean
+  checkpointTriggered Boolean  @default(false)
+  errorMessage        String?  @db.Text
+  sessionId           String?  @db.VarChar(255)
+
+  @@index([userId, requestTime(sort: Desc)])
+  @@index([accountEmailHash, requestTime(sort: Desc)])
+  @@index([checkpointTriggered, requestTime(sort: Desc)])
+  @@map("linkedin_request_log")
+}
+
+model LinkedInAccountHealth {
+  accountEmailHash    String   @id @db.VarChar(64)
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  totalRequests       Int      @default(0)
+  successfulRequests  Int      @default(0)
+  failedRequests      Int      @default(0)
+  checkpointCount     Int      @default(0)
+  lastRequestAt       DateTime?
+  lastCheckpointAt    DateTime?
+  lastSuccessAt       DateTime?
+  isActive            Boolean  @default(true)
+  cooldownUntil       DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isActive, cooldownUntil])
+  @@map("linkedin_account_health")
 }

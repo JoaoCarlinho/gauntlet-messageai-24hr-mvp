@@ -22,6 +22,43 @@ import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { tokenManager } from '../../lib/api';
 
+interface RateLimitData {
+  allowed: boolean;
+  reason?: string;
+  waitTimeMs?: number;
+  usage: {
+    lastHour: number;
+    maxPerHour: number;
+    today: number;
+    maxPerDay: number;
+  };
+  nextAvailable?: string | null;
+}
+
+interface AccountHealthData {
+  hasCredentials: boolean;
+  isActive?: boolean;
+  accountStatus?: string;
+  metrics?: {
+    totalRequests: number;
+    successfulRequests: number;
+    failedRequests: number;
+    consecutiveFailures: number;
+    successRate: number;
+  };
+  cooldown?: {
+    active: boolean;
+    until?: Date | null;
+    reason?: string;
+  };
+  lastActivity?: {
+    lastRequestAt?: Date | null;
+    lastSuccessAt?: Date | null;
+    lastFailureAt?: Date | null;
+  };
+  message?: string;
+}
+
 export default function DiscoveryBotScreen() {
   // State for manual lead capture
   const [profileUrl, setProfileUrl] = useState('');
@@ -36,10 +73,75 @@ export default function DiscoveryBotScreen() {
   const [facebookAccessToken, setFacebookAccessToken] = useState('');
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
 
+  // Rate limit and health state
+  const [rateLimitData, setRateLimitData] = useState<RateLimitData | null>(null);
+  const [accountHealthData, setAccountHealthData] = useState<AccountHealthData | null>(null);
+  const [showHealthSection, setShowHealthSection] = useState(false);
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
+
   // Handle back navigation
   const handleBackPress = useCallback(() => {
     router.push('/(tabs)/ai-agents');
   }, []);
+
+  // Fetch rate limit stats
+  const fetchRateLimitStats = useCallback(async () => {
+    try {
+      const token = await tokenManager.getAccessToken();
+      if (!token) return;
+
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_API_URL}/api/v1/discovery-bot/linkedin/rate-limits`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.rateLimits) {
+          setRateLimitData(data.rateLimits);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch rate limit stats:', error);
+    }
+  }, []);
+
+  // Fetch account health
+  const fetchAccountHealth = useCallback(async () => {
+    try {
+      const token = await tokenManager.getAccessToken();
+      if (!token) return;
+
+      const response = await fetch(
+        `${process.env.EXPO_PUBLIC_API_URL}/api/v1/discovery-bot/linkedin/account-health`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.health) {
+          setAccountHealthData(data.health);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch account health:', error);
+    }
+  }, []);
+
+  // Load stats when LinkedIn auth is enabled
+  const loadLinkedInStats = useCallback(async () => {
+    setIsLoadingStats(true);
+    await Promise.all([fetchRateLimitStats(), fetchAccountHealth()]);
+    setIsLoadingStats(false);
+  }, [fetchRateLimitStats, fetchAccountHealth]);
 
   // Validate URL (LinkedIn or Facebook)
   const validateProfileUrl = (url: string): { isValid: boolean; platform: 'linkedin' | 'facebook' | null } => {
@@ -143,12 +245,54 @@ export default function DiscoveryBotScreen() {
         }
       );
 
+      const responseData = await response.json();
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to capture profile');
+        // Handle LinkedIn-specific errors with structured responses
+        if (responseData.error && typeof responseData.error === 'object') {
+          const { code, message, userAction, retryAfterMs } = responseData.error;
+
+          // Format user-friendly error message
+          let errorTitle = 'Capture Failed';
+          let errorMessage = message;
+
+          switch (code) {
+            case 'RATE_LIMIT_EXCEEDED':
+              errorTitle = 'Rate Limit Exceeded';
+              const waitMinutes = Math.ceil((retryAfterMs || 0) / 60000);
+              errorMessage = `${message}\n\n${userAction || `Please wait ${waitMinutes} minutes.`}`;
+              break;
+            case 'CHECKPOINT_REQUIRED':
+              errorTitle = 'LinkedIn Verification Required';
+              errorMessage = `${message}\n\n${userAction || 'Please log in to LinkedIn on your desktop browser to complete verification.'}`;
+              break;
+            case 'LOGIN_FAILED':
+              errorTitle = 'LinkedIn Login Failed';
+              errorMessage = `${message}\n\n${userAction || 'Please check your LinkedIn credentials and try again.'}`;
+              break;
+            case 'ACCOUNT_ON_COOLDOWN':
+              errorTitle = 'Account on Cooldown';
+              errorMessage = `${message}\n\n${userAction || 'Your account is temporarily paused due to previous errors.'}`;
+              break;
+            case 'SESSION_EXPIRED':
+              errorTitle = 'Session Expired';
+              errorMessage = `${message}\n\n${userAction || 'Your LinkedIn session expired. Try again to re-authenticate.'}`;
+              break;
+            default:
+              errorMessage = userAction ? `${message}\n\n${userAction}` : message;
+          }
+
+          setScrapingError(errorMessage);
+          Alert.alert(errorTitle, errorMessage, [{ text: 'OK' }]);
+          setIsScrapingProfile(false);
+          return;
+        }
+
+        // Handle generic errors
+        throw new Error(responseData.error || 'Failed to capture profile');
       }
 
-      const result = await response.json();
+      const result = responseData;
 
       // Success - show confirmation and clear input
       Alert.alert(
@@ -167,13 +311,15 @@ export default function DiscoveryBotScreen() {
       );
 
       setProfileUrl('');
+      setScrapingError(null);
     } catch (error) {
       console.error('Profile capture error:', error);
-      setScrapingError(error instanceof Error ? error.message : 'Failed to capture profile');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to capture profile';
+      setScrapingError(errorMessage);
 
       Alert.alert(
         'Capture Failed',
-        error instanceof Error ? error.message : 'Failed to capture profile. Please try again.',
+        `${errorMessage}\n\nPlease try again.`,
         [{ text: 'OK' }]
       );
     } finally {
@@ -372,6 +518,151 @@ export default function DiscoveryBotScreen() {
               </View>
             )}
 
+            {/* Rate Limit Display - Show when LinkedIn auth is enabled */}
+            {useLinkedInAuth && rateLimitData && (
+              <View style={styles.rateLimitCard}>
+                <View style={styles.rateLimitHeader}>
+                  <Ionicons name="speedometer-outline" size={20} color="#007AFF" />
+                  <Text style={styles.rateLimitTitle}>LinkedIn Rate Limits</Text>
+                  <TouchableOpacity onPress={loadLinkedInStats} disabled={isLoadingStats}>
+                    <Ionicons
+                      name="refresh-outline"
+                      size={18}
+                      color={isLoadingStats ? '#C7C7CC' : '#007AFF'}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {rateLimitData.allowed ? (
+                  <View style={styles.rateLimitAllowed}>
+                    <Ionicons name="checkmark-circle" size={16} color="#34C759" />
+                    <Text style={styles.rateLimitAllowedText}>Ready to capture</Text>
+                  </View>
+                ) : (
+                  <View style={styles.rateLimitBlocked}>
+                    <Ionicons name="warning" size={16} color="#FF9500" />
+                    <Text style={styles.rateLimitBlockedText}>
+                      {rateLimitData.reason || 'Rate limit exceeded'}
+                    </Text>
+                  </View>
+                )}
+
+                <View style={styles.rateLimitStats}>
+                  <View style={styles.rateLimitStat}>
+                    <Text style={styles.rateLimitStatLabel}>Last Hour</Text>
+                    <Text style={styles.rateLimitStatValue}>
+                      {rateLimitData.usage.lastHour} / {rateLimitData.usage.maxPerHour}
+                    </Text>
+                    <View style={styles.rateLimitBar}>
+                      <View
+                        style={[
+                          styles.rateLimitBarFill,
+                          {
+                            width: `${Math.min((rateLimitData.usage.lastHour / rateLimitData.usage.maxPerHour) * 100, 100)}%`,
+                            backgroundColor: rateLimitData.usage.lastHour >= rateLimitData.usage.maxPerHour ? '#FF3B30' : '#007AFF'
+                          }
+                        ]}
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.rateLimitStat}>
+                    <Text style={styles.rateLimitStatLabel}>Today</Text>
+                    <Text style={styles.rateLimitStatValue}>
+                      {rateLimitData.usage.today} / {rateLimitData.usage.maxPerDay}
+                    </Text>
+                    <View style={styles.rateLimitBar}>
+                      <View
+                        style={[
+                          styles.rateLimitBarFill,
+                          {
+                            width: `${Math.min((rateLimitData.usage.today / rateLimitData.usage.maxPerDay) * 100, 100)}%`,
+                            backgroundColor: rateLimitData.usage.today >= rateLimitData.usage.maxPerDay ? '#FF3B30' : '#007AFF'
+                          }
+                        ]}
+                      />
+                    </View>
+                  </View>
+                </View>
+
+                {rateLimitData.nextAvailable && (
+                  <Text style={styles.rateLimitNextAvailable}>
+                    Next available: {new Date(rateLimitData.nextAvailable).toLocaleTimeString()}
+                  </Text>
+                )}
+              </View>
+            )}
+
+            {/* Account Health Display - Collapsible section */}
+            {useLinkedInAuth && accountHealthData && accountHealthData.hasCredentials && (
+              <View style={styles.healthSection}>
+                <TouchableOpacity
+                  style={styles.healthToggle}
+                  onPress={() => setShowHealthSection(!showHealthSection)}
+                >
+                  <View style={styles.healthToggleLeft}>
+                    <Ionicons name="fitness-outline" size={20} color="#34C759" />
+                    <Text style={styles.healthToggleText}>Account Health</Text>
+                  </View>
+                  <Ionicons
+                    name={showHealthSection ? 'chevron-up' : 'chevron-down'}
+                    size={20}
+                    color="#8E8E93"
+                  />
+                </TouchableOpacity>
+
+                {showHealthSection && (
+                  <View style={styles.healthPanel}>
+                    {accountHealthData.cooldown?.active && (
+                      <View style={styles.healthWarning}>
+                        <Ionicons name="warning" size={18} color="#FF9500" />
+                        <Text style={styles.healthWarningText}>
+                          {accountHealthData.cooldown.reason}
+                        </Text>
+                      </View>
+                    )}
+
+                    {accountHealthData.metrics && (
+                      <View style={styles.healthMetrics}>
+                        <View style={styles.healthMetric}>
+                          <Text style={styles.healthMetricLabel}>Success Rate</Text>
+                          <Text style={[
+                            styles.healthMetricValue,
+                            { color: accountHealthData.metrics.successRate >= 80 ? '#34C759' : accountHealthData.metrics.successRate >= 50 ? '#FF9500' : '#FF3B30' }
+                          ]}>
+                            {accountHealthData.metrics.successRate}%
+                          </Text>
+                        </View>
+
+                        <View style={styles.healthMetric}>
+                          <Text style={styles.healthMetricLabel}>Total Requests</Text>
+                          <Text style={styles.healthMetricValue}>
+                            {accountHealthData.metrics.totalRequests}
+                          </Text>
+                        </View>
+
+                        <View style={styles.healthMetric}>
+                          <Text style={styles.healthMetricLabel}>Consecutive Failures</Text>
+                          <Text style={[
+                            styles.healthMetricValue,
+                            { color: accountHealthData.metrics.consecutiveFailures >= 3 ? '#FF3B30' : '#8E8E93' }
+                          ]}>
+                            {accountHealthData.metrics.consecutiveFailures}
+                          </Text>
+                        </View>
+                      </View>
+                    )}
+
+                    {accountHealthData.lastActivity?.lastSuccessAt && (
+                      <Text style={styles.healthLastActivity}>
+                        Last successful: {new Date(accountHealthData.lastActivity.lastSuccessAt).toLocaleString()}
+                      </Text>
+                    )}
+                  </View>
+                )}
+              </View>
+            )}
+
             {/* Advanced Options Toggle */}
             <TouchableOpacity
               style={styles.advancedOptionsToggle}
@@ -401,7 +692,12 @@ export default function DiscoveryBotScreen() {
                     <Text style={styles.switchLabel}>Use LinkedIn Login</Text>
                     <Switch
                       value={useLinkedInAuth}
-                      onValueChange={setUseLinkedInAuth}
+                      onValueChange={(value) => {
+                        setUseLinkedInAuth(value);
+                        if (value && linkedInEmail && linkedInPassword) {
+                          loadLinkedInStats();
+                        }
+                      }}
                       trackColor={{ false: '#E5E5EA', true: '#34C759' }}
                       thumbColor="#fff"
                     />
@@ -810,5 +1106,149 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
     color: '#000',
+  },
+  // Rate Limit Card Styles
+  rateLimitCard: {
+    marginTop: 16,
+    backgroundColor: '#F9F9F9',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+  },
+  rateLimitHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  rateLimitTitle: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+  },
+  rateLimitAllowed: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  rateLimitAllowedText: {
+    fontSize: 14,
+    color: '#34C759',
+    fontWeight: '500',
+  },
+  rateLimitBlocked: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 12,
+  },
+  rateLimitBlockedText: {
+    fontSize: 14,
+    color: '#FF9500',
+    fontWeight: '500',
+  },
+  rateLimitStats: {
+    gap: 16,
+  },
+  rateLimitStat: {
+    gap: 6,
+  },
+  rateLimitStatLabel: {
+    fontSize: 13,
+    color: '#8E8E93',
+    fontWeight: '500',
+  },
+  rateLimitStatValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#000',
+  },
+  rateLimitBar: {
+    height: 6,
+    backgroundColor: '#E5E5EA',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  rateLimitBarFill: {
+    height: '100%',
+    borderRadius: 3,
+  },
+  rateLimitNextAvailable: {
+    marginTop: 12,
+    fontSize: 12,
+    color: '#8E8E93',
+    fontStyle: 'italic',
+  },
+  // Account Health Styles
+  healthSection: {
+    marginTop: 16,
+    backgroundColor: '#F9F9F9',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
+    overflow: 'hidden',
+  },
+  healthToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  healthToggleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  healthToggleText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000',
+  },
+  healthPanel: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    gap: 16,
+  },
+  healthWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFF9E6',
+    padding: 12,
+    borderRadius: 8,
+  },
+  healthWarningText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 18,
+  },
+  healthMetrics: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  healthMetric: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 6,
+  },
+  healthMetricLabel: {
+    fontSize: 12,
+    color: '#8E8E93',
+    textAlign: 'center',
+  },
+  healthMetricValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#000',
+  },
+  healthLastActivity: {
+    fontSize: 12,
+    color: '#8E8E93',
+    fontStyle: 'italic',
   },
 });

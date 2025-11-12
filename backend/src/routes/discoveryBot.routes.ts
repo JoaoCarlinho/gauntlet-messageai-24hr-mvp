@@ -10,7 +10,12 @@
  */
 
 import { Router } from 'express';
-import { captureProfile, checkProfileStatus } from '../controllers/profileCapture.controller';
+import {
+  captureProfile,
+  checkProfileStatus,
+  getLinkedInRateLimits,
+  getLinkedInAccountHealth,
+} from '../controllers/profileCapture.controller';
 import { profileCaptureLimiter } from '../middleware/scraperRateLimiter';
 import { authenticate } from '../middleware/auth';
 
@@ -32,5 +37,17 @@ router.post('/capture-profile', profileCaptureLimiter, captureProfile);
  * Check if a profile URL has already been captured
  */
 router.get('/capture-profile/status', checkProfileStatus);
+
+/**
+ * GET /api/discovery-bot/linkedin/rate-limits
+ * Get current LinkedIn rate limit status and usage statistics
+ */
+router.get('/linkedin/rate-limits', getLinkedInRateLimits);
+
+/**
+ * GET /api/discovery-bot/linkedin/account-health
+ * Get LinkedIn account health metrics
+ */
+router.get('/linkedin/account-health', getLinkedInAccountHealth);
 
 export default router;
