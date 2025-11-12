@@ -351,7 +351,9 @@ class AdvancedScraperService {
       if (currentUrl.includes('/checkpoint') || currentUrl.includes('/challenge')) {
         // Check if it's email verification (2FA) or a permanent checkpoint
         const isEmailVerification = await page.evaluate(() => {
+          // @ts-ignore - Running in browser context
           const pinInput = document.querySelector('input[name="pin"], input[id="input__email_verification_pin"]');
+          // @ts-ignore - Running in browser context
           const verificationText = document.body.textContent?.toLowerCase() || '';
           return !!(pinInput ||
                    verificationText.includes('verification code') ||
