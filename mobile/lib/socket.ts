@@ -1,5 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 import { tokenManager } from './api';
+import logger from './logger';
 
 export interface SocketConfig {
   url: string;
@@ -73,11 +74,11 @@ class SocketManager {
       // Check if token is expired and refresh if needed
       const isExpired = this.isTokenExpired(token);
       if (isExpired) {
-        console.log('Access token is expired, attempting to refresh before socket connection');
+        logger.debug('Access token is expired, attempting to refresh before socket connection');
         try {
           await this.refreshTokenBeforeConnect();
         } catch (refreshError) {
-          console.error('Failed to refresh token before socket connection:', refreshError);
+          logger.networkError('Failed to refresh token before socket connection', refreshError);
           this.updateConnectionStatus({
             connecting: false,
             connected: false,
@@ -137,12 +138,12 @@ class SocketManager {
       const isExpired = payload.exp < currentTime;
       
       if (isExpired) {
-        console.log(`Token expired at ${new Date(payload.exp * 1000).toISOString()}, current time: ${new Date().toISOString()}`);
+        logger.debug(`Token expired at ${new Date(payload.exp * 1000).toISOString()}, current time: ${new Date().toISOString()}`);
       }
-      
+
       return isExpired;
     } catch (error) {
-      console.warn('Error checking token expiration:', error);
+      logger.debug('Error checking token expiration', error);
       return true; // Assume expired if we can't parse
     }
   }
