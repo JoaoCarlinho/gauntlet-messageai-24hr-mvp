@@ -24,6 +24,5 @@
     "node_modules",
     "src/**/*.test.ts",
     "src/**/__tests__/**/*"
-  ],
-  "extends": "expo/tsconfig.base"
+  ]
 }
