@@ -5,21 +5,26 @@ const KEY_LENGTH = 32; // 256 bits
 const IV_LENGTH = 12;  // 12 bytes for GCM
 const AUTH_TAG_LENGTH = 16; // 16 bytes for GCM
 
-// Load encryption key from environment
+// Load encryption key from environment (optional - will warn if not set)
 const ENCRYPTION_KEY_HEX = process.env.LINKEDIN_CREDENTIAL_KEY;
 
+let ENCRYPTION_KEY: Buffer | null = null;
+
 if (!ENCRYPTION_KEY_HEX) {
-  throw new Error('LINKEDIN_CREDENTIAL_KEY environment variable is required');
-}
+  console.warn('[Encryption] LINKEDIN_CREDENTIAL_KEY not set - LinkedIn authentication will not be available');
+} else {
+  if (ENCRYPTION_KEY_HEX.length !== KEY_LENGTH * 2) {
+    console.error(`[Encryption] LINKEDIN_CREDENTIAL_KEY must be ${KEY_LENGTH * 2} hex characters (${KEY_LENGTH} bytes)`);
+  } else {
+    const key = Buffer.from(ENCRYPTION_KEY_HEX, 'hex');
 
-if (ENCRYPTION_KEY_HEX.length !== KEY_LENGTH * 2) {
-  throw new Error(`LINKEDIN_CREDENTIAL_KEY must be ${KEY_LENGTH * 2} hex characters (${KEY_LENGTH} bytes)`);
-}
-
-const ENCRYPTION_KEY = Buffer.from(ENCRYPTION_KEY_HEX, 'hex');
-
-if (ENCRYPTION_KEY.length !== KEY_LENGTH) {
-  throw new Error(`Invalid encryption key length: ${ENCRYPTION_KEY.length} (expected ${KEY_LENGTH})`);
+    if (key.length !== KEY_LENGTH) {
+      console.error(`[Encryption] Invalid encryption key length: ${key.length} (expected ${KEY_LENGTH})`);
+    } else {
+      ENCRYPTION_KEY = key;
+      console.log('[Encryption] LinkedIn credential encryption initialized');
+    }
+  }
 }
 
 export interface EncryptedData {
@@ -32,8 +37,13 @@ export interface EncryptedData {
  * Encrypt plaintext using AES-256-GCM
  * @param plaintext - The data to encrypt
  * @returns Encrypted data with IV and auth tag
+ * @throws Error if encryption key is not configured
  */
 export function encrypt(plaintext: string): EncryptedData {
+  if (!ENCRYPTION_KEY) {
+    throw new Error('LinkedIn credential encryption is not configured. Set LINKEDIN_CREDENTIAL_KEY environment variable.');
+  }
+
   // Generate random IV (12 bytes for GCM mode)
   const iv = crypto.randomBytes(IV_LENGTH);
 
@@ -58,9 +68,13 @@ export function encrypt(plaintext: string): EncryptedData {
  * Decrypt ciphertext using AES-256-GCM
  * @param encrypted - The encrypted data with IV and auth tag
  * @returns Decrypted plaintext
- * @throws Error if authentication fails (data tampered)
+ * @throws Error if authentication fails (data tampered) or encryption key not configured
  */
 export function decrypt(encrypted: EncryptedData): string {
+  if (!ENCRYPTION_KEY) {
+    throw new Error('LinkedIn credential encryption is not configured. Set LINKEDIN_CREDENTIAL_KEY environment variable.');
+  }
+
   // Create decipher
   const decipher = crypto.createDecipheriv(
     ALGORITHM,
