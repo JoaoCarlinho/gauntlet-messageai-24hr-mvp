@@ -28,6 +28,7 @@
     "prisma:seed": "ts-node prisma/seed.ts",
     "seed": "ts-node prisma/seed.ts",
     "postinstall": "npx prisma generate",
+    "railway:baseline": "node scripts/railway-baseline-once.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
