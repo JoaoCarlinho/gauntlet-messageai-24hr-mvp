@@ -1,5 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { Platform } from 'react-native';
+import logger from './logger';
 
 // Platform-specific storage imports
 let platformStorage: any;
@@ -192,8 +193,8 @@ apiClient.interceptors.response.use(
         const refreshToken = await tokenManager.getRefreshToken();
         if (!refreshToken) {
           // No refresh token - handle gracefully
-          console.log('No refresh token available, user needs to login');
-          
+          logger.silent('No refresh token available, user needs to login');
+
           // Clear any stale tokens
           await tokenManager.clearTokens();
           await tokenManager.clearUserData();
@@ -218,8 +219,8 @@ apiClient.interceptors.response.use(
           return Promise.reject(error);
         }
 
-        console.log('Attempting to refresh access token...');
-        
+        logger.debug('Attempting to refresh access token...');
+
         // Attempt to refresh the token
         const response = await axios.post(`${API_BASE_URL}/api/v1/auth/refresh`, {
           refreshToken,
@@ -231,17 +232,17 @@ apiClient.interceptors.response.use(
           // Update only the access token, keep existing refresh token
           await tokenManager.setTokens(accessToken, null);
           
-          console.log('Access token refreshed successfully');
+          logger.debug('Access token refreshed successfully');
 
           // Retry the original request with new token
           originalRequest.headers.Authorization = `Bearer ${accessToken}`;
           return apiClient(originalRequest);
         } else {
-          console.error('Invalid refresh response:', response.data);
+          logger.error('Invalid refresh response', response.data);
           throw new Error('Invalid refresh response: missing access token');
         }
       } catch (refreshError) {
-        console.error('Token refresh failed:', refreshError);
+        logger.networkError('Token refresh failed', refreshError);
         
         // Refresh failed, clear tokens and trigger logout
         await tokenManager.clearTokens();
