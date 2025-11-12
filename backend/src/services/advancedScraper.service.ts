@@ -15,6 +15,7 @@ import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import axios from 'axios';
 import { LinkedInSessionManager } from './linkedinSessionManager.service';
 import { LinkedInAccountManager } from './linkedinAccountManager.service';
+import { LinkedInVerificationService } from './linkedinVerification.service';
 import { HumanBehaviorSimulator } from '../utils/human-behavior.util';
 import { BROWSER_ARGS, getRandomViewport, getRandomUserAgent } from '../config/puppeteer-stealth.config';
 import { LinkedInErrors } from '../types/linkedin-errors';
@@ -51,6 +52,7 @@ export interface FacebookGraphAPIOptions {
 
 class AdvancedScraperService {
   private browser: Browser | null = null;
+  private verificationPages: Map<string, Page> = new Map(); // Store pages waiting for verification
 
   /**
    * Initialize browser instance with enhanced anti-detection
@@ -347,9 +349,38 @@ class AdvancedScraperService {
       }
 
       if (currentUrl.includes('/checkpoint') || currentUrl.includes('/challenge')) {
-        LinkedInLogger.logAuthAttempt(userId, emailHash, false, 'Checkpoint challenge triggered');
-        await LinkedInSessionManager.invalidateSession(email);
-        throw LinkedInErrors.CHECKPOINT_REQUIRED();
+        // Check if it's email verification (2FA) or a permanent checkpoint
+        const isEmailVerification = await page.evaluate(() => {
+          const pinInput = document.querySelector('input[name="pin"], input[id="input__email_verification_pin"]');
+          const verificationText = document.body.textContent?.toLowerCase() || '';
+          return !!(pinInput ||
+                   verificationText.includes('verification code') ||
+                   verificationText.includes('enter the code') ||
+                   verificationText.includes('we sent a code'));
+        });
+
+        if (isEmailVerification) {
+          console.log('[LinkedIn] Email verification required');
+
+          // Create verification session and keep page alive
+          const verificationSessionId = await LinkedInVerificationService.createVerificationSession(
+            userId,
+            email,
+            currentUrl,
+            page
+          );
+
+          // Store page for later verification (don't close it)
+          this.verificationPages.set(verificationSessionId, page);
+
+          LinkedInLogger.logAuthAttempt(userId, emailHash, false, 'Email verification required');
+          throw LinkedInErrors.EMAIL_VERIFICATION_REQUIRED(verificationSessionId);
+        } else {
+          // This is a permanent checkpoint (CAPTCHA, etc.)
+          LinkedInLogger.logAuthAttempt(userId, emailHash, false, 'Checkpoint challenge triggered');
+          await LinkedInSessionManager.invalidateSession(email);
+          throw LinkedInErrors.CHECKPOINT_REQUIRED();
+        }
       }
 
       LinkedInLogger.logAuthAttempt(userId, emailHash, true);
@@ -512,6 +543,58 @@ class AdvancedScraperService {
       return username || '';
     } catch (error) {
       throw new Error('Invalid Facebook profile URL');
+    }
+  }
+
+  /**
+   * Submit verification code for pending session
+   */
+  async submitVerificationCode(
+    verificationSessionId: string,
+    verificationCode: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Get the stored page
+      const page = this.verificationPages.get(verificationSessionId);
+      if (!page) {
+        return { success: false, error: 'Verification session not found or expired' };
+      }
+
+      // Submit the code using the service
+      const result = await LinkedInVerificationService.submitVerificationCode(
+        verificationSessionId,
+        verificationCode,
+        page
+      );
+
+      // If successful or failed, clean up the page
+      if (result.success || !result.error?.includes('Invalid verification code')) {
+        this.verificationPages.delete(verificationSessionId);
+        // Don't close the page yet - it may be needed for scraping
+      }
+
+      return result;
+    } catch (error) {
+      console.error('[Scraper] Error submitting verification code:', error);
+      return { success: false, error: 'Failed to submit verification code' };
+    }
+  }
+
+  /**
+   * Get verification page for manual scraping after verification
+   */
+  getVerificationPage(verificationSessionId: string): Page | undefined {
+    return this.verificationPages.get(verificationSessionId);
+  }
+
+  /**
+   * Clean up verification page
+   */
+  async cleanupVerificationPage(verificationSessionId: string): Promise<void> {
+    const page = this.verificationPages.get(verificationSessionId);
+    if (page) {
+      await page.close();
+      this.verificationPages.delete(verificationSessionId);
     }
   }
 

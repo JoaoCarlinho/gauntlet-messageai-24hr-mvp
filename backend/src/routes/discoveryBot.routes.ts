@@ -15,6 +15,8 @@ import {
   checkProfileStatus,
   getLinkedInRateLimits,
   getLinkedInAccountHealth,
+  submitLinkedInVerificationCode,
+  getVerificationStatus,
 } from '../controllers/profileCapture.controller';
 import { profileCaptureLimiter } from '../middleware/scraperRateLimiter';
 import { authenticate } from '../middleware/auth';
@@ -49,5 +51,17 @@ router.get('/linkedin/rate-limits', getLinkedInRateLimits);
  * Get LinkedIn account health metrics
  */
 router.get('/linkedin/account-health', getLinkedInAccountHealth);
+
+/**
+ * POST /api/discovery-bot/linkedin/submit-verification-code
+ * Submit email verification code to complete LinkedIn 2FA
+ */
+router.post('/linkedin/submit-verification-code', submitLinkedInVerificationCode);
+
+/**
+ * GET /api/discovery-bot/linkedin/verification-status/:sessionId
+ * Check the status of a verification session
+ */
+router.get('/linkedin/verification-status/:sessionId', getVerificationStatus);
 
 export default router;
