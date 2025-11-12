@@ -16,6 +16,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/database';
 import advancedScraperService from '../services/advancedScraper.service';
 import { LinkedInAccountManager } from '../services/linkedinAccountManager.service';
+import { LinkedInVerificationService } from '../services/linkedinVerification.service';
 import { LinkedInAuthError, errorToResponse } from '../types/linkedin-errors';
 
 interface CaptureProfileRequest {
@@ -219,6 +220,14 @@ export async function captureProfile(req: Request, res: Response) {
     // Handle LinkedIn-specific errors with structured responses
     if (error instanceof LinkedInAuthError) {
       const errorResponse = errorToResponse(error);
+
+      // For email verification, include the session ID
+      if (error.code === 'EMAIL_VERIFICATION_REQUIRED') {
+        return res.status(202).json({
+          ...errorResponse,
+          verificationSessionId: (error as any).verificationSessionId,
+        });
+      }
 
       // Map error codes to HTTP status codes
       const statusCode = (() => {
@@ -459,6 +468,136 @@ export async function getLinkedInAccountHealth(req: Request, res: Response) {
     return res.status(500).json({
       success: false,
       error: 'Failed to fetch account health information',
+    });
+  }
+}
+
+/**
+ * POST /api/linkedin/submit-verification-code
+ * Submit email verification code to complete LinkedIn authentication
+ */
+export async function submitLinkedInVerificationCode(req: Request, res: Response) {
+  try {
+    // Validate authentication
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required',
+      });
+    }
+
+    const { verificationSessionId, verificationCode } = req.body;
+
+    // Validate input
+    if (!verificationSessionId || !verificationCode) {
+      return res.status(400).json({
+        success: false,
+        error: 'Verification session ID and code are required',
+      });
+    }
+
+    // Verify that the session belongs to the user
+    const session = await LinkedInVerificationService.getVerificationSession(verificationSessionId);
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: 'Verification session not found or expired',
+      });
+    }
+
+    if (session.userId !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Unauthorized access to verification session',
+      });
+    }
+
+    // Submit verification code
+    const result = await advancedScraperService.submitVerificationCode(
+      verificationSessionId,
+      verificationCode
+    );
+
+    if (result.success) {
+      return res.json({
+        success: true,
+        message: 'Verification successful - you can now continue with profile scraping',
+      });
+    } else {
+      // Get updated session to check remaining attempts
+      const updatedSession = await LinkedInVerificationService.getVerificationSession(verificationSessionId);
+
+      return res.status(400).json({
+        success: false,
+        error: result.error || 'Verification failed',
+        attemptsRemaining: updatedSession?.attemptsRemaining || 0,
+      });
+    }
+  } catch (error) {
+    console.error('Verification code submission error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to submit verification code',
+    });
+  }
+}
+
+/**
+ * GET /api/linkedin/verification-status/:sessionId
+ * Check the status of a verification session
+ */
+export async function getVerificationStatus(req: Request, res: Response) {
+  try {
+    // Validate authentication
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required',
+      });
+    }
+
+    const { sessionId } = req.params;
+
+    if (!sessionId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Session ID is required',
+      });
+    }
+
+    // Get session
+    const session = await LinkedInVerificationService.getVerificationSession(sessionId);
+
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        error: 'Verification session not found or expired',
+      });
+    }
+
+    // Verify ownership
+    if (session.userId !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: 'Unauthorized access to verification session',
+      });
+    }
+
+    return res.json({
+      success: true,
+      session: {
+        id: session.id,
+        status: session.status,
+        attemptsRemaining: session.attemptsRemaining,
+        expiresAt: session.expiresAt,
+        createdAt: session.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error('Verification status check error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to check verification status',
     });
   }
 }

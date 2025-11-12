@@ -533,3 +533,22 @@ model LinkedInAccountHealth {
   @@index([isActive, cooldownUntil])
   @@map("linkedin_account_health")
 }
+
+model LinkedInVerificationSession {
+  id                  String   @id @default(uuid())
+  userId              String
+  accountEmail        String   @db.VarChar(255)
+  profileUrl          String   @db.VarChar(500)
+  browserSessionData  String   @db.Text // Encrypted browser state (cookies, etc.)
+  encryptionIv        String   @db.Text
+  encryptionAuthTag   String   @db.Text
+  status              String   @default("pending") // "pending", "completed", "failed", "expired"
+  attemptsRemaining   Int      @default(3)
+  expiresAt           DateTime
+  completedAt         DateTime?
+  createdAt           DateTime @default(now())
+
+  @@index([userId, status, expiresAt])
+  @@index([status, expiresAt])
+  @@map("linkedin_verification_sessions")
+}

@@ -84,6 +84,19 @@ export const LinkedInErrors = {
     undefined,
     'Please try again in a few minutes.'
   ),
+
+  EMAIL_VERIFICATION_REQUIRED: (verificationSessionId: string) => {
+    const error = new LinkedInAuthError(
+      'LinkedIn requires email verification code',
+      'EMAIL_VERIFICATION_REQUIRED',
+      true,
+      300000, // 5 minutes timeout
+      'Please enter the verification code sent to your email.'
+    );
+    // Add verificationSessionId as a custom property
+    (error as any).verificationSessionId = verificationSessionId;
+    return error;
+  },
 } as const;
 
 // Type for error response payloads
