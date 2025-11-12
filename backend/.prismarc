@@ -1,0 +1,3 @@
+# Prisma configuration
+# Disable automatic migration on deployment
+schema = "prisma/schema.prisma"

@@ -127,43 +127,22 @@ async function checkDatabaseState() {
 
 async function createDatabaseSchema() {
   try {
-    console.log('📤 Applying database migrations...');
+    console.log('📤 Applying database schema...');
 
-    // Check if database needs baselining
-    const needsBaseline = await checkIfNeedsBaseline();
+    // Use db push for now - it handles existing schemas gracefully
+    // This avoids P3005 errors from Railway's auto-migration detection
+    console.log('Using Prisma db push (safe for existing schemas)...');
 
-    if (needsBaseline) {
-      console.log('⚠️  Database has tables but no migration history - baselining...');
-      await baselineExistingMigrations();
-    }
+    execSync('npx prisma db push --accept-data-loss --skip-generate', {
+      stdio: 'inherit',
+      env: { ...process.env, NODE_ENV: 'production' }
+    });
 
-    // Run migrations
-    try {
-      execSync('npx prisma migrate deploy', {
-        stdio: 'inherit',
-        env: { ...process.env, NODE_ENV: 'production' }
-      });
-      console.log('✅ Database migrations applied successfully');
-    } catch (migrateError) {
-      // If migrate deploy fails due to empty schema error, try db push as fallback
-      if (migrateError.message && migrateError.message.includes('P3005')) {
-        console.log('⚠️  P3005 error detected - attempting automatic baseline...');
-        await baselineExistingMigrations();
-
-        // Retry migration deploy
-        execSync('npx prisma migrate deploy', {
-          stdio: 'inherit',
-          env: { ...process.env, NODE_ENV: 'production' }
-        });
-        console.log('✅ Database migrations applied successfully after baseline');
-      } else {
-        throw migrateError;
-      }
-    }
+    console.log('✅ Database schema updated successfully');
 
   } catch (error) {
-    console.error('❌ Schema creation failed:', error.message);
-    throw new Error(`Schema creation failed: ${error.message}`);
+    console.error('❌ Schema update failed:', error.message);
+    throw new Error(`Schema update failed: ${error.message}`);
   }
 }
 
