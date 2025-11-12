@@ -15,6 +15,8 @@
 import { Request, Response } from 'express';
 import prisma from '../config/database';
 import advancedScraperService from '../services/advancedScraper.service';
+import { LinkedInAccountManager } from '../services/linkedinAccountManager.service';
+import { LinkedInAuthError, errorToResponse } from '../types/linkedin-errors';
 
 interface CaptureProfileRequest {
   profileUrl: string;
@@ -102,8 +104,32 @@ export async function captureProfile(req: Request, res: Response) {
 
     // Scrape profile based on platform and options
     if (platform === 'linkedin') {
+      // Store credentials if LinkedIn authentication is enabled
+      if (useLinkedInAuth && linkedInEmail && linkedInPassword) {
+        await LinkedInAccountManager.storeCredentials(
+          req.user.id,
+          linkedInEmail,
+          linkedInPassword
+        );
+      }
+
+      // Check rate limits before scraping
+      const rateLimitCheck = await LinkedInAccountManager.canMakeRequest(req.user.id);
+      if (!rateLimitCheck.allowed) {
+        return res.status(429).json({
+          success: false,
+          error: {
+            code: 'RATE_LIMIT_EXCEEDED',
+            message: rateLimitCheck.reason || 'Rate limit exceeded',
+            retryable: true,
+            retryAfterMs: rateLimitCheck.waitTimeMs,
+            userAction: `Please wait ${Math.ceil((rateLimitCheck.waitTimeMs || 0) / 1000)} seconds before trying again.`,
+          },
+        });
+      }
+
       profileData = await advancedScraperService.scrapeLinkedInProfile(profileUrl, {
-        useAuthentication: useLinkedInAuth,
+        userId: req.user.id,
         email: linkedInEmail,
         password: linkedInPassword,
         headless: true,
@@ -190,14 +216,49 @@ export async function captureProfile(req: Request, res: Response) {
   } catch (error) {
     console.error('Profile capture error:', error);
 
+    // Handle LinkedIn-specific errors with structured responses
+    if (error instanceof LinkedInAuthError) {
+      const errorResponse = errorToResponse(error);
+
+      // Map error codes to HTTP status codes
+      const statusCode = (() => {
+        switch (error.code) {
+          case 'RATE_LIMIT_EXCEEDED':
+            return 429;
+          case 'CHECKPOINT_REQUIRED':
+          case 'ACCOUNT_ON_COOLDOWN':
+            return 403;
+          case 'NO_CREDENTIALS':
+          case 'LOGIN_FAILED':
+            return 401;
+          case 'SESSION_EXPIRED':
+            return 401;
+          default:
+            return 500;
+        }
+      })();
+
+      return res.status(statusCode).json(errorResponse);
+    }
+
     if (error instanceof Error) {
       return res.status(500).json({
-        error: error.message,
+        success: false,
+        error: {
+          code: 'SCRAPING_FAILED',
+          message: error.message,
+          retryable: true,
+        },
       });
     }
 
     return res.status(500).json({
-      error: 'Failed to capture profile',
+      success: false,
+      error: {
+        code: 'UNKNOWN_ERROR',
+        message: 'Failed to capture profile',
+        retryable: false,
+      },
     });
   } finally {
     // Clean up browser instance
@@ -262,6 +323,142 @@ export async function checkProfileStatus(req: Request, res: Response) {
     console.error('Profile status check error:', error);
     return res.status(500).json({
       error: 'Failed to check profile status',
+    });
+  }
+}
+
+/**
+ * GET /api/linkedin/rate-limits
+ * Get current rate limit status and usage statistics
+ */
+export async function getLinkedInRateLimits(req: Request, res: Response) {
+  try {
+    // Validate authentication
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+      });
+    }
+
+    const userId = req.user.id;
+
+    // Check if user can make a request (this includes rate limit checks)
+    const rateLimitCheck = await LinkedInAccountManager.canMakeRequest(userId);
+
+    // Get recent request history
+    const recentRequests = await LinkedInAccountManager.getRequestHistory(userId, 24);
+
+    // Calculate hourly and daily usage
+    const now = Date.now();
+    const oneHourAgo = now - 3600000;
+    const oneDayAgo = now - 86400000;
+
+    const requestsLastHour = recentRequests.filter(
+      (r: any) => new Date(r.requestTime).getTime() > oneHourAgo
+    ).length;
+
+    const requestsToday = recentRequests.filter(
+      (r: any) => new Date(r.requestTime).getTime() > oneDayAgo
+    ).length;
+
+    return res.json({
+      success: true,
+      rateLimits: {
+        allowed: rateLimitCheck.allowed,
+        reason: rateLimitCheck.reason,
+        waitTimeMs: rateLimitCheck.waitTimeMs,
+        usage: {
+          lastHour: requestsLastHour,
+          maxPerHour: 20,
+          today: requestsToday,
+          maxPerDay: 100,
+        },
+        nextAvailable: rateLimitCheck.waitTimeMs
+          ? new Date(now + rateLimitCheck.waitTimeMs).toISOString()
+          : null,
+      },
+    });
+  } catch (error) {
+    console.error('Rate limit fetch error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch rate limit information',
+    });
+  }
+}
+
+/**
+ * GET /api/linkedin/account-health
+ * Get LinkedIn account health metrics
+ */
+export async function getLinkedInAccountHealth(req: Request, res: Response) {
+  try {
+    // Validate authentication
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+      });
+    }
+
+    const userId = req.user.id;
+
+    // Get account health data
+    const health = await LinkedInAccountManager.getAccountHealth(userId);
+
+    if (!health) {
+      return res.json({
+        success: true,
+        health: {
+          hasCredentials: false,
+          message: 'No LinkedIn credentials stored',
+        },
+      });
+    }
+
+    // Get credentials for additional context
+    const credentials = await LinkedInAccountManager.getCredentials(userId);
+
+    return res.json({
+      success: true,
+      health: {
+        hasCredentials: !!credentials,
+        isActive: health.isActive,
+        accountStatus: health.isOnCooldown ? 'cooldown' : 'active',
+        metrics: {
+          totalRequests: health.totalRequests,
+          successfulRequests: health.successfulRequests,
+          failedRequests: health.failedRequests,
+          consecutiveFailures: health.consecutiveFailures,
+          successRate:
+            health.totalRequests > 0
+              ? Math.round((health.successfulRequests / health.totalRequests) * 100)
+              : 0,
+        },
+        cooldown: health.isOnCooldown
+          ? {
+              active: true,
+              until: health.cooldownUntil,
+              reason: 'Account temporarily paused due to consecutive failures',
+            }
+          : {
+              active: false,
+            },
+        lastActivity: {
+          lastRequestAt: health.lastRequestAt,
+          lastSuccessAt: health.lastSuccessAt,
+          lastFailureAt: health.lastFailureAt,
+        },
+        timestamps: {
+          createdAt: health.createdAt,
+          updatedAt: health.updatedAt,
+        },
+      },
+    });
+  } catch (error) {
+    console.error('Account health fetch error:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to fetch account health information',
     });
   }
 }
