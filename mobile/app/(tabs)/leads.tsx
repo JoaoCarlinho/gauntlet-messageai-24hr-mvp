@@ -15,6 +15,9 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  Modal,
+  ScrollView,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +26,8 @@ import { useLeads, Lead, LeadStatus, LeadScore } from '../../hooks/useLeads';
 export default function LeadsScreen() {
   const { leads, isLoading, error, refetch, updateLeadStatus, claimLead } = useLeads();
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   // Handle refresh
   const handleRefresh = async () => {
@@ -99,10 +104,29 @@ export default function LeadsScreen() {
   const handleClaimLead = async (lead: Lead) => {
     try {
       await claimLead(lead.id);
-      Alert.alert('Success', `Lead "${lead.name}" has been claimed`);
+      setSelectedLead(lead);
+      setShowDetailModal(true);
     } catch (err: any) {
       Alert.alert('Error', err.message || 'Failed to claim lead');
     }
+  };
+
+  // Handle contact actions
+  const handleCallLead = (phone?: string) => {
+    if (phone) {
+      Linking.openURL(`tel:${phone}`);
+    }
+  };
+
+  const handleEmailLead = (email?: string) => {
+    if (email) {
+      Linking.openURL(`mailto:${email}`);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowDetailModal(false);
+    setSelectedLead(null);
   };
 
   // Handle update status
@@ -132,7 +156,10 @@ export default function LeadsScreen() {
     return (
       <TouchableOpacity
         style={styles.leadCard}
-        onPress={() => handleUpdateStatus(item)}
+        onPress={() => {
+          setSelectedLead(item);
+          setShowDetailModal(true);
+        }}
         activeOpacity={0.7}
       >
         {/* Header */}
@@ -142,7 +169,6 @@ export default function LeadsScreen() {
             <View style={styles.badges}>
               {item.score && (
                 <View
-                  key={`${item.id}-score-badge`}
                   style={[
                     styles.scoreBadge,
                     { backgroundColor: getScoreBgColor(item.score) },
@@ -158,7 +184,7 @@ export default function LeadsScreen() {
                   </Text>
                 </View>
               )}
-              <View key={`${item.id}-status-badge`} style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
+              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) + '20' }]}>
                 <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
                   {getStatusLabel(item.status)}
                 </Text>
@@ -170,13 +196,13 @@ export default function LeadsScreen() {
         {/* Contact Info */}
         <View style={styles.contactInfo}>
           {item.email && (
-            <View key={`${item.id}-email-contact`} style={styles.contactItem}>
+            <View style={styles.contactItem}>
               <Ionicons name="mail-outline" size={14} color="#666" />
               <Text style={styles.contactText}>{item.email}</Text>
             </View>
           )}
           {item.company && (
-            <View key={`${item.id}-company-contact`} style={styles.contactItem}>
+            <View style={styles.contactItem}>
               <Ionicons name="business-outline" size={14} color="#666" />
               <Text style={styles.contactText}>{item.company}</Text>
             </View>
@@ -185,12 +211,12 @@ export default function LeadsScreen() {
 
         {/* Source & Discovery Session */}
         <View style={styles.metadata}>
-          <View key={`${item.id}-source-metadata`} style={styles.metadataItem}>
+          <View style={styles.metadataItem}>
             <Ionicons name="compass-outline" size={14} color="#8E8E93" />
             <Text style={styles.metadataText}>Source: {item.source}</Text>
           </View>
           {item.discoverySessionId && (
-            <View key={`${item.id}-discovery-metadata`} style={styles.metadataItem}>
+            <View style={styles.metadataItem}>
               <Ionicons name="chatbubbles-outline" size={14} color="#8E8E93" />
               <Text style={styles.metadataText}>Discovery Session</Text>
             </View>
@@ -246,7 +272,7 @@ export default function LeadsScreen() {
       <FlatList
         data={leads}
         renderItem={renderLeadItem}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item, index) => item?.id || `lead-${index}`}
         contentContainerStyle={leads.length === 0 ? styles.emptyList : styles.list}
         ListEmptyComponent={renderEmptyState}
         refreshControl={
@@ -254,6 +280,153 @@ export default function LeadsScreen() {
         }
         showsVerticalScrollIndicator={false}
       />
+
+      {/* Lead Detail Modal */}
+      <Modal
+        visible={showDetailModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={handleCloseModal}
+      >
+        <SafeAreaView style={styles.modalContainer} edges={['top', 'bottom']}>
+          {/* Modal Header */}
+          <View style={styles.modalHeader}>
+            <View>
+              <Text style={styles.modalTitle}>Lead Claimed!</Text>
+              <Text style={styles.modalSubtitle}>Here are the details</Text>
+            </View>
+            <TouchableOpacity onPress={handleCloseModal} style={styles.closeButton}>
+              <Ionicons name="close" size={28} color="#000" />
+            </TouchableOpacity>
+          </View>
+
+          {selectedLead && (
+            <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+              {/* Lead Name & Score */}
+              <View style={styles.detailSection}>
+                <Text style={styles.detailName}>{selectedLead.name}</Text>
+                {selectedLead.score && (
+                  <View
+                    style={[
+                      styles.detailScoreBadge,
+                      { backgroundColor: getScoreBgColor(selectedLead.score) },
+                    ]}
+                  >
+                    <Ionicons
+                      name="flame"
+                      size={16}
+                      color={getScoreColor(selectedLead.score)}
+                    />
+                    <Text
+                      style={[
+                        styles.detailScoreText,
+                        { color: getScoreColor(selectedLead.score) },
+                      ]}
+                    >
+                      {selectedLead.score.toUpperCase()} LEAD
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Contact Actions */}
+              <View style={styles.actionSection}>
+                {selectedLead.phone && (
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => handleCallLead(selectedLead.phone)}
+                  >
+                    <Ionicons name="call" size={20} color="#fff" />
+                    <Text style={styles.actionButtonText}>Call</Text>
+                  </TouchableOpacity>
+                )}
+                {selectedLead.email && (
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={() => handleEmailLead(selectedLead.email)}
+                  >
+                    <Ionicons name="mail" size={20} color="#fff" />
+                    <Text style={styles.actionButtonText}>Email</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Contact Information */}
+              <View style={styles.detailCard}>
+                <Text style={styles.detailCardTitle}>Contact Information</Text>
+                {selectedLead.email && (
+                  <View style={styles.detailRow}>
+                    <Ionicons name="mail-outline" size={20} color="#666" />
+                    <Text style={styles.detailText}>{selectedLead.email}</Text>
+                  </View>
+                )}
+                {selectedLead.phone && (
+                  <View style={styles.detailRow}>
+                    <Ionicons name="call-outline" size={20} color="#666" />
+                    <Text style={styles.detailText}>{selectedLead.phone}</Text>
+                  </View>
+                )}
+                {selectedLead.company && (
+                  <View style={styles.detailRow}>
+                    <Ionicons name="business-outline" size={20} color="#666" />
+                    <Text style={styles.detailText}>{selectedLead.company}</Text>
+                  </View>
+                )}
+                {selectedLead.jobTitle && (
+                  <View style={styles.detailRow}>
+                    <Ionicons name="briefcase-outline" size={20} color="#666" />
+                    <Text style={styles.detailText}>{selectedLead.jobTitle}</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Lead Details */}
+              <View style={styles.detailCard}>
+                <Text style={styles.detailCardTitle}>Lead Details</Text>
+                <View style={styles.detailRow}>
+                  <Ionicons name="flag-outline" size={20} color="#666" />
+                  <Text style={styles.detailText}>
+                    Status: {getStatusLabel(selectedLead.status)}
+                  </Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Ionicons name="compass-outline" size={20} color="#666" />
+                  <Text style={styles.detailText}>Source: {selectedLead.source}</Text>
+                </View>
+                {selectedLead.qualificationScore !== undefined && (
+                  <View style={styles.detailRow}>
+                    <Ionicons name="analytics-outline" size={20} color="#666" />
+                    <Text style={styles.detailText}>
+                      Qualification Score: {selectedLead.qualificationScore}/100
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Discovery Session Summary */}
+              {selectedLead.discoverySessionSummary && (
+                <View style={styles.detailCard}>
+                  <Text style={styles.detailCardTitle}>Discovery Session Notes</Text>
+                  <Text style={styles.summaryText}>
+                    {selectedLead.discoverySessionSummary}
+                  </Text>
+                </View>
+              )}
+
+              {/* Update Status */}
+              <TouchableOpacity
+                style={styles.updateStatusButton}
+                onPress={() => {
+                  handleCloseModal();
+                  setTimeout(() => handleUpdateStatus(selectedLead), 300);
+                }}
+              >
+                <Text style={styles.updateStatusButtonText}>Update Status</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          )}
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -402,5 +575,121 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
+  },
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#F2F2F7',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E5EA',
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#000',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 2,
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalContent: {
+    flex: 1,
+    padding: 20,
+  },
+  detailSection: {
+    marginBottom: 20,
+  },
+  detailName: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#000',
+    marginBottom: 12,
+  },
+  detailScoreBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  detailScoreText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  actionSection: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 24,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#007AFF',
+    paddingVertical: 14,
+    borderRadius: 12,
+  },
+  actionButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  detailCard: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  detailCardTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000',
+    marginBottom: 16,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  detailText: {
+    fontSize: 15,
+    color: '#333',
+    flex: 1,
+  },
+  summaryText: {
+    fontSize: 15,
+    color: '#333',
+    lineHeight: 22,
+  },
+  updateStatusButton: {
+    backgroundColor: '#fff',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+  },
+  updateStatusButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#007AFF',
   },
 });
