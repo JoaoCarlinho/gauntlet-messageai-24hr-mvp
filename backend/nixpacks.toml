@@ -1,6 +1,10 @@
 # Nixpacks Configuration for Railway
 # This prevents Railway from auto-running Prisma migrations
 
+[variables]
+# Disable Prisma auto-migration
+NIXPACKS_NO_PRISMA_MIGRATE = "1"
+
 [phases.setup]
 # Use Nix for Node.js/npm/openssl (standard packages)
 nixPkgs = ["nodejs_18", "npm-9_x", "openssl"]
