@@ -127,19 +127,101 @@ async function checkDatabaseState() {
 
 async function createDatabaseSchema() {
   try {
-    console.log('📤 Pushing schema using Prisma db push...');
-    
-    execSync('npx prisma db push --accept-data-loss', {
-      stdio: 'inherit',
-      env: { ...process.env, NODE_ENV: 'production' }
-    });
-    
-    console.log('✅ Database schema created successfully');
-    
+    console.log('📤 Applying database migrations...');
+
+    // Check if database needs baselining
+    const needsBaseline = await checkIfNeedsBaseline();
+
+    if (needsBaseline) {
+      console.log('⚠️  Database has tables but no migration history - baselining...');
+      await baselineExistingMigrations();
+    }
+
+    // Run migrations
+    try {
+      execSync('npx prisma migrate deploy', {
+        stdio: 'inherit',
+        env: { ...process.env, NODE_ENV: 'production' }
+      });
+      console.log('✅ Database migrations applied successfully');
+    } catch (migrateError) {
+      // If migrate deploy fails due to empty schema error, try db push as fallback
+      if (migrateError.message && migrateError.message.includes('P3005')) {
+        console.log('⚠️  P3005 error detected - attempting automatic baseline...');
+        await baselineExistingMigrations();
+
+        // Retry migration deploy
+        execSync('npx prisma migrate deploy', {
+          stdio: 'inherit',
+          env: { ...process.env, NODE_ENV: 'production' }
+        });
+        console.log('✅ Database migrations applied successfully after baseline');
+      } else {
+        throw migrateError;
+      }
+    }
+
   } catch (error) {
     console.error('❌ Schema creation failed:', error.message);
     throw new Error(`Schema creation failed: ${error.message}`);
   }
+}
+
+async function checkIfNeedsBaseline() {
+  try {
+    // Check if migration table exists
+    const migrationTable = await prisma.$queryRaw`
+      SELECT table_name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+      AND table_name = '_prisma_migrations'
+    `;
+
+    if (migrationTable.length === 0) {
+      // Check if any other tables exist
+      const otherTables = await prisma.$queryRaw`
+        SELECT table_name
+        FROM information_schema.tables
+        WHERE table_schema = 'public'
+        AND table_type = 'BASE TABLE'
+        LIMIT 1
+      `;
+
+      // Needs baseline if tables exist but no migration history
+      return otherTables.length > 0;
+    }
+
+    return false;
+  } catch (error) {
+    console.log('⚠️  Could not check baseline status:', error.message);
+    return false;
+  }
+}
+
+async function baselineExistingMigrations() {
+  console.log('🏗️  Baselining existing migrations...');
+
+  const migrations = [
+    '20251022040000_init_clean',
+    '20251022040001_safe_schema_update',
+    '20251112000000_add_linkedin_verification'
+  ];
+
+  for (const migration of migrations) {
+    try {
+      console.log(`   Resolving ${migration}...`);
+      execSync(`npx prisma migrate resolve --applied ${migration}`, {
+        stdio: 'pipe',
+        env: { ...process.env, NODE_ENV: 'production' }
+      });
+      console.log(`   ✅ ${migration} marked as applied`);
+    } catch (error) {
+      // Migration might already be resolved - this is okay
+      console.log(`   ℹ️  ${migration} already resolved`);
+    }
+  }
+
+  console.log('✅ Database baseline completed');
 }
 
 async function generatePrismaClient() {
