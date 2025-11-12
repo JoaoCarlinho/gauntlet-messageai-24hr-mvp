@@ -1,5 +1,5 @@
 # Nixpacks Configuration for Railway
-# Railway will auto-detect and run Prisma migrations (0_init baseline)
+# No migrations folder - using prisma db push in deployment script
 
 [phases.setup]
 # Use Nix for Node.js/npm/openssl (standard packages)
