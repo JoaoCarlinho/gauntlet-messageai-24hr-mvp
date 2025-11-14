@@ -12,9 +12,10 @@ interface UseAuthReturn {
   isLoggedIn: boolean;
   currentUser: User | null;
   hasValidTokens: boolean;
-  
+
   // Actions
   login: (credentials: LoginRequest) => void;
+  loginWithGoogle: (idToken: string) => void;
   register: (userData: RegisterRequest) => void;
   logout: () => void;
   refreshToken: () => void;
@@ -41,20 +42,27 @@ export const useAuth = (): UseAuthReturn => {
   // Get actions from Kea store
   const {
     login: loginAction,
+    loginWithGoogle: loginWithGoogleAction,
     register: registerAction,
     logout: logoutAction,
     refreshToken: refreshTokenAction,
     initializeAuth: initializeAuthAction,
     setError,
   } = useActions(authLogic);
-  
+
   // Wrapper functions with additional functionality
   const login = (credentials: LoginRequest) => {
     // Clear any existing errors before attempting login
     setError(null);
     loginAction(credentials);
   };
-  
+
+  const loginWithGoogle = (idToken: string) => {
+    // Clear any existing errors before attempting Google login
+    setError(null);
+    loginWithGoogleAction(idToken);
+  };
+
   const register = (userData: RegisterRequest) => {
     // Clear any existing errors before attempting registration
     setError(null);
@@ -88,9 +96,10 @@ export const useAuth = (): UseAuthReturn => {
     isLoggedIn,
     currentUser,
     hasValidTokens,
-    
+
     // Actions
     login,
+    loginWithGoogle,
     register,
     logout,
     refreshToken,

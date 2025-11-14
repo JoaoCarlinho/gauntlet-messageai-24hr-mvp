@@ -56,17 +56,18 @@ interface AuthState {
 interface AuthActions {
   // Authentication actions
   login: (credentials: LoginRequest) => void;
+  loginWithGoogle: (idToken: string) => void;
   register: (userData: RegisterRequest) => void;
   logout: () => void;
   refreshToken: () => void;
-  
+
   // State management actions
   setUser: (user: User | null) => void;
   setTokens: (accessToken: string | null, refreshToken: string | null) => void;
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   clearAuth: () => void;
-  
+
   // Initialization
   initializeAuth: () => void;
 }
@@ -87,17 +88,18 @@ export const authLogic = kea({
   actions: {
     // Authentication actions
     login: (credentials: LoginRequest) => ({ credentials }),
+    loginWithGoogle: (idToken: string) => ({ idToken }),
     register: (userData: RegisterRequest) => ({ userData }),
     logout: true,
     refreshToken: true,
-    
+
     // State management actions
     setUser: (user: User | null) => ({ user }),
     setTokens: (accessToken: string | null, refreshToken: string | null) => ({ accessToken, refreshToken }),
     setLoading: (loading: boolean) => ({ loading }),
     setError: (error: string | null) => ({ error }),
     clearAuth: true,
-    
+
     // Initialization
     initializeAuth: true,
   },
@@ -123,6 +125,7 @@ export const authLogic = kea({
     isLoading: {
       setLoading: (_, { loading }) => loading,
       login: () => true,
+      loginWithGoogle: () => true,
       register: () => true,
       logout: () => true,
       refreshToken: () => true,
@@ -131,6 +134,7 @@ export const authLogic = kea({
     error: {
       setError: (_, { error }) => error,
       login: () => null,
+      loginWithGoogle: () => null,
       register: () => null,
       logout: () => null,
       refreshToken: () => null,
@@ -144,11 +148,11 @@ export const authLogic = kea({
     login: async ({ credentials }: any) => {
       try {
         const authResponse: AuthResponse = await authAPI.login(credentials);
-        
+
         // Update state (this will also persist to SecureStore via tokenManager)
         actions.setUser(authResponse.user);
         actions.setTokens(authResponse.accessToken, authResponse.refreshToken);
-        
+
         // Register push token after successful login
         try {
           const { notificationManager } = await import('../lib/notifications');
@@ -157,7 +161,7 @@ export const authLogic = kea({
           console.warn('Failed to register push token after login:', pushTokenError);
           // Don't fail login if push token registration fails
         }
-        
+
         actions.setLoading(false);
         actions.setError(null);
       } catch (error) {
@@ -166,7 +170,34 @@ export const authLogic = kea({
         actions.setLoading(false);
       }
     },
-    
+
+    // Google login listener
+    loginWithGoogle: async ({ idToken }: any) => {
+      try {
+        const authResponse: AuthResponse = await authAPI.loginWithGoogle(idToken);
+
+        // Update state (this will also persist to SecureStore via tokenManager)
+        actions.setUser(authResponse.user);
+        actions.setTokens(authResponse.accessToken, authResponse.refreshToken);
+
+        // Register push token after successful login
+        try {
+          const { notificationManager } = await import('../lib/notifications');
+          await notificationManager.registerPushTokenAfterAuth();
+        } catch (pushTokenError) {
+          console.warn('Failed to register push token after Google login:', pushTokenError);
+          // Don't fail login if push token registration fails
+        }
+
+        actions.setLoading(false);
+        actions.setError(null);
+      } catch (error) {
+        console.error('Google login error:', error);
+        actions.setError(error instanceof Error ? error.message : 'Google login failed');
+        actions.setLoading(false);
+      }
+    },
+
     // Register listener
     register: async ({ userData }: any) => {
       try {

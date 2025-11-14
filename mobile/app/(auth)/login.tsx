@@ -8,18 +8,21 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
 import Button from '../../components/ui/Button';
+import { signInWithGoogle } from '../../services/googleAuth';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
-  
-  const { login, isLoading, error, isAuthenticated, clearError } = useAuth();
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const { login, loginWithGoogle, isLoading, error, isAuthenticated, clearError } = useAuth();
 
   // Navigate to main app when authenticated
   useEffect(() => {
@@ -90,17 +93,32 @@ export default function LoginScreen() {
     // Clear previous errors
     setEmailError('');
     setPasswordError('');
-    
+
     // Validate form
     const isEmailValid = validateEmail(email);
     const isPasswordValid = validatePassword(password);
-    
+
     if (!isEmailValid || !isPasswordValid) {
       return;
     }
 
     // Attempt login
     login({ email: email.trim(), password });
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      setGoogleLoading(true);
+      const result = await signInWithGoogle();
+      loginWithGoogle(result.idToken);
+    } catch (error) {
+      console.error('Google sign-in error:', error);
+      Alert.alert(
+        'Google Sign-In Failed',
+        error instanceof Error ? error.message : 'Failed to sign in with Google. Please try again.'
+      );
+      setGoogleLoading(false);
+    }
   };
 
   return (
@@ -154,9 +172,25 @@ export default function LoginScreen() {
               title="Sign In"
               onPress={handleLogin}
               loading={isLoading}
-              disabled={isLoading}
+              disabled={isLoading || googleLoading}
               fullWidth
               style={styles.button}
+            />
+
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>OR</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            <Button
+              title="Sign in with Google"
+              onPress={handleGoogleLogin}
+              loading={googleLoading}
+              disabled={isLoading || googleLoading}
+              fullWidth
+              variant="outline"
+              style={styles.googleButton}
             />
           </View>
 
@@ -227,6 +261,25 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   button: {
+    marginTop: 8,
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#ddd',
+  },
+  dividerText: {
+    marginHorizontal: 16,
+    fontSize: 14,
+    color: '#999',
+    fontWeight: '500',
+  },
+  googleButton: {
     marginTop: 8,
   },
   footer: {

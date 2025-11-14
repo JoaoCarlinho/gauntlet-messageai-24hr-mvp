@@ -331,33 +331,80 @@ export const authAPI = {
     }
   },
 
-  async register(userData: RegisterRequest): Promise<AuthResponse> {
+  async loginWithGoogle(idToken: string): Promise<AuthResponse> {
     try {
-      const response = await apiClient.post('/auth/register', userData);
-      
-      console.log('Register response:', JSON.stringify(response.data, null, 2));
-      
+      const response = await apiClient.post('/auth/google', { idToken });
+
+      console.log('Google login response:', JSON.stringify(response.data, null, 2));
+
       // Handle backend response structure: { message, user, tokens }
       if (response.data.user && response.data.tokens) {
         const { accessToken, refreshToken } = response.data.tokens;
-        
+
         // Validate tokens before proceeding
         if (!accessToken || !refreshToken) {
-          console.error('Missing tokens in register response:', { accessToken, refreshToken });
-          throw new Error('Invalid registration response: missing tokens');
+          console.error('Missing tokens in Google login response:', { accessToken, refreshToken });
+          throw new Error('Invalid Google login response: missing tokens');
         }
-        
+
         const authData = {
           user: response.data.user,
           accessToken,
           refreshToken
         };
-        
+
         await tokenManager.setTokens(authData.accessToken, authData.refreshToken);
         await tokenManager.setUserData(authData.user);
         return authData;
       }
-      
+
+      // Handle error response structure: { error, message }
+      throw new Error(response.data.error || response.data.message || 'Google login failed');
+    } catch (error: any) {
+      // Handle specific HTTP status codes
+      if (error.response?.status === 401) {
+        throw new Error('Google authentication failed. Please try again.');
+      } else if (error.response?.status === 400) {
+        const message = error.response.data?.message || error.response.data?.error;
+        throw new Error(message || 'Invalid Google token.');
+      } else if (error.response?.status === 429) {
+        throw new Error('Too many login attempts. Please wait a moment and try again.');
+      } else if (error.response?.status >= 500) {
+        throw new Error('Server error. Please try again later.');
+      }
+
+      // Re-throw the original error if it's not an HTTP error
+      throw error;
+    }
+  },
+
+  async register(userData: RegisterRequest): Promise<AuthResponse> {
+    try {
+      const response = await apiClient.post('/auth/register', userData);
+
+      console.log('Register response:', JSON.stringify(response.data, null, 2));
+
+      // Handle backend response structure: { message, user, tokens }
+      if (response.data.user && response.data.tokens) {
+        const { accessToken, refreshToken } = response.data.tokens;
+
+        // Validate tokens before proceeding
+        if (!accessToken || !refreshToken) {
+          console.error('Missing tokens in register response:', { accessToken, refreshToken });
+          throw new Error('Invalid registration response: missing tokens');
+        }
+
+        const authData = {
+          user: response.data.user,
+          accessToken,
+          refreshToken
+        };
+
+        await tokenManager.setTokens(authData.accessToken, authData.refreshToken);
+        await tokenManager.setUserData(authData.user);
+        return authData;
+      }
+
       // Handle error response structure: { error, message }
       throw new Error(response.data.error || response.data.message || 'Registration failed');
     } catch (error: any) {
@@ -375,7 +422,7 @@ export const authAPI = {
       } else if (error.response?.status >= 500) {
         throw new Error('Server error. Please try again later.');
       }
-      
+
       // Re-throw the original error if it's not an HTTP error
       throw error;
     }

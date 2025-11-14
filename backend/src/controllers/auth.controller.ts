@@ -3,6 +3,7 @@ import { body, validationResult } from 'express-validator';
 import {
   registerUser,
   loginUser,
+  loginWithGoogle,
   refreshAccessToken,
   logoutUser,
   changePassword,
@@ -50,6 +51,17 @@ export const validateLogin = [
   body('password')
     .notEmpty()
     .withMessage('Password is required')
+];
+
+/**
+ * Validation rules for Google login
+ */
+export const validateGoogleLogin = [
+  body('idToken')
+    .notEmpty()
+    .withMessage('Google ID token is required')
+    .isString()
+    .withMessage('ID token must be a string')
 ];
 
 /**
@@ -167,7 +179,7 @@ export const login = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Login error:', error);
-    
+
     if (error instanceof Error && error.message.includes('Invalid email or password')) {
       return res.status(401).json({
         error: 'Authentication failed',
@@ -178,6 +190,59 @@ export const login = async (req: Request, res: Response) => {
     res.status(500).json({
       error: 'Login failed',
       message: 'An error occurred during login'
+    });
+  }
+};
+
+/**
+ * Login with Google
+ */
+export const googleLogin = async (req: Request, res: Response) => {
+  try {
+    // Check validation results
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: errors.array()
+      });
+    }
+
+    const { idToken, pushToken, platform, deviceId } = req.body;
+
+    const result = await loginWithGoogle({
+      idToken,
+      pushToken,
+      platform,
+      deviceId
+    });
+
+    res.status(200).json({
+      message: 'Google login successful',
+      user: result.user,
+      tokens: result.tokens
+    });
+  } catch (error) {
+    console.error('Google login error:', error);
+
+    if (error instanceof Error) {
+      if (error.message.includes('Google authentication failed')) {
+        return res.status(401).json({
+          error: 'Authentication failed',
+          message: error.message
+        });
+      }
+      if (error.message.includes('Email not provided')) {
+        return res.status(400).json({
+          error: 'Invalid token',
+          message: 'Google account email is required'
+        });
+      }
+    }
+
+    res.status(500).json({
+      error: 'Google login failed',
+      message: 'An error occurred during Google authentication'
     });
   }
 };

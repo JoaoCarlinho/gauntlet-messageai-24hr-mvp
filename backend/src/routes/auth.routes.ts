@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   register,
   login,
+  googleLogin,
   refresh,
   logout,
   changeUserPassword,
@@ -9,6 +10,7 @@ import {
   updateProfile,
   validateRegistration,
   validateLogin,
+  validateGoogleLogin,
   validatePasswordChange,
   validateProfileUpdate
 } from '../controllers/auth.controller';
@@ -29,6 +31,13 @@ router.post('/register', authRateLimit, validateRegistration, register);
  * @access  Public
  */
 router.post('/login', authRateLimit, validateLogin, login);
+
+/**
+ * @route   POST /api/v1/auth/google
+ * @desc    Login with Google
+ * @access  Public
+ */
+router.post('/google', authRateLimit, validateGoogleLogin, googleLogin);
 
 /**
  * @route   POST /api/v1/auth/refresh
