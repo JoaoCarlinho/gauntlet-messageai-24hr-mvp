@@ -38,6 +38,10 @@ Thumbs.db
 # Backend
 backend/dist/
 backend/.env
+backend/prisma/migrations/
+backend/prisma/migrations.backup/
+backend/prisma/migrations_backup/
+backend/prisma/migrations_old_backup/
 
 # Mobile
 mobile/.env
@@ -46,6 +50,9 @@ mobile/.env
 *.apk
 *.ipa
 *.aab
+
+# Docs
+app_scaffold_context/
 
 # Logs
 logs/
@@ -60,3 +67,16 @@ dev_history/
 app_scaffold_context/campaign_advisor_icp_review.md
 app_scaffold_context/ai-agent-task-selection-in-product-definer.md
 scripts/delete-branches.sh
+.claude/
+bmad/
+docs/
+backend/MANUAL_LEAD_CAPTURE.md
+backend/TEST_IMPLEMENTATION_STATUS.md
+backend/TEST_QUICKSTART.md
+backend/TESTING.md
+backend/TESTS_FINAL_STATUS.md
+.gitignore
+branches.txt
+diff.txt
+scripts/convert-epics-to-stories.js
+scripts/clear_metro_cache.sh
