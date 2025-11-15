@@ -11,16 +11,13 @@ COPY package*.json ./
 COPY prisma ./prisma/
 
 # Install ALL dependencies (including devDependencies for build)
-RUN npm ci
+RUN npm install
 
 # Copy source code
 COPY . .
 
-# Generate Prisma Client
-RUN npx prisma generate
-
-# Build TypeScript (if using TS, otherwise skip)
-# RUN npm run build
+# Build TypeScript (Prisma client already generated via npm install postinstall)
+RUN npm run build
 
 # Stage 2: Production
 FROM node:18-alpine AS production
@@ -33,18 +30,23 @@ RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files and Prisma schema BEFORE npm install
 COPY package*.json ./
-
-# Install ONLY production dependencies
-RUN npm ci --only=production && npm cache clean --force
-
-# Copy Prisma schema and generated client from builder
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
-# Copy application code
-COPY --chown=nodejs:nodejs . .
+# Install ONLY production dependencies (skip postinstall to avoid Prisma cross-compile issues)
+RUN npm install --only=production --ignore-scripts && npm cache clean --force
+
+# Copy generated Prisma client from builder to ensure we have the built version
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
+# Copy built application (dist directory)
+COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+
+# Copy runtime files needed
+COPY --chown=nodejs:nodejs package*.json ./
+COPY --chown=nodejs:nodejs prisma ./prisma
 
 # Switch to non-root user
 USER nodejs
@@ -59,5 +61,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start application
-CMD ["node", "src/index.js"]
+# Start application with schema sync (db push for initial deployment, will migrate later)
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss --skip-generate && node dist/index.js"]

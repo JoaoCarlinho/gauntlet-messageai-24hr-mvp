@@ -140,7 +140,7 @@ resource "aws_iam_policy" "ecs_secrets_policy" {
           "secretsmanager:GetSecretValue",
           "secretsmanager:DescribeSecret"
         ]
-        Resource = [
+        Resource = concat([
           aws_secretsmanager_secret.database_url.arn,
           aws_secretsmanager_secret.jwt_secret.arn,
           aws_secretsmanager_secret.jwt_refresh_secret.arn,
@@ -148,7 +148,7 @@ resource "aws_iam_policy" "ecs_secrets_policy" {
           aws_secretsmanager_secret.firebase_client_email.arn,
           aws_secretsmanager_secret.firebase_private_key.arn,
           aws_secretsmanager_secret.linkedin_credential_key.arn
-        ]
+        ], var.enable_redis ? [aws_secretsmanager_secret.redis_url[0].arn] : [])
       },
       {
         Effect = "Allow"

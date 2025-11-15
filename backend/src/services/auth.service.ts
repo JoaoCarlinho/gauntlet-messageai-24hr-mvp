@@ -182,6 +182,9 @@ export const loginUser = async (data: LoginData): Promise<AuthResult> => {
   }
 
   // Verify password
+  if (!user.password) {
+    throw new Error('Invalid email or password');
+  }
   const isPasswordValid = await bcrypt.compare(password, user.password);
   if (!isPasswordValid) {
     throw new Error('Invalid email or password');
@@ -450,6 +453,9 @@ export const changePassword = async (
   }
 
   // Verify current password
+  if (!user.password) {
+    throw new Error('Current password is incorrect');
+  }
   const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
   if (!isCurrentPasswordValid) {
     throw new Error('Current password is incorrect');

@@ -177,6 +177,40 @@ resource "aws_vpc_endpoint" "ecr_dkr" {
   }
 }
 
+# Secrets Manager VPC Endpoint (required for ECS to access secrets)
+resource "aws_vpc_endpoint" "secretsmanager" {
+  count = var.enable_vpc_endpoints ? 1 : 0
+
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.aws_region}.secretsmanager"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = [aws_subnet.private_1.id, aws_subnet.private_2.id]
+  security_group_ids  = [aws_security_group.vpc_endpoint.id]
+  private_dns_enabled = true
+
+  tags = {
+    Name    = "${var.project_name}-secretsmanager-endpoint-${var.environment}"
+    Project = var.project_name
+  }
+}
+
+# CloudWatch Logs VPC Endpoint (required for ECS to send logs)
+resource "aws_vpc_endpoint" "logs" {
+  count = var.enable_vpc_endpoints ? 1 : 0
+
+  vpc_id              = aws_vpc.main.id
+  service_name        = "com.amazonaws.${var.aws_region}.logs"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = [aws_subnet.private_1.id, aws_subnet.private_2.id]
+  security_group_ids  = [aws_security_group.vpc_endpoint.id]
+  private_dns_enabled = true
+
+  tags = {
+    Name    = "${var.project_name}-logs-endpoint-${var.environment}"
+    Project = var.project_name
+  }
+}
+
 # Private Route Table (for ECS tasks)
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
