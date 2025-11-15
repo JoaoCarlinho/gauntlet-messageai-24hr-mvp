@@ -11,17 +11,23 @@ export const awsConfig = {
 };
 
 // Validate required AWS environment variables
+// Note: Access keys are optional - ECS can use IAM roles for authentication
 export const validateAWSConfig = (): void => {
-  const requiredVars = [
-    'AWS_ACCESS_KEY_ID',
-    'AWS_SECRET_ACCESS_KEY',
-    'AWS_S3_BUCKET'
-  ];
+  // Only S3 bucket is required
+  if (!process.env.AWS_S3_BUCKET) {
+    console.warn('AWS_S3_BUCKET not configured - S3 features will be disabled');
+  }
 
-  const missingVars = requiredVars.filter(varName => !process.env[varName]);
-  
-  if (missingVars.length > 0) {
-    throw new Error(`Missing required AWS environment variables: ${missingVars.join(', ')}`);
+  // If access keys are partially configured, warn about it
+  const hasAccessKey = !!process.env.AWS_ACCESS_KEY_ID;
+  const hasSecretKey = !!process.env.AWS_SECRET_ACCESS_KEY;
+
+  if (hasAccessKey !== hasSecretKey) {
+    console.warn('AWS credentials partially configured - this may cause authentication issues');
+  }
+
+  if (!hasAccessKey && !hasSecretKey) {
+    console.log('AWS credentials not provided - will use IAM role (recommended for ECS)');
   }
 };
 
@@ -99,24 +105,38 @@ export const generateUniqueFilename = (originalName: string, prefix?: string): s
 // AWS Service instances (SDK v3)
 export const createS3Instance = (): S3Client => {
   validateAWSConfig();
-  return new S3Client({
+
+  // Use IAM role credentials if static credentials aren't provided
+  const clientConfig: any = {
     region: awsConfig.region,
-    credentials: {
-      accessKeyId: awsConfig.accessKeyId!,
-      secretAccessKey: awsConfig.secretAccessKey!,
-    },
-  });
+  };
+
+  if (awsConfig.accessKeyId && awsConfig.secretAccessKey) {
+    clientConfig.credentials = {
+      accessKeyId: awsConfig.accessKeyId,
+      secretAccessKey: awsConfig.secretAccessKey,
+    };
+  }
+
+  return new S3Client(clientConfig);
 };
 
 export const createSQSInstance = (): SQSClient => {
   validateAWSConfig();
-  return new SQSClient({
+
+  // Use IAM role credentials if static credentials aren't provided
+  const clientConfig: any = {
     region: awsConfig.region,
-    credentials: {
-      accessKeyId: awsConfig.accessKeyId!,
-      secretAccessKey: awsConfig.secretAccessKey!,
-    },
-  });
+  };
+
+  if (awsConfig.accessKeyId && awsConfig.secretAccessKey) {
+    clientConfig.credentials = {
+      accessKeyId: awsConfig.accessKeyId,
+      secretAccessKey: awsConfig.secretAccessKey,
+    };
+  }
+
+  return new SQSClient(clientConfig);
 };
 
 // Export default configuration

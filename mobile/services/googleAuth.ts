@@ -1,8 +1,10 @@
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
-import { auth } from '../config/firebase';
+import { Platform } from 'react-native';
+import { auth } from '../../config/firebase';
 import {
   signInWithCredential,
+  signInWithPopup,
   GoogleAuthProvider,
   UserCredential,
 } from 'firebase/auth';
@@ -20,11 +22,32 @@ export interface GoogleAuthResult {
 }
 
 /**
- * Sign in with Google using Expo AuthSession
- * This handles the OAuth flow and returns the Firebase ID token
+ * Sign in with Google using platform-specific methods
+ * - Web: Uses Firebase signInWithPopup
+ * - Mobile: Uses Expo AuthSession
  */
 export const signInWithGoogle = async (): Promise<GoogleAuthResult> => {
   try {
+    // Web platform: Use Firebase's built-in popup
+    if (Platform.OS === 'web') {
+      const provider = new GoogleAuthProvider();
+      provider.addScope('profile');
+      provider.addScope('email');
+
+      const userCredential: UserCredential = await signInWithPopup(auth, provider);
+      const idToken = await userCredential.user.getIdToken();
+
+      return {
+        idToken,
+        user: {
+          email: userCredential.user.email || '',
+          displayName: userCredential.user.displayName || '',
+          photoURL: userCredential.user.photoURL || '',
+        },
+      };
+    }
+
+    // Mobile platforms: Use Expo AuthSession
     const clientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
 
     if (!clientId) {

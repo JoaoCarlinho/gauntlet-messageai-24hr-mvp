@@ -262,6 +262,11 @@ export const loginWithGoogle = async (data: GoogleLoginData): Promise<AuthResult
   const { idToken, pushToken, platform, deviceId } = data;
 
   try {
+    // Check if Firebase is configured
+    if (!firebaseAuth) {
+      throw new Error('Firebase authentication is not configured');
+    }
+
     // Verify the Firebase ID token
     const decodedToken = await firebaseAuth.verifyIdToken(idToken);
 
