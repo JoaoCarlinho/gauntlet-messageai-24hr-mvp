@@ -5,7 +5,7 @@ resource "aws_elasticache_replication_group" "redis" {
   count = var.enable_redis ? 1 : 0
 
   replication_group_id       = "${var.project_name}-redis-${var.environment}"
-  replication_group_description = "Redis cluster for MessageAI caching and sessions"
+  description                = "Redis cluster for MessageAI caching and sessions"
   engine                     = "redis"
   engine_version             = "7.0"
   node_type                  = var.redis_node_type  # cache.t4g.micro for budget

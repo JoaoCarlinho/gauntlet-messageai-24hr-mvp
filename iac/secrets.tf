@@ -98,6 +98,7 @@ resource "aws_secretsmanager_secret" "firebase_private_key" {
 }
 
 resource "aws_secretsmanager_secret_version" "firebase_private_key" {
+  count         = var.firebase_private_key != "" ? 1 : 0
   secret_id     = aws_secretsmanager_secret.firebase_private_key.id
   secret_string = var.firebase_private_key
 }

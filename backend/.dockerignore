@@ -1,0 +1,15 @@
+node_modules
+npm-debug.log
+.env
+.env.*
+.git
+.gitignore
+*.md
+.DS_Store
+.vscode
+coverage
+.nyc_output
+*.log
+dist
+build
+.terraform

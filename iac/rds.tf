@@ -65,7 +65,7 @@ resource "aws_db_instance" "postgresql" {
 
   identifier             = "${var.project_name}-db-${var.environment}"
   engine                 = "postgres"
-  engine_version         = "14.9"
+  engine_version         = "14"  # AWS will use latest 14.x version
   instance_class         = var.rds_instance_class  # db.t4g.micro for budget
   allocated_storage      = var.rds_allocated_storage
   storage_type           = "gp3"

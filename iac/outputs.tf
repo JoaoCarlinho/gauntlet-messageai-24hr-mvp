@@ -81,25 +81,26 @@ output "weekly_report_rule_arn" {
 }
 
 # Pinecone Vector Database Outputs
-output "pinecone_index_name" {
-  description = "Name of the Pinecone index for vector storage"
-  value       = pinecone_index.messageai_production.name
-}
-
-output "pinecone_index_host" {
-  description = "Host URL of the Pinecone index"
-  value       = pinecone_index.messageai_production.host
-}
-
-output "pinecone_index_dimension" {
-  description = "Dimension of vectors stored in the index"
-  value       = pinecone_index.messageai_production.dimension
-}
-
-output "pinecone_index_metric" {
-  description = "Distance metric used for similarity search"
-  value       = pinecone_index.messageai_production.metric
-}
+# Pinecone outputs disabled for AWS-only deployment
+# output "pinecone_index_name" {
+#   description = "Name of the Pinecone index for vector storage"
+#   value       = pinecone_index.messageai_production.name
+# }
+#
+# output "pinecone_index_host" {
+#   description = "Host URL of the Pinecone index"
+#   value       = pinecone_index.messageai_production.host
+# }
+#
+# output "pinecone_index_dimension" {
+#   description = "Dimension of vectors stored in the index"
+#   value       = pinecone_index.messageai_production.dimension
+# }
+#
+# output "pinecone_index_metric" {
+#   description = "Distance metric used for similarity search"
+#   value       = pinecone_index.messageai_production.metric
+# }
 
 
 # Note: Railway outputs will be added after manual Railway setup

@@ -161,10 +161,8 @@ resource "aws_ecs_service" "api" {
   # }
 
   # Deployment configuration
-  deployment_configuration {
-    maximum_percent         = 200
-    minimum_healthy_percent = 100
-  }
+  deployment_maximum_percent         = 200
+  deployment_minimum_healthy_percent = 100
 
   # Health check grace period
   health_check_grace_period_seconds = 60
@@ -173,7 +171,7 @@ resource "aws_ecs_service" "api" {
   enable_execute_command = var.environment != "production"
 
   depends_on = [
-    aws_lb_listener.https,
+    aws_lb_listener.http,  # Changed from https since HTTPS listener is disabled
     aws_iam_role_policy_attachment.ecs_execution_role_policy
   ]
 
