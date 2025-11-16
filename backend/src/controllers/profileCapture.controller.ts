@@ -17,6 +17,7 @@ import prisma from '../config/database';
 import advancedScraperService from '../services/advancedScraper.service';
 import { LinkedInAccountManager } from '../services/linkedinAccountManager.service';
 import { LinkedInVerificationService } from '../services/linkedinVerification.service';
+import { LinkedInConnectionService } from '../services/linkedinConnection.service';
 import { LinkedInAuthError, errorToResponse } from '../types/linkedin-errors';
 
 interface CaptureProfileRequest {
@@ -30,6 +31,9 @@ interface CaptureProfileRequest {
   linkedInPassword?: string;
   useFacebookGraphAPI?: boolean;
   facebookAccessToken?: string;
+  // Enhanced scraping options
+  autoConnect?: boolean; // Auto-connect with LinkedIn profiles
+  captureScreenshot?: boolean; // Capture and upload screenshot (default true)
 }
 
 // Legacy functions removed - now using advancedScraperService
@@ -55,6 +59,8 @@ export async function captureProfile(req: Request, res: Response) {
       linkedInPassword,
       useFacebookGraphAPI,
       facebookAccessToken,
+      autoConnect = false,
+      captureScreenshot = true,
     }: CaptureProfileRequest = req.body;
 
     // Get teamId from authenticated user if not provided in request
@@ -129,13 +135,59 @@ export async function captureProfile(req: Request, res: Response) {
         });
       }
 
-      profileData = await advancedScraperService.scrapeLinkedInProfile(profileUrl, {
-        userId: req.user.id,
-        email: linkedInEmail,
-        password: linkedInPassword,
-        headless: true,
-        timeout: 30000,
-      });
+      // Use enhanced scraping for complete profile data
+      const { profile: enhancedProfile, connectionResult } =
+        await advancedScraperService.scrapeLinkedInProfileEnhanced(profileUrl, {
+          userId: req.user.id,
+          email: linkedInEmail,
+          password: linkedInPassword,
+          headless: true,
+          timeout: 30000,
+          autoConnect,
+          captureScreenshot,
+        });
+
+      // Check connection rate limits if auto-connect is enabled
+      if (autoConnect && linkedInEmail) {
+        const connectionRateLimit = await LinkedInConnectionService.canMakeConnectionRequest(linkedInEmail);
+        if (!connectionRateLimit.allowed) {
+          console.warn(`[Profile Capture] Connection rate limit exceeded: ${connectionRateLimit.reason}`);
+        }
+      }
+
+      // Log connection request if attempted
+      if (connectionResult && linkedInEmail) {
+        await LinkedInConnectionService.logConnectionRequest(
+          req.user.id,
+          linkedInEmail,
+          profileUrl,
+          enhancedProfile.name,
+          enhancedProfile.headline,
+          connectionResult.action === 'connected' ? connectionResult.message : undefined,
+          connectionResult.success ? 'sent' : 'failed',
+          connectionResult.error
+        );
+
+        // Increment connection counter if successful
+        if (connectionResult.success && connectionResult.action === 'connected') {
+          await LinkedInConnectionService.incrementConnectionRequest(linkedInEmail);
+        }
+      }
+
+      // Convert enhanced profile to legacy format for compatibility
+      profileData = {
+        name: enhancedProfile.name,
+        title: enhancedProfile.headline,
+        company: enhancedProfile.experience[0]?.company || '',
+        location: enhancedProfile.location,
+        bio: enhancedProfile.about,
+        profileUrl: enhancedProfile.profileUrl,
+        platform: 'linkedin' as const,
+        additionalData: {
+          enhancedProfile, // Store complete profile data
+          connectionResult,
+        },
+      };
     } else if (platform === 'facebook') {
       if (useFacebookGraphAPI) {
         // Use Facebook Graph API
@@ -164,7 +216,11 @@ export async function captureProfile(req: Request, res: Response) {
     const firstName = nameParts[0] || '';
     const lastName = nameParts.slice(1).join(' ') || '';
 
-    // Create lead in database
+    // Extract enhanced profile data if available
+    const enhancedProfile = profileData.additionalData?.enhancedProfile;
+    const connectionResult = profileData.additionalData?.connectionResult;
+
+    // Create lead in database with enhanced data
     const lead = await prisma.lead.create({
       data: {
         firstName,
@@ -174,14 +230,30 @@ export async function captureProfile(req: Request, res: Response) {
         source: `manual_${platform}${useFacebookGraphAPI ? '_graph_api' : ''}${useLinkedInAuth ? '_auth' : ''}`,
         status: 'new',
         teamId: resolvedTeamId,
-        // Store additional profile data in rawData
+        // Store comprehensive profile data in rawData
         rawData: {
           platform: profileData.platform,
           capturedAt: new Date().toISOString(),
-          captureMethod: useFacebookGraphAPI ? 'graph_api' : useLinkedInAuth ? 'authenticated_scraping' : 'puppeteer_scraping',
+          captureMethod: useFacebookGraphAPI ? 'graph_api' : useLinkedInAuth ? 'enhanced_authenticated_scraping' : 'puppeteer_scraping',
           bio: profileData.bio || '',
           location: profileData.location || '',
           profileUrl: profileData.profileUrl,
+          // Enhanced LinkedIn data
+          ...(enhancedProfile && {
+            experience: enhancedProfile.experience,
+            education: enhancedProfile.education,
+            certifications: enhancedProfile.certifications,
+            contactInfo: enhancedProfile.contactInfo,
+            screenshotUrl: enhancedProfile.screenshotUrl,
+            dataCompleteness: enhancedProfile.dataCompleteness,
+            missingFields: enhancedProfile.missingFields,
+          }),
+          // Connection result
+          ...(connectionResult && {
+            connectionStatus: connectionResult.action,
+            connectionMessage: connectionResult.message,
+            connectionError: connectionResult.error,
+          }),
           ...(profileData.additionalData && { additionalData: profileData.additionalData }),
         },
         // Store social profile URLs
@@ -211,8 +283,24 @@ export async function captureProfile(req: Request, res: Response) {
         jobTitle: lead.jobTitle,
         company: lead.company,
         platform: profileData.platform,
+        // Include enhanced data summary
+        ...(enhancedProfile && {
+          dataCompleteness: enhancedProfile.dataCompleteness,
+          screenshotUrl: enhancedProfile.screenshotUrl,
+          experienceCount: enhancedProfile.experience.length,
+          educationCount: enhancedProfile.education.length,
+          certificationsCount: enhancedProfile.certifications.length,
+          hasContactInfo: !!(enhancedProfile.contactInfo.email || enhancedProfile.contactInfo.phone),
+        }),
+        // Include connection result
+        ...(connectionResult && {
+          connectionStatus: connectionResult.action,
+          connectionSuccess: connectionResult.success,
+        }),
       },
-      message: 'Profile captured successfully',
+      message: enhancedProfile?.dataCompleteness.needsManualReview
+        ? 'Profile captured with partial data - manual review recommended'
+        : 'Profile captured successfully',
     });
   } catch (error) {
     console.error('Profile capture error:', error);

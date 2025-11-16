@@ -21,6 +21,10 @@ import { BROWSER_ARGS, getRandomViewport, getRandomUserAgent } from '../config/p
 import { LinkedInErrors } from '../types/linkedin-errors';
 import { LinkedInLogger } from '../utils/linkedin-logger.util';
 import { hashEmail } from '../utils/encryption.util';
+import { extractCompleteProfile } from '../utils/linkedin-extractor.util';
+import { autoConnect, ConnectionResult } from '../utils/linkedin-connection.util';
+import { uploadScreenshotToS3 } from './s3.service';
+import { EnhancedLinkedInProfile } from '../types/linkedin-profile';
 
 // Add stealth plugin to avoid detection
 puppeteerExtra.use(StealthPlugin());
@@ -43,6 +47,8 @@ export interface ScraperOptions {
   headless?: boolean;
   timeout?: number;
   userId?: string; // Required for rate limiting and session management
+  autoConnect?: boolean; // Auto-connect with profile if not already connected
+  captureScreenshot?: boolean; // Capture and upload screenshot to S3 (default true)
 }
 
 export interface FacebookGraphAPIOptions {
@@ -273,6 +279,194 @@ class AdvancedScraperService {
         profileUrl,
         platform: 'linkedin',
       };
+    } catch (error) {
+      await page.close();
+
+      // Log failed request
+      const responseTime = Date.now() - startTime;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      await LinkedInAccountManager.logRequest(
+        userId,
+        email,
+        profileUrl,
+        false,
+        responseTime,
+        errorMessage
+      );
+
+      LinkedInLogger.logScrapingAttempt(profileUrl, userId, false, responseTime, sessionType);
+
+      // Re-throw LinkedIn-specific errors
+      if (error instanceof Error && error.name === 'LinkedInAuthError') {
+        throw error;
+      }
+
+      throw LinkedInErrors.SCRAPING_FAILED(errorMessage);
+    }
+  }
+
+  /**
+   * Enhanced LinkedIn profile scraping with complete data extraction
+   * Includes: experience, education, certifications, contact info, screenshot, auto-connect
+   */
+  async scrapeLinkedInProfileEnhanced(
+    profileUrl: string,
+    options: ScraperOptions = {}
+  ): Promise<{ profile: EnhancedLinkedInProfile; connectionResult?: ConnectionResult }> {
+    const startTime = Date.now();
+    const { userId, email, password, autoConnect: shouldAutoConnect = false, captureScreenshot = true } = options;
+
+    // Validate required parameters
+    if (!userId || !email || !password) {
+      throw LinkedInErrors.NO_CREDENTIALS();
+    }
+
+    // Check rate limits BEFORE scraping
+    const rateLimitCheck = await LinkedInAccountManager.canMakeRequest(userId);
+    if (!rateLimitCheck.allowed) {
+      throw LinkedInErrors.RATE_LIMIT_EXCEEDED(
+        rateLimitCheck.waitTimeMs || 0,
+        rateLimitCheck.reason || 'Rate limit exceeded'
+      );
+    }
+
+    const browser = await this.initBrowser(options.headless !== false);
+    const page = await this.createStealthPage(browser);
+    const emailHash = hashEmail(email);
+
+    let sessionType: 'cached' | 'fresh' = 'cached';
+    let connectionResult: ConnectionResult | undefined;
+
+    try {
+      // Try to load existing session
+      const existingSession = await LinkedInSessionManager.loadSession(email);
+
+      if (existingSession) {
+        console.log('[LinkedIn] Reusing cached session');
+        LinkedInLogger.logSessionAction('reused', emailHash);
+
+        // Set cookies from cached session
+        await page.setCookie(...existingSession.cookies);
+        await page.setUserAgent(existingSession.userAgent);
+      } else {
+        console.log('[LinkedIn] No cached session, performing login');
+        sessionType = 'fresh';
+
+        // Perform login and save session
+        await this.loginToLinkedIn(page, email, password, userId);
+
+        // Save session after successful login
+        const credentialRecord = await LinkedInAccountManager.getCredentials(userId);
+        if (credentialRecord) {
+          await LinkedInSessionManager.saveSession(page, email, credentialRecord.credentialId);
+          LinkedInLogger.logSessionAction('created', emailHash);
+        }
+
+        // Apply 90-150 second delay after login
+        await HumanBehaviorSimulator.randomDelay();
+      }
+
+      // Navigate to profile with human-like behavior
+      await HumanBehaviorSimulator.hesitate();
+      await page.goto(profileUrl, {
+        waitUntil: 'networkidle2',
+        timeout: options.timeout || 30000,
+      });
+
+      // Simulate reading page title
+      const pageTitle = await page.title();
+      await HumanBehaviorSimulator.simulateReading(pageTitle.length);
+
+      // Check for checkpoint challenge
+      const currentUrl = page.url();
+      if (currentUrl.includes('/checkpoint') || currentUrl.includes('/challenge')) {
+        await LinkedInSessionManager.invalidateSession(email);
+        LinkedInLogger.logCheckpoint(userId, emailHash, profileUrl);
+
+        await LinkedInAccountManager.logRequest(
+          userId,
+          email,
+          profileUrl,
+          false,
+          Date.now() - startTime,
+          'Checkpoint challenge triggered'
+        );
+
+        throw LinkedInErrors.CHECKPOINT_REQUIRED();
+      }
+
+      // PHASE 1: Extract complete profile data
+      console.log('[LinkedIn] Starting enhanced profile extraction...');
+      const profile = await extractCompleteProfile(page, profileUrl);
+
+      // PHASE 2: Auto-connect (if enabled and we have first name)
+      if (shouldAutoConnect && profile.firstName) {
+        console.log('[LinkedIn] Auto-connect enabled, attempting connection...');
+        connectionResult = await autoConnect(page, profile.firstName, profile.headline);
+
+        if (connectionResult.success) {
+          console.log(`[LinkedIn] Connection ${connectionResult.action}: ${connectionResult.message}`);
+        } else {
+          console.warn(`[LinkedIn] Connection failed: ${connectionResult.error}`);
+        }
+      }
+
+      // PHASE 3: Capture screenshot and upload to S3
+      if (captureScreenshot) {
+        try {
+          console.log('[LinkedIn] Capturing screenshot...');
+
+          // Scroll to top for consistent screenshot
+          await page.evaluate(() => {
+            // @ts-ignore - Running in browser context
+            window.scrollTo(0, 0);
+          });
+          await HumanBehaviorSimulator.simulateReading(500);
+
+          // Take full-page screenshot
+          const screenshotBuffer = await page.screenshot({
+            fullPage: true,
+            type: 'png',
+          });
+
+          // Upload to S3
+          const screenshotUrl = await uploadScreenshotToS3(
+            Buffer.from(screenshotBuffer),
+            profileUrl,
+            userId
+          );
+
+          if (screenshotUrl) {
+            profile.screenshotUrl = screenshotUrl;
+            profile.dataCompleteness.hasScreenshot = true;
+            console.log('[LinkedIn] Screenshot uploaded successfully');
+          } else {
+            console.warn('[LinkedIn] Screenshot upload failed (non-blocking)');
+          }
+        } catch (screenshotError) {
+          console.warn('[LinkedIn] Screenshot capture failed (non-blocking):', screenshotError);
+        }
+      }
+
+      await page.close();
+
+      // Log successful request
+      const responseTime = Date.now() - startTime;
+      await LinkedInAccountManager.logRequest(
+        userId,
+        email,
+        profileUrl,
+        true,
+        responseTime
+      );
+
+      LinkedInLogger.logScrapingAttempt(profileUrl, userId, true, responseTime, sessionType);
+
+      console.log('[LinkedIn] Enhanced scraping completed successfully');
+      console.log(`[LinkedIn] Profile completeness: ${profile.missingFields?.length === 0 ? '100%' : `Missing: ${profile.missingFields?.join(', ')}`}`);
+
+      return { profile, connectionResult };
     } catch (error) {
       await page.close();
 

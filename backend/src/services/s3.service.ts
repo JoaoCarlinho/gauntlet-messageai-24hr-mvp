@@ -193,3 +193,55 @@ export const uploadMediaToS3 = async (file: Express.Multer.File, userId: string,
     throw new Error('S3 media upload failed');
   }
 };
+
+/**
+ * Upload LinkedIn profile screenshot to S3
+ */
+export const uploadScreenshotToS3 = async (
+  screenshotBuffer: Buffer,
+  profileUrl: string,
+  userId: string
+): Promise<string> => {
+  try {
+    // Create S3 instance
+    const s3 = createS3Instance();
+
+    // Extract profile ID/username from URL for filename
+    const urlParts = profileUrl.split('/');
+    const profileIdentifier = urlParts[urlParts.length - 1] || urlParts[urlParts.length - 2] || 'unknown';
+
+    // Generate unique filename
+    const timestamp = Date.now();
+    const fileName = `linkedin-screenshots/${userId}/${profileIdentifier}-${timestamp}.png`;
+
+    // Upload parameters
+    const uploadParams = {
+      Bucket: s3Config.bucket,
+      Key: fileName,
+      Body: screenshotBuffer,
+      ContentType: 'image/png',
+      ACL: ObjectCannedACL.public_read,
+      Metadata: {
+        userId: userId,
+        profileUrl: profileUrl,
+        uploadedAt: new Date().toISOString(),
+        fileSize: screenshotBuffer.length.toString()
+      }
+    };
+
+    // Upload to S3 using SDK v3
+    const command = new PutObjectCommand(uploadParams);
+    await s3.send(command);
+
+    // Return the public URL
+    const screenshotUrl = `https://${s3Config.bucket}.s3.${s3Config.region}.amazonaws.com/${fileName}`;
+    console.log(`[S3] Screenshot uploaded successfully: ${screenshotUrl}`);
+
+    return screenshotUrl;
+  } catch (error) {
+    console.error('S3 screenshot upload error:', error);
+    // Don't throw error - screenshot upload failure shouldn't block profile scraping
+    // Return empty string to indicate failure
+    return '';
+  }
+};
