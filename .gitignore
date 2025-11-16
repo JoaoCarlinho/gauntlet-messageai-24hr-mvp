@@ -80,3 +80,4 @@ branches.txt
 diff.txt
 scripts/convert-epics-to-stories.js
 scripts/clear_metro_cache.sh
+.env.secrets
