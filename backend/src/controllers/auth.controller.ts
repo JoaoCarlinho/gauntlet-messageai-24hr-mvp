@@ -10,7 +10,10 @@ import {
   getUserProfile,
   updateUserProfile,
   isValidEmail,
-  isValidPhoneNumber
+  isValidPhoneNumber,
+  requestPasswordReset,
+  verifyPasswordResetToken,
+  resetPassword
 } from '../services/auth.service';
 
 /**
@@ -420,10 +423,151 @@ export const updateProfile = async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Update profile error:', error);
-    
+
     res.status(500).json({
       error: 'Profile update failed',
       message: 'An error occurred while updating profile'
+    });
+  }
+};
+
+/**
+ * Validation rules for password reset request
+ */
+export const validatePasswordResetRequest = [
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Please provide a valid email address')
+];
+
+/**
+ * Validation rules for password reset
+ */
+export const validatePasswordReset = [
+  body('token')
+    .notEmpty()
+    .withMessage('Reset token is required')
+    .isString()
+    .withMessage('Reset token must be a string'),
+  body('newPassword')
+    .isLength({ min: 8 })
+    .withMessage('Password must be at least 8 characters long')
+    .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/)
+    .withMessage('Password must contain at least one lowercase letter, one uppercase letter, and one number')
+];
+
+/**
+ * Request password reset - sends reset email
+ */
+export const forgotPassword = async (req: Request, res: Response) => {
+  try {
+    // Check validation results
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: errors.array()
+      });
+    }
+
+    const { email } = req.body;
+
+    await requestPasswordReset(email);
+
+    // Always return success for security (don't reveal if email exists)
+    res.status(200).json({
+      message: 'If an account with that email exists, a password reset link has been sent'
+    });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+
+    // Don't reveal internal errors for security
+    res.status(200).json({
+      message: 'If an account with that email exists, a password reset link has been sent'
+    });
+  }
+};
+
+/**
+ * Verify password reset token
+ */
+export const verifyResetToken = async (req: Request, res: Response) => {
+  try {
+    const { token } = req.query;
+
+    if (!token || typeof token !== 'string') {
+      return res.status(400).json({
+        error: 'Invalid request',
+        message: 'Reset token is required'
+      });
+    }
+
+    const result = await verifyPasswordResetToken(token);
+
+    if (result.valid) {
+      res.status(200).json({
+        valid: true,
+        message: 'Token is valid'
+      });
+    } else {
+      res.status(400).json({
+        valid: false,
+        message: 'Invalid or expired reset token'
+      });
+    }
+  } catch (error) {
+    console.error('Verify reset token error:', error);
+
+    res.status(400).json({
+      valid: false,
+      message: 'Invalid or expired reset token'
+    });
+  }
+};
+
+/**
+ * Reset password using token
+ */
+export const resetPasswordWithToken = async (req: Request, res: Response) => {
+  try {
+    // Check validation results
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: errors.array()
+      });
+    }
+
+    const { token, newPassword } = req.body;
+
+    await resetPassword(token, newPassword);
+
+    res.status(200).json({
+      message: 'Password reset successful. You can now log in with your new password.'
+    });
+  } catch (error) {
+    console.error('Reset password error:', error);
+
+    if (error instanceof Error) {
+      if (error.message.includes('Invalid or expired')) {
+        return res.status(400).json({
+          error: 'Reset failed',
+          message: error.message
+        });
+      }
+      if (error.message.includes('Password must be')) {
+        return res.status(400).json({
+          error: 'Password validation failed',
+          message: error.message
+        });
+      }
+    }
+
+    res.status(500).json({
+      error: 'Password reset failed',
+      message: 'An error occurred while resetting password'
     });
   }
 };

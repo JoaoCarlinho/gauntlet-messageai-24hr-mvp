@@ -19,13 +19,18 @@ model User {
   lastSeen      DateTime @default(now())
   isOnline      Boolean  @default(false)
   pushTokens    String[] @default([])
+
+  // Password Reset Fields
+  passwordResetToken     String?
+  passwordResetExpiresAt DateTime?
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   sentMessages     Message[]
   conversations    ConversationMember[]
   readReceipts     ReadReceipt[]
-  
+
   // Sales Funnel Relations
   teamMemberships   TeamMember[]
   aiConversations   AIAgentConversation[]
@@ -551,4 +556,40 @@ model LinkedInVerificationSession {
   @@index([userId, status, expiresAt])
   @@index([status, expiresAt])
   @@map("linkedin_verification_sessions")
+}
+
+model LinkedInConnectionRequest {
+  id                  String   @id @default(uuid())
+  userId              String   // User who initiated the connection
+  accountEmail        String   @db.VarChar(255) // LinkedIn account used
+  profileUrl          String   @db.VarChar(500) // Profile URL of connection target
+  targetName          String   @db.VarChar(255) // Name of person being connected with
+  targetHeadline      String?  @db.Text // Their headline/title
+  personalizedMessage String?  @db.Text // Message sent with connection request
+  status              String   @default("sent") // "sent", "accepted", "failed", "withdrawn"
+  sentAt              DateTime @default(now())
+  respondedAt         DateTime? // When they accepted/rejected
+  errorMessage        String?  @db.Text // Error if failed
+
+  @@index([userId, sentAt])
+  @@index([accountEmail, sentAt])
+  @@index([profileUrl])
+  @@index([status])
+  @@map("linkedin_connection_requests")
+}
+
+model LinkedInConnectionRateLimit {
+  id                  String   @id @default(uuid())
+  accountEmail        String   @unique @db.VarChar(255) // LinkedIn account
+  requestsThisHour    Int      @default(0)
+  requestsThisDay     Int      @default(0)
+  requestsThisWeek    Int      @default(0)
+  hourResetAt         DateTime
+  dayResetAt          DateTime
+  weekResetAt         DateTime
+  lastRequestAt       DateTime?
+  updatedAt           DateTime @updatedAt
+
+  @@index([accountEmail, hourResetAt])
+  @@map("linkedin_connection_rate_limits")
 }

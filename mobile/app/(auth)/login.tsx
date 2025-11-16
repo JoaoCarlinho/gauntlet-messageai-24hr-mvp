@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  TouchableOpacity,
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuth } from '../../hooks/useAuth';
@@ -48,8 +49,7 @@ export default function LoginScreen() {
               text: 'Forgot Password?',
               style: 'default',
               onPress: () => {
-                // TODO: Implement forgot password functionality
-                Alert.alert('Forgot Password', 'Password reset functionality will be available soon.');
+                router.push('/(auth)/forgot-password');
               }
             }
           ]
@@ -167,6 +167,13 @@ export default function LoginScreen() {
               />
               {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
             </View>
+
+            <TouchableOpacity
+              onPress={() => router.push('/(auth)/forgot-password')}
+              style={styles.forgotPasswordButton}
+            >
+              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+            </TouchableOpacity>
 
             <Button
               title="Sign In"
@@ -294,6 +301,16 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 16,
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+  forgotPasswordButton: {
+    alignSelf: 'flex-end',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
     color: '#007AFF',
     fontWeight: '600',
   },

@@ -1,7 +1,7 @@
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import { Platform } from 'react-native';
-import { auth } from '../../config/firebase';
+import { auth, googleProvider } from '../../config/firebase';
 import {
   signInWithCredential,
   signInWithPopup,
@@ -30,11 +30,8 @@ export const signInWithGoogle = async (): Promise<GoogleAuthResult> => {
   try {
     // Web platform: Use Firebase's built-in popup
     if (Platform.OS === 'web') {
-      const provider = new GoogleAuthProvider();
-      provider.addScope('profile');
-      provider.addScope('email');
-
-      const userCredential: UserCredential = await signInWithPopup(auth, provider);
+      // Use the googleProvider from config/firebase.ts which is already configured
+      const userCredential: UserCredential = await signInWithPopup(auth, googleProvider);
       const idToken = await userCredential.user.getIdToken();
 
       return {

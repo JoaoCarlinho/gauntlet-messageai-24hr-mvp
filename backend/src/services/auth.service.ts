@@ -5,6 +5,14 @@ import { addPushToken } from './users.service';
 import { createTeam } from './teams.service';
 import { auth as firebaseAuth } from '../config/firebase';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  generateResetToken,
+  hashResetToken,
+  verifyResetToken,
+  getResetTokenExpiration,
+  isResetTokenExpired
+} from '../utils/passwordReset';
+import { sendPasswordResetEmail } from './email.service';
 
 export interface RegisterData {
   email: string;
@@ -557,4 +565,137 @@ export const isValidEmail = (email: string): boolean => {
 export const isValidPhoneNumber = (phoneNumber: string): boolean => {
   const phoneRegex = /^\+?[\d\s\-\(\)]{10,}$/;
   return phoneRegex.test(phoneNumber);
+};
+
+/**
+ * Request password reset - generates token and sends email
+ */
+export const requestPasswordReset = async (email: string): Promise<void> => {
+  // Find user by email
+  const user = await prisma.user.findUnique({
+    where: { email },
+    select: {
+      id: true,
+      email: true,
+      displayName: true,
+      password: true
+    }
+  });
+
+  // For security, don't reveal if user exists or not
+  // Always return success even if user doesn't exist
+  if (!user) {
+    console.log(`Password reset requested for non-existent email: ${email}`);
+    return;
+  }
+
+  // Check if user has a password (not OAuth-only user)
+  if (!user.password) {
+    console.log(`Password reset requested for OAuth-only user: ${email}`);
+    return;
+  }
+
+  // Generate reset token
+  const plainToken = generateResetToken();
+  const hashedToken = await hashResetToken(plainToken);
+  const expiresAt = getResetTokenExpiration();
+
+  // Store hashed token in database
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      passwordResetToken: hashedToken,
+      passwordResetExpiresAt: expiresAt,
+      updatedAt: new Date()
+    }
+  });
+
+  // Send reset email with plain token
+  try {
+    await sendPasswordResetEmail(user.email, plainToken, user.displayName);
+    console.log(`Password reset email sent to: ${email}`);
+  } catch (error) {
+    console.error('Failed to send password reset email:', error);
+    // Clear the reset token if email fails
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordResetToken: null,
+        passwordResetExpiresAt: null
+      }
+    });
+    throw new Error('Failed to send password reset email');
+  }
+};
+
+/**
+ * Verify password reset token
+ */
+export const verifyPasswordResetToken = async (token: string): Promise<{ valid: boolean; userId?: string }> => {
+  // Find all users with non-expired reset tokens
+  const users = await prisma.user.findMany({
+    where: {
+      passwordResetToken: { not: null },
+      passwordResetExpiresAt: { not: null }
+    },
+    select: {
+      id: true,
+      passwordResetToken: true,
+      passwordResetExpiresAt: true
+    }
+  });
+
+  // Check each user's token
+  for (const user of users) {
+    if (!user.passwordResetToken || !user.passwordResetExpiresAt) {
+      continue;
+    }
+
+    // Check if token is expired
+    if (isResetTokenExpired(user.passwordResetExpiresAt)) {
+      continue;
+    }
+
+    // Verify token
+    const isValid = await verifyResetToken(token, user.passwordResetToken);
+    if (isValid) {
+      return { valid: true, userId: user.id };
+    }
+  }
+
+  return { valid: false };
+};
+
+/**
+ * Reset password using token
+ */
+export const resetPassword = async (token: string, newPassword: string): Promise<void> => {
+  // Verify token and get user ID
+  const { valid, userId } = await verifyPasswordResetToken(token);
+
+  if (!valid || !userId) {
+    throw new Error('Invalid or expired reset token');
+  }
+
+  // Validate new password
+  if (newPassword.length < 8) {
+    throw new Error('Password must be at least 8 characters long');
+  }
+
+  // Hash new password
+  const saltRounds = 12;
+  const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+
+  // Update password and clear reset token
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      password: hashedPassword,
+      passwordResetToken: null,
+      passwordResetExpiresAt: null,
+      updatedAt: new Date()
+    }
+  });
+
+  console.log(`Password reset successful for user: ${userId}`);
 };

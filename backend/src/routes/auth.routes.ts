@@ -12,7 +12,12 @@ import {
   validateLogin,
   validateGoogleLogin,
   validatePasswordChange,
-  validateProfileUpdate
+  validateProfileUpdate,
+  forgotPassword,
+  verifyResetToken,
+  resetPasswordWithToken,
+  validatePasswordResetRequest,
+  validatePasswordReset
 } from '../controllers/auth.controller';
 import { authenticate, authRateLimit } from '../middleware/auth';
 
@@ -73,5 +78,26 @@ router.get('/profile', authenticate, getProfile);
  * @access  Private
  */
 router.put('/profile', authenticate, validateProfileUpdate, updateProfile);
+
+/**
+ * @route   POST /api/v1/auth/forgot-password
+ * @desc    Request password reset
+ * @access  Public
+ */
+router.post('/forgot-password', authRateLimit, validatePasswordResetRequest, forgotPassword);
+
+/**
+ * @route   GET /api/v1/auth/verify-reset-token
+ * @desc    Verify password reset token
+ * @access  Public
+ */
+router.get('/verify-reset-token', verifyResetToken);
+
+/**
+ * @route   POST /api/v1/auth/reset-password
+ * @desc    Reset password using token
+ * @access  Public
+ */
+router.post('/reset-password', authRateLimit, validatePasswordReset, resetPasswordWithToken);
 
 export default router;
